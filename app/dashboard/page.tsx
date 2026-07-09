@@ -1,3 +1,5 @@
+import Card from "@/components/Card";
+
 export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-gray-100 p-8">
@@ -10,27 +12,10 @@ export default function DashboardPage() {
       </p>
 
       <div className="grid grid-cols-2 gap-6 mt-10">
-
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-gray-500">Events</h2>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-gray-500">Guests</h2>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-gray-500">Checked In</h2>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-gray-500">Pending</h2>
-          <p className="text-3xl font-bold mt-2">0</p>
-        </div>
-
+        <Card title="Events" value={0} />
+        <Card title="Guests" value={0} />
+        <Card title="Checked In" value={0} />
+        <Card title="Pending" value={0} />
       </div>
     </main>
   );
