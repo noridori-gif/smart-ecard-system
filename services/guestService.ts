@@ -47,6 +47,20 @@ export async function getGuestsByEvent(eventId: number) {
   return (data ?? []) as Guest[];
 }
 
+export async function getGuestById(guestId: number) {
+  const { data, error } = await supabase
+    .from("guests")
+    .select("*")
+    .eq("id", guestId)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Guest;
+}
+
 export async function deleteGuest(id: number) {
   const { error } = await supabase
     .from("guests")
