@@ -1,22 +1,22 @@
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
 import Card from "@/components/Card";
 
 export default function DashboardPage() {
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
+    <section>
+      <h1 className="text-4xl font-bold text-blue-700">
+        Dashboard
+      </h1>
 
-      <main className="flex-1 p-8">
-        <Header />
+      <p className="mt-2 text-gray-600">
+        Welcome to Smart Event Pass
+      </p>
 
-        <div className="grid grid-cols-2 gap-6 mt-8">
-          <Card title="Events" value={0} />
-          <Card title="Guests" value={0} />
-          <Card title="Checked In" value={0} />
-          <Card title="Pending" value={0} />
-        </div>
-      </main>
-    </div>
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card title="Events" value={0} />
+        <Card title="Guests" value={0} />
+        <Card title="Checked In" value={0} />
+        <Card title="Pending" value={0} />
+      </div>
+    </section>
   );
 }
