@@ -7,6 +7,7 @@ import Input from "@/components/Input";
 import Button from "@/components/Button";
 import {
   createGuest,
+  deleteGuest,
   getGuestsByEvent,
   type Guest,
   type NewGuest,
@@ -28,6 +29,7 @@ export default function EventGuestsPage() {
   const [formData, setFormData] = useState(initialForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingGuestId, setDeletingGuestId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -83,10 +85,8 @@ export default function EventGuestsPage() {
 
     try {
       await createGuest(newGuest);
-
       setFormData(initialForm);
       setSuccessMessage("Mgeni ameongezwa vizuri.");
-
       await loadGuests();
     } catch (error) {
       const message =
@@ -97,6 +97,35 @@ export default function EventGuestsPage() {
       setErrorMessage(message);
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleDelete(guest: Guest) {
+    const confirmed = window.confirm(
+      `Una uhakika unataka kumfuta ${guest.full_name}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingGuestId(guest.id);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      await deleteGuest(guest.id);
+      setSuccessMessage(`${guest.full_name} amefutwa vizuri.`);
+      await loadGuests();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Mgeni hakuweza kufutwa.";
+
+      setErrorMessage(message);
+    } finally {
+      setDeletingGuestId(null);
     }
   }
 
@@ -246,12 +275,25 @@ export default function EventGuestsPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/events/${eventId}/guests/${guest.id}/qr`}
-                        className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                      >
-                        View QR
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/events/${eventId}/guests/${guest.id}/qr`}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                        >
+                          View QR
+                        </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(guest)}
+                          disabled={deletingGuestId === guest.id}
+                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                        >
+                          {deletingGuestId === guest.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
