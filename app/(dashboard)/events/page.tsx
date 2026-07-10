@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getEvents } from "@/services/eventService";
 
 type EventItem = {
-  id: string;
+  id: number;
   title: string;
   event_type: string;
   bride_name: string | null;
@@ -90,6 +90,7 @@ export default function EventsPage() {
                   <th className="px-6 py-4">Date</th>
                   <th className="px-6 py-4">Time</th>
                   <th className="px-6 py-4">Venue</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
 
@@ -114,6 +115,15 @@ export default function EventsPage() {
 
                     <td className="px-6 py-4 text-gray-600">
                       {event.venue}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/events/${event.id}/guests`}
+                        className="rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-200"
+                      >
+                        Manage Guests
+                      </Link>
                     </td>
                   </tr>
                 ))}
