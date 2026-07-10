@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Input from "@/components/Input";
@@ -215,6 +216,7 @@ export default function EventGuestsPage() {
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Allowed</th>
                   <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
 
@@ -241,6 +243,15 @@ export default function EventGuestsPage() {
                       <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800">
                         {guest.status}
                       </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/events/${eventId}/guests/${guest.id}/qr`}
+                        className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                      >
+                        View QR
+                      </Link>
                     </td>
                   </tr>
                 ))}
