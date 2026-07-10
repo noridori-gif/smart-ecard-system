@@ -61,6 +61,65 @@ export async function getGuestById(guestId: number) {
   return data as Guest;
 }
 
+export async function getGuestByQrToken(qrToken: string) {
+  const { data, error } = await supabase
+    .from("guests")
+    .select("*")
+    .eq("qr_token", qrToken)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Guest | null;
+}
+
+export async function checkInGuest(qrToken: string) {
+  const guest = await getGuestByQrToken(qrToken);
+
+  if (!guest) {
+    return {
+      success: false,
+      status: "invalid",
+      message: "Invalid QR Code",
+      guest: null,
+    };
+  }
+
+  if (guest.status === "checked_in") {
+    return {
+      success: false,
+      status: "already_checked_in",
+      message: "Guest has already checked in",
+      guest,
+    };
+  }
+
+  const checkedInAt = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("guests")
+    .update({
+      status: "checked_in",
+      checked_in_at: checkedInAt,
+    })
+    .eq("id", guest.id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    success: true,
+    status: "checked_in",
+    message: "Guest checked in successfully",
+    guest: data as Guest,
+  };
+}
+
 export async function deleteGuest(id: number) {
   const { error } = await supabase
     .from("guests")
