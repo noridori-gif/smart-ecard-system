@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createInvitation } from "@/services/invitationService";
 
 export type NewGuest = {
   event_id: number;
@@ -24,13 +25,24 @@ export type Guest = {
 };
 
 export async function createGuest(guest: NewGuest) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("guests")
-    .insert(guest);
+    .insert(guest)
+    .select()
+    .single();
 
   if (error) {
     throw new Error(error.message);
   }
+
+  const createdGuest = data as Guest;
+
+  await createInvitation(
+    createdGuest.event_id,
+    createdGuest.id
+  );
+
+  return createdGuest;
 }
 
 export async function getGuestsByEvent(eventId: number) {
