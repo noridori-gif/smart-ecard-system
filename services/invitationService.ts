@@ -10,6 +10,17 @@ export type Invitation = {
   created_at: string;
 };
 
+export type InvitationWithDetails = Invitation & {
+  events: {
+    title: string;
+  } | null;
+  guests: {
+    full_name: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+};
+
 export async function createInvitation(
   eventId: number,
   guestId: number
@@ -60,4 +71,29 @@ export async function getInvitationsByEvent(
   }
 
   return (data ?? []) as Invitation[];
+}
+
+export async function getAllInvitations(): Promise<
+  InvitationWithDetails[]
+> {
+  const { data, error } = await supabase
+    .from("invitations")
+    .select(`
+      *,
+      events (
+        title
+      ),
+      guests (
+        full_name,
+        phone,
+        email
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as InvitationWithDetails[];
 }
