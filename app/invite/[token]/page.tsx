@@ -5,6 +5,7 @@ import Countdown from "@/components/invitation/Countdown";
 import InvitationHero from "@/components/invitation/InvitationHero";
 import EventPass from "@/components/invitation/EventPass";
 import RsvpButtons from "@/components/invitation/RsvpButtons";
+import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 
 type Props = {
   params: Promise<{
@@ -25,8 +26,12 @@ type InvitationTheme = {
   statusStyle: string;
 };
 
-function getInvitationTheme(eventType: string): InvitationTheme {
-  const normalizedType = eventType.trim().toLowerCase();
+function getInvitationTheme(
+  eventType: string
+): InvitationTheme {
+  const normalizedType = eventType
+    .trim()
+    .toLowerCase();
 
   if (
     normalizedType === "wedding" ||
@@ -44,8 +49,10 @@ function getInvitationTheme(eventType: string): InvitationTheme {
         "bg-gradient-to-r from-rose-600 via-pink-500 to-amber-400",
       accentText: "text-rose-700",
       detailBackground: "bg-rose-50",
-      guestBoxStyle: "border-rose-200 bg-rose-50",
-      statusStyle: "bg-rose-100 text-rose-700",
+      guestBoxStyle:
+        "border-rose-200 bg-rose-50",
+      statusStyle:
+        "bg-rose-100 text-rose-700",
     };
   }
 
@@ -66,8 +73,10 @@ function getInvitationTheme(eventType: string): InvitationTheme {
         "bg-gradient-to-r from-orange-600 via-rose-500 to-amber-400",
       accentText: "text-orange-700",
       detailBackground: "bg-orange-50",
-      guestBoxStyle: "border-amber-300 bg-amber-50",
-      statusStyle: "bg-orange-100 text-orange-700",
+      guestBoxStyle:
+        "border-amber-300 bg-amber-50",
+      statusStyle:
+        "bg-orange-100 text-orange-700",
     };
   }
 
@@ -77,7 +86,8 @@ function getInvitationTheme(eventType: string): InvitationTheme {
   ) {
     return {
       icon: "🎂",
-      invitationLabel: "Come Celebrate With Us",
+      invitationLabel:
+        "Come Celebrate With Us",
       eventLabel: "Birthday Celebration",
       message:
         "Join us for a joyful birthday celebration filled with happiness, laughter and wonderful memories.",
@@ -87,8 +97,10 @@ function getInvitationTheme(eventType: string): InvitationTheme {
         "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500",
       accentText: "text-purple-700",
       detailBackground: "bg-purple-50",
-      guestBoxStyle: "border-purple-200 bg-purple-50",
-      statusStyle: "bg-purple-100 text-purple-700",
+      guestBoxStyle:
+        "border-purple-200 bg-purple-50",
+      statusStyle:
+        "bg-purple-100 text-purple-700",
     };
   }
 
@@ -100,7 +112,8 @@ function getInvitationTheme(eventType: string): InvitationTheme {
   ) {
     return {
       icon: "💼",
-      invitationLabel: "Official Invitation",
+      invitationLabel:
+        "Official Invitation",
       eventLabel: "Corporate Event",
       message:
         "You are formally invited to attend this important event. We look forward to welcoming you.",
@@ -110,8 +123,10 @@ function getInvitationTheme(eventType: string): InvitationTheme {
         "bg-gradient-to-r from-slate-900 via-blue-800 to-blue-600",
       accentText: "text-blue-800",
       detailBackground: "bg-blue-50",
-      guestBoxStyle: "border-blue-200 bg-blue-50",
-      statusStyle: "bg-blue-100 text-blue-700",
+      guestBoxStyle:
+        "border-blue-200 bg-blue-50",
+      statusStyle:
+        "bg-blue-100 text-blue-700",
     };
   }
 
@@ -122,7 +137,8 @@ function getInvitationTheme(eventType: string): InvitationTheme {
     return {
       icon: "🎓",
       invitationLabel: "You Are Invited",
-      eventLabel: "Graduation Celebration",
+      eventLabel:
+        "Graduation Celebration",
       message:
         "Join us as we celebrate this remarkable achievement and an exciting new chapter.",
       pageBackground:
@@ -131,8 +147,10 @@ function getInvitationTheme(eventType: string): InvitationTheme {
         "bg-gradient-to-r from-indigo-800 via-indigo-600 to-amber-500",
       accentText: "text-indigo-700",
       detailBackground: "bg-indigo-50",
-      guestBoxStyle: "border-indigo-200 bg-indigo-50",
-      statusStyle: "bg-indigo-100 text-indigo-700",
+      guestBoxStyle:
+        "border-indigo-200 bg-indigo-50",
+      statusStyle:
+        "bg-indigo-100 text-indigo-700",
     };
   }
 
@@ -148,18 +166,27 @@ function getInvitationTheme(eventType: string): InvitationTheme {
       "bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500",
     accentText: "text-blue-700",
     detailBackground: "bg-slate-50",
-    guestBoxStyle: "border-blue-200 bg-blue-50",
-    statusStyle: "bg-blue-100 text-blue-700",
+    guestBoxStyle:
+      "border-blue-200 bg-blue-50",
+    statusStyle:
+      "bg-blue-100 text-blue-700",
   };
 }
 
-function formatMetadataDate(eventDate: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${eventDate}T00:00:00`));
+function formatMetadataDate(
+  eventDate: string
+) {
+  return new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(
+    new Date(`${eventDate}T00:00:00`)
+  );
 }
 
 export async function generateMetadata({
@@ -169,27 +196,33 @@ export async function generateMetadata({
 
   if (!token) {
     return {
-      title: "Invitation | Smart Event Pass",
+      title:
+        "Invitation | Smart Event Pass",
     };
   }
 
   try {
-    const invitation = await getInvitationByToken(token);
+    const invitation =
+      await getInvitationByToken(token);
 
     if (!invitation) {
       return {
-        title: "Invitation Not Found | Smart Event Pass",
-        description: "This invitation could not be found.",
+        title:
+          "Invitation Not Found | Smart Event Pass",
+        description:
+          "This invitation could not be found.",
       };
     }
 
-    const formattedDate = formatMetadataDate(
-      invitation.event_date
-    );
+    const formattedDate =
+      formatMetadataDate(
+        invitation.event_date
+      );
 
-    const formattedTime = invitation.event_time
-      ? invitation.event_time.slice(0, 5)
-      : "";
+    const formattedTime =
+      invitation.event_time
+        ? invitation.event_time.slice(0, 5)
+        : "";
 
     const title = `${invitation.event_title} | Smart Event Pass`;
 
@@ -203,11 +236,13 @@ export async function generateMetadata({
       .join(" • ");
 
     const imageUrl =
-      invitation.cover_image_url ?? undefined;
+      invitation.cover_image_url ??
+      undefined;
 
     return {
       title,
       description,
+
       openGraph: {
         title,
         description,
@@ -218,11 +253,13 @@ export async function generateMetadata({
                 url: imageUrl,
                 width: 1200,
                 height: 630,
-                alt: invitation.event_title,
+                alt:
+                  invitation.event_title,
               },
             ]
           : undefined,
       },
+
       twitter: {
         card: imageUrl
           ? "summary_large_image"
@@ -236,7 +273,8 @@ export async function generateMetadata({
     };
   } catch {
     return {
-      title: "Invitation | Smart Event Pass",
+      title:
+        "Invitation | Smart Event Pass",
       description:
         "Open your personal event invitation.",
     };
@@ -252,7 +290,8 @@ export default async function InvitationPage({
     notFound();
   }
 
-  const invitation = await getInvitationByToken(token);
+  const invitation =
+    await getInvitationByToken(token);
 
   if (!invitation) {
     notFound();
@@ -262,40 +301,51 @@ export default async function InvitationPage({
     invitation.event_type
   );
 
-  const formattedDate = new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  ).format(
-    new Date(`${invitation.event_date}T00:00:00`)
-  );
+  const formattedDate =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }
+    ).format(
+      new Date(
+        `${invitation.event_date}T00:00:00`
+      )
+    );
 
-  const formattedTime = invitation.event_time
-    ? invitation.event_time.slice(0, 5)
-    : "Time to be confirmed";
+  const formattedTime =
+    invitation.event_time
+      ? invitation.event_time.slice(0, 5)
+      : "Time to be confirmed";
 
   const normalizedEventType =
-    invitation.event_type.trim().toLowerCase();
+    invitation.event_type
+      .trim()
+      .toLowerCase();
 
   const isWedding =
     normalizedEventType === "wedding" ||
-    normalizedEventType.includes("harusi");
+    normalizedEventType.includes(
+      "harusi"
+    );
 
   const isSendOff =
     normalizedEventType === "send-off" ||
     normalizedEventType === "sendoff" ||
-    normalizedEventType.includes("send");
+    normalizedEventType.includes(
+      "send"
+    );
 
   const heroTitle =
     isWedding &&
     invitation.bride_name &&
     invitation.groom_name
       ? `${invitation.groom_name} & ${invitation.bride_name}`
-      : isSendOff && invitation.bride_name
+      : isSendOff &&
+          invitation.bride_name
         ? invitation.bride_name
         : invitation.event_title;
 
@@ -303,15 +353,29 @@ export default async function InvitationPage({
     <main
       className={`min-h-screen px-4 py-8 sm:py-12 ${theme.pageBackground}`}
     >
+      <InvitationViewedTracker
+        invitationToken={
+          invitation.invitation_token
+        }
+      />
+
       <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
         <InvitationHero
           icon={theme.icon}
-          invitationLabel={theme.invitationLabel}
+          invitationLabel={
+            theme.invitationLabel
+          }
           heroTitle={heroTitle}
           eventLabel={theme.eventLabel}
-          eventTitle={invitation.event_title}
-          heroBackground={theme.heroBackground}
-          coverImageUrl={invitation.cover_image_url}
+          eventTitle={
+            invitation.event_title
+          }
+          heroBackground={
+            theme.heroBackground
+          }
+          coverImageUrl={
+            invitation.cover_image_url
+          }
         />
 
         <section className="px-6 py-10 sm:px-12 sm:py-12">
@@ -335,9 +399,13 @@ export default async function InvitationPage({
 
           <div className="my-9 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-200" />
-            <span className={`text-2xl ${theme.accentText}`}>
+
+            <span
+              className={`text-2xl ${theme.accentText}`}
+            >
               ✦
             </span>
+
             <div className="h-px flex-1 bg-slate-200" />
           </div>
 
@@ -345,7 +413,9 @@ export default async function InvitationPage({
             <div
               className={`rounded-2xl p-6 text-center ${theme.detailBackground}`}
             >
-              <div className="text-2xl">📅</div>
+              <div className="text-2xl">
+                📅
+              </div>
 
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
                 Date
@@ -359,7 +429,9 @@ export default async function InvitationPage({
             <div
               className={`rounded-2xl p-6 text-center ${theme.detailBackground}`}
             >
-              <div className="text-2xl">🕒</div>
+              <div className="text-2xl">
+                🕒
+              </div>
 
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
                 Time
@@ -373,7 +445,9 @@ export default async function InvitationPage({
             <div
               className={`rounded-2xl p-6 text-center sm:col-span-2 ${theme.detailBackground}`}
             >
-              <div className="text-2xl">📍</div>
+              <div className="text-2xl">
+                📍
+              </div>
 
               <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
                 Venue
@@ -386,10 +460,18 @@ export default async function InvitationPage({
           </div>
 
           <Countdown
-            eventDate={invitation.event_date}
-            eventTime={invitation.event_time}
-            accentTextClass={theme.accentText}
-            boxClassName={theme.detailBackground}
+            eventDate={
+              invitation.event_date
+            }
+            eventTime={
+              invitation.event_time
+            }
+            accentTextClass={
+              theme.accentText
+            }
+            boxClassName={
+              theme.detailBackground
+            }
           />
 
           <div
@@ -402,26 +484,47 @@ export default async function InvitationPage({
             <p
               className={`mt-2 text-3xl font-bold ${theme.accentText}`}
             >
-              {invitation.allowed_guests}{" "}
-              {invitation.allowed_guests === 1
+              {
+                invitation.allowed_guests
+              }{" "}
+              {invitation.allowed_guests ===
+              1
                 ? "Guest"
                 : "Guests"}
             </p>
           </div>
 
           <EventPass
-            guestName={invitation.guest_name}
-            qrToken={invitation.qr_token}
-            allowedGuests={invitation.allowed_guests}
-            category={invitation.category}
-            accentTextClass={theme.accentText}
-            boxClassName={theme.detailBackground}
+            guestName={
+              invitation.guest_name
+            }
+            qrToken={
+              invitation.qr_token
+            }
+            allowedGuests={
+              invitation.allowed_guests
+            }
+            category={
+              invitation.category
+            }
+            accentTextClass={
+              theme.accentText
+            }
+            boxClassName={
+              theme.detailBackground
+            }
           />
 
           <RsvpButtons
-            invitationToken={invitation.invitation_token}
-            currentStatus={invitation.rsvp_status}
-            accentTextClass={theme.accentText}
+            invitationToken={
+              invitation.invitation_token
+            }
+            currentStatus={
+              invitation.rsvp_status
+            }
+            accentTextClass={
+              theme.accentText
+            }
           />
 
           <div className="mt-10 border-t border-slate-100 pt-7 text-center">
@@ -430,7 +533,8 @@ export default async function InvitationPage({
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              Your invitation. Your moment.
+              Your invitation. Your
+              moment.
             </p>
           </div>
         </section>
