@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getInvitationByToken } from "@/services/invitationService";
 import Countdown from "@/components/invitation/Countdown";
@@ -101,7 +102,7 @@ function getInvitationTheme(eventType: string): InvitationTheme {
       invitationLabel: "Official Invitation",
       eventLabel: "Corporate Event",
       message:
-        "You are formally invited to attend this important event. We look forward to welcoming you and sharing a valuable and memorable experience.",
+        "You are formally invited to attend this important event. We look forward to welcoming you.",
       pageBackground:
         "bg-gradient-to-br from-slate-200 via-white to-blue-100",
       heroBackground:
@@ -122,7 +123,7 @@ function getInvitationTheme(eventType: string): InvitationTheme {
       invitationLabel: "You Are Invited",
       eventLabel: "Graduation Celebration",
       message:
-        "Join us as we celebrate this remarkable achievement and an exciting new chapter. Your presence will make this milestone even more meaningful.",
+        "Join us as we celebrate this remarkable achievement and an exciting new chapter.",
       pageBackground:
         "bg-gradient-to-br from-indigo-100 via-white to-amber-100",
       heroBackground:
@@ -139,7 +140,7 @@ function getInvitationTheme(eventType: string): InvitationTheme {
     invitationLabel: "You Are Invited",
     eventLabel: "Special Event",
     message:
-      "We warmly invite you to join us for this special occasion. Your presence will make the event even more meaningful and memorable.",
+      "We warmly invite you to join us for this special occasion.",
     pageBackground:
       "bg-gradient-to-br from-slate-100 via-white to-blue-100",
     heroBackground:
@@ -151,7 +152,101 @@ function getInvitationTheme(eventType: string): InvitationTheme {
   };
 }
 
-export default async function InvitationPage({ params }: Props) {
+function formatMetadataDate(eventDate: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${eventDate}T00:00:00`));
+}
+
+export async function generateMetadata({
+  params,
+}: Props): Promise<Metadata> {
+  const { token } = await params;
+
+  if (!token) {
+    return {
+      title: "Invitation | Smart Event Pass",
+    };
+  }
+
+  try {
+    const invitation = await getInvitationByToken(token);
+
+    if (!invitation) {
+      return {
+        title: "Invitation Not Found | Smart Event Pass",
+        description: "This invitation could not be found.",
+      };
+    }
+
+    const formattedDate = formatMetadataDate(
+      invitation.event_date
+    );
+
+    const formattedTime = invitation.event_time
+      ? invitation.event_time.slice(0, 5)
+      : "";
+
+    const title = `${invitation.event_title} | Smart Event Pass`;
+
+    const description = [
+      `A special invitation for ${invitation.guest_name}.`,
+      formattedDate,
+      formattedTime,
+      invitation.venue,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+    const imageUrl =
+      invitation.cover_image_url ?? undefined;
+
+    return {
+      title,
+      description,
+
+      openGraph: {
+        title,
+        description,
+        type: "website",
+        images: imageUrl
+          ? [
+              {
+                url: imageUrl,
+                width: 1200,
+                height: 630,
+                alt: invitation.event_title,
+              },
+            ]
+          : undefined,
+      },
+
+      twitter: {
+        card: imageUrl
+          ? "summary_large_image"
+          : "summary",
+        title,
+        description,
+        images: imageUrl
+          ? [imageUrl]
+          : undefined,
+      },
+    };
+  } catch {
+    return {
+      title: "Invitation | Smart Event Pass",
+      description:
+        "Open your personal event invitation.",
+    };
+  }
+}
+
+export default async function InvitationPage({
+  params,
+}: Props) {
   const { token } = await params;
 
   if (!token) {
@@ -164,22 +259,28 @@ export default async function InvitationPage({ params }: Props) {
     notFound();
   }
 
-  const theme = getInvitationTheme(invitation.event_type);
+  const theme = getInvitationTheme(
+    invitation.event_type
+  );
 
-  const formattedDate = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${invitation.event_date}T00:00:00`));
+  const formattedDate = new Intl.DateTimeFormat(
+    "en-GB",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(
+    new Date(`${invitation.event_date}T00:00:00`)
+  );
 
   const formattedTime = invitation.event_time
     ? invitation.event_time.slice(0, 5)
     : "Time to be confirmed";
 
-  const normalizedEventType = invitation.event_type
-    .trim()
-    .toLowerCase();
+  const normalizedEventType =
+    invitation.event_type.trim().toLowerCase();
 
   const isWedding =
     normalizedEventType === "wedding" ||
@@ -191,7 +292,9 @@ export default async function InvitationPage({ params }: Props) {
     normalizedEventType.includes("send");
 
   const heroTitle =
-    isWedding && invitation.bride_name && invitation.groom_name
+    isWedding &&
+    invitation.bride_name &&
+    invitation.groom_name
       ? `${invitation.groom_name} & ${invitation.bride_name}`
       : isSendOff && invitation.bride_name
         ? invitation.bride_name
@@ -233,7 +336,13 @@ export default async function InvitationPage({ params }: Props) {
 
           <div className="my-9 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-200" />
-            <span className={`text-2xl ${theme.accentText}`}>✦</span>
+
+            <span
+              className={`text-2xl ${theme.accentText}`}
+            >
+              ✦
+            </span>
+
             <div className="h-px flex-1 bg-slate-200" />
           </div>
 
@@ -295,7 +404,9 @@ export default async function InvitationPage({ params }: Props) {
               This invitation admits
             </p>
 
-            <p className={`mt-2 text-3xl font-bold ${theme.accentText}`}>
+            <p
+              className={`mt-2 text-3xl font-bold ${theme.accentText}`}
+            >
               {invitation.allowed_guests}{" "}
               {invitation.allowed_guests === 1
                 ? "Guest"
@@ -306,7 +417,9 @@ export default async function InvitationPage({ params }: Props) {
           <EventPass
             guestName={invitation.guest_name}
             qrToken={invitation.qr_token}
-            allowedGuests={invitation.allowed_guests}
+            allowedGuests={
+              invitation.allowed_guests
+            }
             category={invitation.category}
             accentTextClass={theme.accentText}
             boxClassName={theme.detailBackground}
