@@ -11,8 +11,10 @@ import {
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   const [deletingEventId, setDeletingEventId] =
     useState<number | null>(null);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -43,7 +45,7 @@ export default function EventsPage() {
     eventTitle: string
   ) {
     const confirmed = window.confirm(
-      `Una uhakika unataka kufuta event "${eventTitle}"?\n\nKitendo hiki kinaweza pia kufuta guests na invitations zake, na hakiwezi kurudishwa.`
+      `Una uhakika unataka kufuta event "${eventTitle}"?\n\nGuests na invitations zote za event hii pia zitafutika. Kitendo hiki hakiwezi kurudishwa.`
     );
 
     if (!confirmed) {
@@ -62,7 +64,7 @@ export default function EventsPage() {
       );
 
       setSuccessMessage(
-        `Event "${eventTitle}" imefutwa successfully.`
+        `Event "${eventTitle}" imefutwa vizuri.`
       );
     } catch (error) {
       setErrorMessage(
@@ -115,15 +117,17 @@ export default function EventsPage() {
           </p>
         )}
 
-        {!isLoading && !errorMessage && events.length === 0 && (
-          <p className="p-8 text-gray-500">
-            No events have been created yet.
-          </p>
-        )}
+        {!isLoading &&
+          !errorMessage &&
+          events.length === 0 && (
+            <p className="p-8 text-gray-500">
+              No events have been created yet.
+            </p>
+          )}
 
         {!isLoading && events.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left">
+            <table className="w-full min-w-[980px] text-left">
               <thead className="bg-gray-50 text-sm uppercase text-gray-600">
                 <tr>
                   <th className="px-6 py-4">Event</th>
@@ -166,12 +170,19 @@ export default function EventsPage() {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex min-w-max gap-2">
+                        <div className="flex min-w-max flex-wrap gap-2">
+                          <Link
+                            href={`/events/${event.id}/edit`}
+                            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+                          >
+                            Edit
+                          </Link>
+
                           <Link
                             href={`/events/${event.id}/guests`}
                             className="rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-200"
                           >
-                            Manage Guests
+                            Guests
                           </Link>
 
                           <button

@@ -24,6 +24,17 @@ export type NewEvent = {
   cover_image_url?: string | null;
 };
 
+export type UpdateEvent = {
+  title: string;
+  event_type: string;
+  bride_name?: string;
+  groom_name?: string;
+  event_date: string;
+  event_time: string;
+  venue: string;
+  cover_image_url?: string | null;
+};
+
 export async function uploadEventCover(
   imageFile: File
 ): Promise<string> {
@@ -31,7 +42,6 @@ export async function uploadEventCover(
     imageFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
 
   const fileName = `${crypto.randomUUID()}.${fileExtension}`;
-
   const filePath = `covers/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
@@ -61,10 +71,21 @@ export async function uploadEventCover(
   return data.publicUrl;
 }
 
-export async function createEvent(event: NewEvent) {
+export async function createEvent(
+  event: NewEvent
+): Promise<Event> {
   const { data, error } = await supabase
     .from("events")
-    .insert(event)
+    .insert({
+      title: event.title,
+      event_type: event.event_type,
+      bride_name: event.bride_name || null,
+      groom_name: event.groom_name || null,
+      event_date: event.event_date,
+      event_time: event.event_time,
+      venue: event.venue,
+      cover_image_url: event.cover_image_url ?? null,
+    })
     .select()
     .single();
 
@@ -102,6 +123,33 @@ export async function getEventById(
   }
 
   return data as Event | null;
+}
+
+export async function updateEvent(
+  id: number,
+  event: UpdateEvent
+): Promise<Event> {
+  const { data, error } = await supabase
+    .from("events")
+    .update({
+      title: event.title,
+      event_type: event.event_type,
+      bride_name: event.bride_name || null,
+      groom_name: event.groom_name || null,
+      event_date: event.event_date,
+      event_time: event.event_time,
+      venue: event.venue,
+      cover_image_url: event.cover_image_url ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Event;
 }
 
 export async function deleteEvent(id: number) {
