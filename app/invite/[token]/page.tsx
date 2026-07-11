@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getInvitationByToken } from "@/services/invitationService";
 import Countdown from "@/components/invitation/Countdown";
+import InvitationHero from "@/components/invitation/InvitationHero";
 
 type Props = {
   params: Promise<{
@@ -76,7 +77,7 @@ function getInvitationTheme(eventType: string): InvitationTheme {
       invitationLabel: "Come Celebrate With Us",
       eventLabel: "Birthday Celebration",
       message:
-        "Join us for a joyful birthday celebration filled with happiness, laughter and wonderful memories. We would be delighted to celebrate with you.",
+        "Join us for a joyful birthday celebration filled with happiness, laughter and wonderful memories.",
       pageBackground:
         "bg-gradient-to-br from-purple-100 via-white to-pink-100",
       heroBackground:
@@ -85,50 +86,6 @@ function getInvitationTheme(eventType: string): InvitationTheme {
       detailBackground: "bg-purple-50",
       guestBoxStyle: "border-purple-200 bg-purple-50",
       statusStyle: "bg-purple-100 text-purple-700",
-    };
-  }
-
-  if (
-    normalizedType === "corporate" ||
-    normalizedType.includes("conference") ||
-    normalizedType.includes("seminar") ||
-    normalizedType.includes("business")
-  ) {
-    return {
-      icon: "💼",
-      invitationLabel: "Official Invitation",
-      eventLabel: "Corporate Event",
-      message:
-        "You are formally invited to attend this important event. We look forward to welcoming you and sharing a valuable and memorable experience.",
-      pageBackground:
-        "bg-gradient-to-br from-slate-200 via-white to-blue-100",
-      heroBackground:
-        "bg-gradient-to-r from-slate-900 via-blue-800 to-blue-600",
-      accentText: "text-blue-800",
-      detailBackground: "bg-blue-50",
-      guestBoxStyle: "border-blue-200 bg-blue-50",
-      statusStyle: "bg-blue-100 text-blue-700",
-    };
-  }
-
-  if (
-    normalizedType === "graduation" ||
-    normalizedType.includes("graduation")
-  ) {
-    return {
-      icon: "🎓",
-      invitationLabel: "You Are Invited",
-      eventLabel: "Graduation Celebration",
-      message:
-        "Join us as we celebrate this remarkable achievement and an exciting new chapter. Your presence will make this milestone even more meaningful.",
-      pageBackground:
-        "bg-gradient-to-br from-indigo-100 via-white to-amber-100",
-      heroBackground:
-        "bg-gradient-to-r from-indigo-800 via-indigo-600 to-amber-500",
-      accentText: "text-indigo-700",
-      detailBackground: "bg-indigo-50",
-      guestBoxStyle: "border-indigo-200 bg-indigo-50",
-      statusStyle: "bg-indigo-100 text-indigo-700",
     };
   }
 
@@ -200,34 +157,14 @@ export default async function InvitationPage({ params }: Props) {
       className={`min-h-screen px-4 py-8 sm:py-12 ${theme.pageBackground}`}
     >
       <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <section
-          className={`relative overflow-hidden px-6 py-14 text-center text-white sm:px-10 sm:py-16 ${theme.heroBackground}`}
-        >
-          <div className="absolute -left-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
-          <div className="absolute -bottom-16 -right-12 h-52 w-52 rounded-full bg-white/10" />
-
-          <div className="relative">
-            <div className="text-5xl">{theme.icon}</div>
-
-            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.3em] text-white/90">
-              {theme.invitationLabel}
-            </p>
-
-            <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl">
-              {heroTitle}
-            </h1>
-
-            <p className="mt-4 text-lg font-medium text-white/90">
-              {theme.eventLabel}
-            </p>
-
-            {heroTitle !== invitation.event_title && (
-              <p className="mt-2 text-base text-white/80">
-                {invitation.event_title}
-              </p>
-            )}
-          </div>
-        </section>
+        <InvitationHero
+          icon={theme.icon}
+          invitationLabel={theme.invitationLabel}
+          heroTitle={heroTitle}
+          eventLabel={theme.eventLabel}
+          eventTitle={invitation.event_title}
+          heroBackground={theme.heroBackground}
+        />
 
         <section className="px-6 py-10 sm:px-12 sm:py-12">
           <div
@@ -250,9 +187,7 @@ export default async function InvitationPage({ params }: Props) {
 
           <div className="my-9 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-200" />
-            <span className={`text-2xl ${theme.accentText}`}>
-              ✦
-            </span>
+            <span className={`text-2xl ${theme.accentText}`}>✦</span>
             <div className="h-px flex-1 bg-slate-200" />
           </div>
 
