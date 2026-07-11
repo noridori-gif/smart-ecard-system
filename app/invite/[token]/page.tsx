@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getInvitationByToken } from "@/services/invitationService";
 import Countdown from "@/components/invitation/Countdown";
 import InvitationHero from "@/components/invitation/InvitationHero";
+import EventPass from "@/components/invitation/EventPass";
 
 type Props = {
   params: Promise<{
@@ -256,6 +257,15 @@ export default async function InvitationPage({ params }: Props) {
                 : "Guests"}
             </p>
           </div>
+
+          <EventPass
+            guestName={invitation.guest_name}
+            qrToken={invitation.qr_token}
+            allowedGuests={invitation.allowed_guests}
+            category={invitation.category}
+            accentTextClass={theme.accentText}
+            boxClassName={theme.detailBackground}
+          />
 
           <div className="mt-8 text-center">
             <p className="text-sm font-medium text-slate-500">
