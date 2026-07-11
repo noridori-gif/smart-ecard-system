@@ -13,7 +13,11 @@ export type Invitation = {
 export type InvitationWithDetails = Invitation & {
   events: {
     title: string;
+    event_date: string;
+    event_time: string;
+    venue: string;
   } | null;
+
   guests: {
     full_name: string;
     phone: string | null;
@@ -108,7 +112,10 @@ export async function getAllInvitations(): Promise<
     .select(`
       *,
       events (
-        title
+        title,
+        event_date,
+        event_time,
+        venue
       ),
       guests (
         full_name,

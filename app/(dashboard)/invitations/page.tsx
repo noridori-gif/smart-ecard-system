@@ -6,6 +6,33 @@ import {
   InvitationWithDetails,
 } from "@/services/invitationService";
 
+function formatPhoneForWhatsApp(phone: string | null) {
+  if (!phone) {
+    return "";
+  }
+
+  let cleanedPhone = phone.replace(/\D/g, "");
+
+  if (cleanedPhone.startsWith("0")) {
+    cleanedPhone = `255${cleanedPhone.slice(1)}`;
+  }
+
+  return cleanedPhone;
+}
+
+function formatEventDate(eventDate?: string) {
+  if (!eventDate) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${eventDate}T00:00:00`));
+}
+
 export default function InvitationsPage() {
   const [invitations, setInvitations] = useState<
     InvitationWithDetails[]
@@ -37,9 +64,84 @@ export default function InvitationsPage() {
     loadInvitations();
   }, []);
 
+  function getInvitationLink(invitationToken: string) {
+    return `${window.location.origin}/invite/${invitationToken}`;
+  }
+
+  function handleViewInvitation(invitationToken: string) {
+    const invitationLink =
+      getInvitationLink(invitationToken);
+
+    window.open(
+      invitationLink,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  function handleWhatsAppShare(
+    invitation: InvitationWithDetails
+  ) {
+    const guestName =
+      invitation.guests?.full_name ?? "Guest";
+
+    const eventTitle =
+      invitation.events?.title ?? "our special event";
+
+    const eventDate = formatEventDate(
+      invitation.events?.event_date
+    );
+
+    const eventTime = invitation.events?.event_time
+      ? invitation.events.event_time.slice(0, 5)
+      : "";
+
+    const venue =
+      invitation.events?.venue ?? "";
+
+    const invitationLink = getInvitationLink(
+      invitation.invitation_token
+    );
+
+    const messageLines = [
+      `Hello ${guestName},`,
+      "",
+      `You are warmly invited to ${eventTitle}.`,
+      "",
+      eventDate ? `📅 Date: ${eventDate}` : "",
+      eventTime ? `🕒 Time: ${eventTime}` : "",
+      venue ? `📍 Venue: ${venue}` : "",
+      "",
+      "Please open your personal invitation using the link below:",
+      invitationLink,
+      "",
+      "Your invitation contains your unique QR pass. Please present it at the entrance.",
+      "",
+      "We look forward to celebrating with you.",
+    ];
+
+    const message = messageLines.join("\n");
+
+    const encodedMessage = encodeURIComponent(message);
+
+    const formattedPhone = formatPhoneForWhatsApp(
+      invitation.guests?.phone ?? null
+    );
+
+    const whatsappUrl = formattedPhone
+      ? `https://wa.me/${formattedPhone}?text=${encodedMessage}`
+      : `https://wa.me/?text=${encodedMessage}`;
+
+    window.open(
+      whatsappUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
   return (
-    <main className="p-8">
-      <div className="rounded-xl bg-white p-8 shadow-sm">
+    <main className="p-4 sm:p-8">
+      <div className="rounded-xl bg-white p-5 shadow-sm sm:p-8">
         <h1 className="text-3xl font-bold text-slate-900">
           Invitations
         </h1>
@@ -90,7 +192,7 @@ export default function InvitationsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Token
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -102,27 +204,59 @@ export default function InvitationsPage() {
                     className="border-b border-slate-100"
                   >
                     <td className="px-4 py-4 text-sm text-slate-800">
-                      {invitation.guests?.full_name ?? "Unknown guest"}
+                      <p className="font-semibold">
+                        {invitation.guests?.full_name ??
+                          "Unknown guest"}
+                      </p>
+
+                      {invitation.guests?.phone && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {invitation.guests.phone}
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-4 py-4 text-sm text-slate-800">
-                      {invitation.events?.title ?? "Unknown event"}
+                      {invitation.events?.title ??
+                        "Unknown event"}
                     </td>
 
                     <td className="px-4 py-4 text-sm">
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+                      <span className="rounded-full bg-blue-50 px-3 py-1 capitalize text-blue-700">
                         {invitation.invitation_status}
                       </span>
                     </td>
 
                     <td className="px-4 py-4 text-sm">
-                      <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
+                      <span className="rounded-full bg-amber-50 px-3 py-1 capitalize text-amber-700">
                         {invitation.rsvp_status}
                       </span>
                     </td>
 
-                    <td className="max-w-xs truncate px-4 py-4 text-sm text-slate-500">
-                      {invitation.invitation_token}
+                    <td className="px-4 py-4">
+                      <div className="flex min-w-max flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleViewInvitation(
+                              invitation.invitation_token
+                            )
+                          }
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                        >
+                          View Invitation
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleWhatsAppShare(invitation)
+                          }
+                          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                        >
+                          WhatsApp
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
