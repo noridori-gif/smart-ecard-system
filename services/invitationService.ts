@@ -21,6 +21,28 @@ export type InvitationWithDetails = Invitation & {
   } | null;
 };
 
+export type PublicInvitation = {
+  invitation_id: number;
+  invitation_token: string;
+  invitation_status: string;
+  rsvp_status: string;
+
+  guest_id: number;
+  guest_name: string;
+  allowed_guests: number;
+  category: string | null;
+  qr_token: string;
+
+  event_id: number;
+  event_title: string;
+  event_type: string;
+  bride_name: string | null;
+  groom_name: string | null;
+  event_date: string;
+  event_time: string;
+  venue: string;
+};
+
 export async function createInvitation(
   eventId: number,
   guestId: number
@@ -43,18 +65,23 @@ export async function createInvitation(
 
 export async function getInvitationByToken(
   token: string
-): Promise<Invitation | null> {
-  const { data, error } = await supabase
-    .from("invitations")
-    .select("*")
-    .eq("invitation_token", token)
-    .maybeSingle();
+): Promise<PublicInvitation | null> {
+  const { data, error } = await supabase.rpc(
+    "get_public_invitation",
+    {
+      token_input: token,
+    }
+  );
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data as Invitation | null;
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  return data[0] as PublicInvitation;
 }
 
 export async function getInvitationsByEvent(
