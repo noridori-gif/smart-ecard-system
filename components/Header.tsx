@@ -1,34 +1,59 @@
-export default function Header() {
+"use client";
+
+type HeaderProps = {
+  onMenuClick: () => void;
+};
+
+export default function Header({
+  onMenuClick,
+}: HeaderProps) {
   return (
-    <header className="bg-white shadow-sm rounded-xl p-5 flex justify-between items-center">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800">
-          Dashboard
-        </h2>
+    <header className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl text-blue-800 hover:bg-blue-100 lg:hidden"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
 
-        <p className="text-gray-500 text-sm">
-          Welcome back to Smart Event Pass
-        </p>
-      </div>
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
+              Dashboard
+            </h2>
 
-      <div className="flex items-center gap-6">
-        <button className="text-2xl">
-          🔔
-        </button>
-
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold">
-            N
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block">
+              Welcome back to Smart Event Pass
+            </p>
           </div>
+        </div>
 
-          <div>
-            <p className="font-semibold">
-              Noriega
-            </p>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl hover:bg-amber-100"
+            aria-label="Notifications"
+          >
+            🔔
+          </button>
 
-            <p className="text-xs text-gray-500">
-              Administrator
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 font-bold text-white">
+              N
+            </div>
+
+            <div className="hidden sm:block">
+              <p className="font-semibold text-slate-900">
+                Noriega
+              </p>
+
+              <p className="text-xs text-slate-500">
+                Administrator
+              </p>
+            </div>
           </div>
         </div>
       </div>
