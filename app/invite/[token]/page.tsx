@@ -90,6 +90,50 @@ function getInvitationTheme(eventType: string): InvitationTheme {
     };
   }
 
+  if (
+    normalizedType === "corporate" ||
+    normalizedType.includes("conference") ||
+    normalizedType.includes("seminar") ||
+    normalizedType.includes("business")
+  ) {
+    return {
+      icon: "💼",
+      invitationLabel: "Official Invitation",
+      eventLabel: "Corporate Event",
+      message:
+        "You are formally invited to attend this important event. We look forward to welcoming you and sharing a valuable and memorable experience.",
+      pageBackground:
+        "bg-gradient-to-br from-slate-200 via-white to-blue-100",
+      heroBackground:
+        "bg-gradient-to-r from-slate-900 via-blue-800 to-blue-600",
+      accentText: "text-blue-800",
+      detailBackground: "bg-blue-50",
+      guestBoxStyle: "border-blue-200 bg-blue-50",
+      statusStyle: "bg-blue-100 text-blue-700",
+    };
+  }
+
+  if (
+    normalizedType === "graduation" ||
+    normalizedType.includes("graduation")
+  ) {
+    return {
+      icon: "🎓",
+      invitationLabel: "You Are Invited",
+      eventLabel: "Graduation Celebration",
+      message:
+        "Join us as we celebrate this remarkable achievement and an exciting new chapter. Your presence will make this milestone even more meaningful.",
+      pageBackground:
+        "bg-gradient-to-br from-indigo-100 via-white to-amber-100",
+      heroBackground:
+        "bg-gradient-to-r from-indigo-800 via-indigo-600 to-amber-500",
+      accentText: "text-indigo-700",
+      detailBackground: "bg-indigo-50",
+      guestBoxStyle: "border-indigo-200 bg-indigo-50",
+      statusStyle: "bg-indigo-100 text-indigo-700",
+    };
+  }
+
   return {
     icon: "🎉",
     invitationLabel: "You Are Invited",
@@ -165,6 +209,7 @@ export default async function InvitationPage({ params }: Props) {
           eventLabel={theme.eventLabel}
           eventTitle={invitation.event_title}
           heroBackground={theme.heroBackground}
+          coverImageUrl={invitation.cover_image_url}
         />
 
         <section className="px-6 py-10 sm:px-12 sm:py-12">

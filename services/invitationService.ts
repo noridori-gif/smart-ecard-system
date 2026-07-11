@@ -16,6 +16,7 @@ export type InvitationWithDetails = Invitation & {
     event_date: string;
     event_time: string;
     venue: string;
+    cover_image_url: string | null;
   } | null;
 
   guests: {
@@ -45,6 +46,7 @@ export type PublicInvitation = {
   event_date: string;
   event_time: string;
   venue: string;
+  cover_image_url: string | null;
 };
 
 export async function createInvitation(
@@ -115,7 +117,8 @@ export async function getAllInvitations(): Promise<
         title,
         event_date,
         event_time,
-        venue
+        venue,
+        cover_image_url
       ),
       guests (
         full_name,
