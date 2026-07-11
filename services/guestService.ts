@@ -10,6 +10,14 @@ export type NewGuest = {
   allowed_guests?: number;
 };
 
+export type UpdateGuest = {
+  full_name: string;
+  phone?: string;
+  email?: string;
+  category?: string;
+  allowed_guests?: number;
+};
+
 export type Guest = {
   id: number;
   event_id: number;
@@ -24,7 +32,9 @@ export type Guest = {
   created_at: string;
 };
 
-export async function createGuest(guest: NewGuest) {
+export async function createGuest(
+  guest: NewGuest
+): Promise<Guest> {
   const { data, error } = await supabase
     .from("guests")
     .insert(guest)
@@ -45,7 +55,9 @@ export async function createGuest(guest: NewGuest) {
   return createdGuest;
 }
 
-export async function getGuestsByEvent(eventId: number) {
+export async function getGuestsByEvent(
+  eventId: number
+): Promise<Guest[]> {
   const { data, error } = await supabase
     .from("guests")
     .select("*")
@@ -59,7 +71,9 @@ export async function getGuestsByEvent(eventId: number) {
   return (data ?? []) as Guest[];
 }
 
-export async function getGuestById(guestId: number) {
+export async function getGuestById(
+  guestId: number
+): Promise<Guest> {
   const { data, error } = await supabase
     .from("guests")
     .select("*")
@@ -73,7 +87,33 @@ export async function getGuestById(guestId: number) {
   return data as Guest;
 }
 
-export async function getGuestByQrToken(qrToken: string) {
+export async function updateGuest(
+  guestId: number,
+  guest: UpdateGuest
+): Promise<Guest> {
+  const { data, error } = await supabase
+    .from("guests")
+    .update({
+      full_name: guest.full_name,
+      phone: guest.phone || null,
+      email: guest.email || null,
+      category: guest.category || "Normal",
+      allowed_guests: guest.allowed_guests ?? 1,
+    })
+    .eq("id", guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Guest;
+}
+
+export async function getGuestByQrToken(
+  qrToken: string
+): Promise<Guest | null> {
   const { data, error } = await supabase
     .from("guests")
     .select("*")
@@ -87,7 +127,9 @@ export async function getGuestByQrToken(qrToken: string) {
   return data as Guest | null;
 }
 
-export async function checkInGuest(qrToken: string) {
+export async function checkInGuest(
+  qrToken: string
+) {
   const guest = await getGuestByQrToken(qrToken);
 
   if (!guest) {
@@ -132,7 +174,9 @@ export async function checkInGuest(qrToken: string) {
   };
 }
 
-export async function deleteGuest(id: number) {
+export async function deleteGuest(
+  id: number
+) {
   const { error } = await supabase
     .from("guests")
     .delete()

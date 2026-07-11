@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
 import { useParams } from "next/navigation";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
@@ -9,6 +13,7 @@ import {
   createGuest,
   deleteGuest,
   getGuestsByEvent,
+  updateGuest,
   type Guest,
   type NewGuest,
 } from "@/services/guestService";
@@ -27,9 +32,16 @@ export default function EventGuestsPage() {
 
   const [guests, setGuests] = useState<Guest[]>([]);
   const [formData, setFormData] = useState(initialForm);
+
+  const [editingGuestId, setEditingGuestId] =
+    useState<number | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [deletingGuestId, setDeletingGuestId] = useState<number | null>(null);
+
+  const [deletingGuestId, setDeletingGuestId] =
+    useState<number | null>(null);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -41,12 +53,11 @@ export default function EventGuestsPage() {
       const data = await getGuestsByEvent(eventId);
       setGuests(data);
     } catch (error) {
-      const message =
+      setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Wageni hawakuweza kupatikana.";
-
-      setErrorMessage(message);
+          : "Wageni hawakuweza kupatikana."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +69,9 @@ export default function EventGuestsPage() {
     }
   }, [eventId]);
 
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
     const { name, value } = event.target;
 
     setFormData((currentData) => ({
@@ -67,34 +80,84 @@ export default function EventGuestsPage() {
     }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function resetForm() {
+    setFormData(initialForm);
+    setEditingGuestId(null);
+  }
+
+  function handleEditGuest(guest: Guest) {
+    setEditingGuestId(guest.id);
+
+    setFormData({
+      full_name: guest.full_name,
+      phone: guest.phone ?? "",
+      email: guest.email ?? "",
+      category: guest.category ?? "Normal",
+      allowed_guests: String(guest.allowed_guests),
+    });
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     setIsSaving(true);
     setErrorMessage("");
     setSuccessMessage("");
 
-    const newGuest: NewGuest = {
-      event_id: eventId,
-      full_name: formData.full_name,
-      phone: formData.phone || undefined,
-      email: formData.email || undefined,
-      category: formData.category,
-      allowed_guests: Number(formData.allowed_guests),
-    };
-
     try {
-      await createGuest(newGuest);
-      setFormData(initialForm);
-      setSuccessMessage("Mgeni ameongezwa vizuri.");
+      if (editingGuestId !== null) {
+        await updateGuest(editingGuestId, {
+          full_name: formData.full_name,
+          phone: formData.phone || undefined,
+          email: formData.email || undefined,
+          category: formData.category,
+          allowed_guests: Number(
+            formData.allowed_guests
+          ),
+        });
+
+        setSuccessMessage(
+          "Taarifa za mgeni zimebadilishwa vizuri."
+        );
+      } else {
+        const newGuest: NewGuest = {
+          event_id: eventId,
+          full_name: formData.full_name,
+          phone: formData.phone || undefined,
+          email: formData.email || undefined,
+          category: formData.category,
+          allowed_guests: Number(
+            formData.allowed_guests
+          ),
+        };
+
+        await createGuest(newGuest);
+
+        setSuccessMessage(
+          "Mgeni ameongezwa vizuri."
+        );
+      }
+
+      resetForm();
       await loadGuests();
     } catch (error) {
-      const message =
+      setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Mgeni hakuweza kuhifadhiwa.";
-
-      setErrorMessage(message);
+          : editingGuestId !== null
+            ? "Taarifa za mgeni hazikuweza kubadilishwa."
+            : "Mgeni hakuweza kuhifadhiwa."
+      );
     } finally {
       setIsSaving(false);
     }
@@ -115,15 +178,22 @@ export default function EventGuestsPage() {
 
     try {
       await deleteGuest(guest.id);
-      setSuccessMessage(`${guest.full_name} amefutwa vizuri.`);
+
+      if (editingGuestId === guest.id) {
+        resetForm();
+      }
+
+      setSuccessMessage(
+        `${guest.full_name} amefutwa vizuri.`
+      );
+
       await loadGuests();
     } catch (error) {
-      const message =
+      setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Mgeni hakuweza kufutwa.";
-
-      setErrorMessage(message);
+          : "Mgeni hakuweza kufutwa."
+      );
     } finally {
       setDeletingGuestId(null);
     }
@@ -141,10 +211,31 @@ export default function EventGuestsPage() {
         </p>
       </div>
 
-      <div className="mt-8 rounded-xl bg-white p-8 shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Add New Guest
-        </h2>
+      <div className="mt-8 rounded-xl bg-white p-5 shadow-md sm:p-8">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {editingGuestId !== null
+              ? "Edit Guest"
+              : "Add New Guest"}
+          </h2>
+
+          {editingGuestId !== null && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
+
+        {editingGuestId !== null && (
+          <div className="mt-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
+            Unahariri taarifa za mgeni. QR code na invitation
+            link vitabaki vilevile.
+          </div>
+        )}
 
         {errorMessage && (
           <div className="mt-5 rounded-lg bg-red-50 p-4 text-red-700">
@@ -206,9 +297,17 @@ export default function EventGuestsPage() {
             onChange={handleChange}
           />
 
-          <div className="flex items-end">
+          <div className="flex items-end gap-3">
             <Button
-              text={isSaving ? "Saving..." : "Add Guest"}
+              text={
+                isSaving
+                  ? editingGuestId !== null
+                    ? "Updating..."
+                    : "Saving..."
+                  : editingGuestId !== null
+                    ? "Update Guest"
+                    : "Add Guest"
+              }
               type="submit"
               disabled={isSaving}
             />
@@ -237,7 +336,7 @@ export default function EventGuestsPage() {
 
         {!isLoading && guests.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full min-w-[950px] text-left">
               <thead className="bg-gray-50 text-sm uppercase text-gray-600">
                 <tr>
                   <th className="px-6 py-4">Name</th>
@@ -251,7 +350,14 @@ export default function EventGuestsPage() {
 
               <tbody className="divide-y divide-gray-200">
                 {guests.map((guest) => (
-                  <tr key={guest.id} className="hover:bg-gray-50">
+                  <tr
+                    key={guest.id}
+                    className={
+                      editingGuestId === guest.id
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50"
+                    }
+                  >
                     <td className="px-6 py-4 font-semibold text-gray-800">
                       {guest.full_name}
                     </td>
@@ -269,7 +375,13 @@ export default function EventGuestsPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800">
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm capitalize ${
+                          guest.status === "checked_in"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
                         {guest.status}
                       </span>
                     </td>
@@ -285,8 +397,25 @@ export default function EventGuestsPage() {
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(guest)}
-                          disabled={deletingGuestId === guest.id}
+                          onClick={() =>
+                            handleEditGuest(guest)
+                          }
+                          disabled={
+                            deletingGuestId === guest.id
+                          }
+                          className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDelete(guest)
+                          }
+                          disabled={
+                            deletingGuestId === guest.id
+                          }
                           className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
                         >
                           {deletingGuestId === guest.id
