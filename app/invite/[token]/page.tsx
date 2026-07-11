@@ -4,6 +4,7 @@ import { getInvitationByToken } from "@/services/invitationService";
 import Countdown from "@/components/invitation/Countdown";
 import InvitationHero from "@/components/invitation/InvitationHero";
 import EventPass from "@/components/invitation/EventPass";
+import RsvpButtons from "@/components/invitation/RsvpButtons";
 
 type Props = {
   params: Promise<{
@@ -207,7 +208,6 @@ export async function generateMetadata({
     return {
       title,
       description,
-
       openGraph: {
         title,
         description,
@@ -223,7 +223,6 @@ export async function generateMetadata({
             ]
           : undefined,
       },
-
       twitter: {
         card: imageUrl
           ? "summary_large_image"
@@ -336,13 +335,9 @@ export default async function InvitationPage({
 
           <div className="my-9 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-200" />
-
-            <span
-              className={`text-2xl ${theme.accentText}`}
-            >
+            <span className={`text-2xl ${theme.accentText}`}>
               ✦
             </span>
-
             <div className="h-px flex-1 bg-slate-200" />
           </div>
 
@@ -417,25 +412,17 @@ export default async function InvitationPage({
           <EventPass
             guestName={invitation.guest_name}
             qrToken={invitation.qr_token}
-            allowedGuests={
-              invitation.allowed_guests
-            }
+            allowedGuests={invitation.allowed_guests}
             category={invitation.category}
             accentTextClass={theme.accentText}
             boxClassName={theme.detailBackground}
           />
 
-          <div className="mt-8 text-center">
-            <p className="text-sm font-medium text-slate-500">
-              RSVP Status
-            </p>
-
-            <span
-              className={`mt-3 inline-flex rounded-full px-5 py-2 text-sm font-bold capitalize ${theme.statusStyle}`}
-            >
-              {invitation.rsvp_status}
-            </span>
-          </div>
+          <RsvpButtons
+            invitationToken={invitation.invitation_token}
+            currentStatus={invitation.rsvp_status}
+            accentTextClass={theme.accentText}
+          />
 
           <div className="mt-10 border-t border-slate-100 pt-7 text-center">
             <p className="text-sm font-semibold text-slate-500">
