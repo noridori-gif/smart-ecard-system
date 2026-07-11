@@ -1,14 +1,21 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
@@ -19,11 +26,25 @@ export default function LoginPage() {
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Login halisi tutaunganisha baadaye.
-    console.log(formData);
+    setErrorMessage("");
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -58,7 +79,16 @@ export default function LoginPage() {
             onChange={handleChange}
           />
 
-          <Button text="Login" type="submit" />
+          {errorMessage && (
+            <p className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+              {errorMessage}
+            </p>
+          )}
+
+          <Button
+            text={isLoading ? "Signing in..." : "Login"}
+            type="submit"
+          />
         </form>
       </div>
     </main>
