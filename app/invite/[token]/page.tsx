@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInvitationByToken } from "@/services/invitationService";
+import Countdown from "@/components/invitation/Countdown";
 
 type Props = {
   params: Promise<{
@@ -298,6 +299,13 @@ export default async function InvitationPage({ params }: Props) {
               </p>
             </div>
           </div>
+
+          <Countdown
+            eventDate={invitation.event_date}
+            eventTime={invitation.event_time}
+            accentTextClass={theme.accentText}
+            boxClassName={theme.detailBackground}
+          />
 
           <div
             className={`mt-7 rounded-2xl border p-6 text-center ${theme.guestBoxStyle}`}
