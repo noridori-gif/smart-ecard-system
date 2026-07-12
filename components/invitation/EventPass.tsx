@@ -2,11 +2,14 @@
 
 import { QRCodeSVG } from "qrcode.react";
 
+type Language = "sw" | "en";
+
 type EventPassProps = {
   guestName: string;
   qrToken: string;
   allowedGuests: number;
   category: string | null;
+  language?: Language;
   accentTextClass?: string;
   boxClassName?: string;
 };
@@ -16,57 +19,92 @@ export default function EventPass({
   qrToken,
   allowedGuests,
   category,
+  language = "sw",
   accentTextClass = "text-blue-700",
   boxClassName = "bg-slate-50",
 }: EventPassProps) {
+  const t =
+    language === "sw"
+      ? {
+          title: "Smart Event Pass",
+          guest: "Mgeni",
+          category: "Kundi",
+          allowed: "Wageni Wanaruhusiwa",
+          scan: "Scan QR hii wakati wa kuingia.",
+          guestWord: "Mgeni",
+          guestsWord: "Wageni",
+        }
+      : {
+          title: "Smart Event Pass",
+          guest: "Guest",
+          category: "Category",
+          allowed: "Allowed Guests",
+          scan: "Present this QR code during check-in.",
+          guestWord: "Guest",
+          guestsWord: "Guests",
+        };
+
   return (
-    <section className="mt-9">
-      <div
-        className={`rounded-3xl border border-slate-200 p-6 text-center shadow-sm ${boxClassName}`}
-      >
-        <div className="text-4xl">🎟️</div>
-
-        <p className="mt-3 text-xs font-bold uppercase tracking-[0.25em] text-slate-500">
-          Event Pass
-        </p>
-
-        <h3 className={`mt-2 text-2xl font-bold ${accentTextClass}`}>
-          {guestName}
+    <section
+      className={`mt-8 rounded-3xl border border-slate-200 p-6 shadow-sm ${boxClassName}`}
+    >
+      <div className="text-center">
+        <h3
+          className={`text-2xl font-bold ${accentTextClass}`}
+        >
+          {t.title}
         </h3>
+      </div>
 
-        <div className="mt-6 flex justify-center rounded-2xl bg-white p-5">
-          <QRCodeSVG
-            value={qrToken}
-            size={240}
-            level="H"
-            includeMargin
-          />
-        </div>
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              {t.guest}
+            </p>
 
-        <p className="mt-5 text-sm font-medium text-slate-700">
-          Present this QR code at the entrance.
-        </p>
-
-        <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-white p-3">
-            <p className="text-slate-500">Category</p>
-            <p className="mt-1 font-semibold text-slate-900">
-              {category ?? "Normal"}
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {guestName}
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-3">
-            <p className="text-slate-500">Admits</p>
-            <p className="mt-1 font-semibold text-slate-900">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              {t.category}
+            </p>
+
+            <p className="mt-1 text-lg font-semibold text-slate-900">
+              {category ?? "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              {t.allowed}
+            </p>
+
+            <p className="mt-1 text-lg font-semibold text-slate-900">
               {allowedGuests}{" "}
-              {allowedGuests === 1 ? "Guest" : "Guests"}
+              {allowedGuests === 1
+                ? t.guestWord
+                : t.guestsWord}
             </p>
           </div>
         </div>
 
-        <p className="mt-5 text-xs text-slate-400">
-          This pass is unique to the invited guest.
-        </p>
+        <div className="flex flex-col items-center justify-center">
+          <div className="rounded-2xl bg-white p-4 shadow">
+            <QRCodeSVG
+              value={qrToken}
+              size={180}
+              includeMargin
+            />
+          </div>
+
+          <p className="mt-4 text-center text-sm text-slate-500">
+            {t.scan}
+          </p>
+        </div>
       </div>
     </section>
   );
