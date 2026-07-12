@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 
+import PDFExportButton from "@/components/reports/PDFExportButton";
+
 import {
   calculateEventReportSummary,
   getReportEvents,
@@ -81,7 +83,9 @@ function formatEventDate(value: string) {
   }).format(new Date(`${value}T00:00:00`));
 }
 
-function formatStatusLabel(status: string | null | undefined) {
+function formatStatusLabel(
+  status: string | null | undefined
+) {
   if (status === "checked_in") {
     return "Checked In";
   }
@@ -387,9 +391,6 @@ export default function ReportsPage() {
 
       const workbook = XLSX.utils.book_new();
 
-      /*
-       * SHEET 1: EVENT SUMMARY
-       */
       const summaryRows = [
         {
           "Report Item": "Event Name",
@@ -479,9 +480,6 @@ export default function ReportsPage() {
         "Event Summary"
       );
 
-      /*
-       * SHEET 2: ATTENDANCE
-       */
       const attendanceRows = guests.map(
         (guest, index) => ({
           No: index + 1,
@@ -513,9 +511,6 @@ export default function ReportsPage() {
         "Attendance"
       );
 
-      /*
-       * SHEET 3: GUEST LIST
-       */
       const guestRows = guests.map(
         (guest, index) => ({
           No: index + 1,
@@ -548,9 +543,6 @@ export default function ReportsPage() {
         "Guest List"
       );
 
-      /*
-       * SHEET 4: INVITATIONS & RSVP
-       */
       const invitationRows = invitations.map(
         (invitation, index) => ({
           No: index + 1,
@@ -681,6 +673,14 @@ export default function ReportsPage() {
                 : "Export Complete Excel Report"}
             </span>
           </button>
+
+          <PDFExportButton
+            event={selectedEvent}
+            summary={summary}
+            guests={guests}
+            invitations={invitations}
+            disabled={loadingReport}
+          />
         </div>
       </div>
 
