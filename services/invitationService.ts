@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 
+export type EventLanguage = "sw" | "en";
+
 export type Invitation = {
   id: number;
   event_id: number;
@@ -7,15 +9,29 @@ export type Invitation = {
   invitation_token: string;
   invitation_status: string;
   rsvp_status: string;
+  viewed_at?: string | null;
   created_at: string;
 };
 
 export type InvitationWithDetails = Invitation & {
   events: {
     title: string;
+    event_type: string;
+
+    language: EventLanguage;
+
+    ceremony_title: string | null;
+    ceremony_date: string | null;
+    ceremony_time: string | null;
+    ceremony_venue: string | null;
+    ceremony_map_url: string | null;
+
     event_date: string;
     event_time: string;
     venue: string;
+    reception_map_url: string | null;
+
+    dress_code: string | null;
     cover_image_url: string | null;
   } | null;
 
@@ -41,11 +57,24 @@ export type PublicInvitation = {
   event_id: number;
   event_title: string;
   event_type: string;
+
   bride_name: string | null;
   groom_name: string | null;
+
+  language: EventLanguage;
+
+  ceremony_title: string | null;
+  ceremony_date: string | null;
+  ceremony_time: string | null;
+  ceremony_venue: string | null;
+  ceremony_map_url: string | null;
+
   event_date: string;
   event_time: string;
   venue: string;
+  reception_map_url: string | null;
+
+  dress_code: string | null;
   cover_image_url: string | null;
 };
 
@@ -97,7 +126,9 @@ export async function getInvitationsByEvent(
     .from("invitations")
     .select("*")
     .eq("event_id", eventId)
-    .order("created_at", { ascending: false });
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (error) {
     throw new Error(error.message);
@@ -115,9 +146,21 @@ export async function getAllInvitations(): Promise<
       *,
       events (
         title,
+        event_type,
+        language,
+
+        ceremony_title,
+        ceremony_date,
+        ceremony_time,
+        ceremony_venue,
+        ceremony_map_url,
+
         event_date,
         event_time,
         venue,
+        reception_map_url,
+
+        dress_code,
         cover_image_url
       ),
       guests (
@@ -126,7 +169,9 @@ export async function getAllInvitations(): Promise<
         email
       )
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (error) {
     throw new Error(error.message);
