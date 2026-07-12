@@ -7,6 +7,9 @@ import EventPass from "@/components/invitation/EventPass";
 import RsvpButtons from "@/components/invitation/RsvpButtons";
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Props = {
   params: Promise<{
     token: string;
@@ -40,7 +43,6 @@ type Translation = {
   guest: string;
   guests: string;
   footer: string;
-  invitationTitle: string;
   invitationDescription: string;
 };
 
@@ -59,8 +61,8 @@ function getTranslation(language: Language): Translation {
       guest: "Mgeni",
       guests: "Wageni",
       footer: "Mwaliko wako. Tukio lako.",
-      invitationTitle: "Mwaliko",
-      invitationDescription: "Fungua mwaliko wako maalumu wa tukio.",
+      invitationDescription:
+        "Fungua mwaliko wako maalumu wa tukio.",
     };
   }
 
@@ -77,8 +79,8 @@ function getTranslation(language: Language): Translation {
     guest: "Guest",
     guests: "Guests",
     footer: "Your invitation. Your moment.",
-    invitationTitle: "Invitation",
-    invitationDescription: "Open your personal event invitation.",
+    invitationDescription:
+      "Open your personal event invitation.",
   };
 }
 
@@ -290,6 +292,7 @@ function formatEventTime(
   }
 
   const swahiliHourValue = (hourValue + 6) % 12;
+
   const swahiliHour =
     swahiliHourValue === 0 ? 12 : swahiliHourValue;
 
@@ -422,8 +425,10 @@ export async function generateMetadata({
 
     if (!invitation) {
       return {
-        title: "Invitation Not Found | Smart Event Pass",
-        description: "This invitation could not be found.",
+        title:
+          "Invitation Not Found | Smart Event Pass",
+        description:
+          "This invitation could not be found.",
       };
     }
 
@@ -461,7 +466,8 @@ export async function generateMetadata({
     return {
       title,
       description:
-        description || translation.invitationDescription,
+        description ||
+        translation.invitationDescription,
 
       openGraph: {
         title,
@@ -491,7 +497,8 @@ export async function generateMetadata({
   } catch {
     return {
       title: "Invitation | Smart Event Pass",
-      description: "Open your personal event invitation.",
+      description:
+        "Open your personal event invitation.",
     };
   }
 }
@@ -505,7 +512,8 @@ export default async function InvitationPage({
     notFound();
   }
 
-  const invitation = await getInvitationByToken(token);
+  const invitation =
+    await getInvitationByToken(token);
 
   if (!invitation) {
     notFound();
@@ -521,9 +529,8 @@ export default async function InvitationPage({
     language
   );
 
-  const normalizedEventType = invitation.event_type
-    .trim()
-    .toLowerCase();
+  const normalizedEventType =
+    invitation.event_type.trim().toLowerCase();
 
   const isWedding =
     normalizedEventType === "wedding" ||
@@ -554,7 +561,9 @@ export default async function InvitationPage({
       className={`min-h-screen px-4 py-8 sm:py-12 ${theme.pageBackground}`}
     >
       <InvitationViewedTracker
-        invitationToken={invitation.invitation_token}
+        invitationToken={
+          invitation.invitation_token
+        }
       />
 
       <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -565,7 +574,9 @@ export default async function InvitationPage({
           eventLabel={theme.eventLabel}
           eventTitle={invitation.event_title}
           heroBackground={theme.heroBackground}
-          coverImageUrl={invitation.cover_image_url}
+          coverImageUrl={
+            invitation.cover_image_url
+          }
         />
 
         <section className="px-5 py-9 sm:px-12 sm:py-12">
@@ -590,7 +601,9 @@ export default async function InvitationPage({
           <div className="my-9 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-200" />
 
-            <span className={`text-2xl ${theme.accentText}`}>
+            <span
+              className={`text-2xl ${theme.accentText}`}
+            >
               ✦
             </span>
 
@@ -608,10 +621,16 @@ export default async function InvitationPage({
                 date={invitation.ceremony_date}
                 time={invitation.ceremony_time}
                 venue={invitation.ceremony_venue}
-                mapUrl={invitation.ceremony_map_url}
+                mapUrl={
+                  invitation.ceremony_map_url
+                }
                 language={language}
-                accentTextClass={theme.accentText}
-                detailBackgroundClass={theme.detailBackground}
+                accentTextClass={
+                  theme.accentText
+                }
+                detailBackgroundClass={
+                  theme.detailBackground
+                }
               />
             )}
 
@@ -621,10 +640,14 @@ export default async function InvitationPage({
               date={invitation.event_date}
               time={invitation.event_time}
               venue={invitation.venue}
-              mapUrl={invitation.reception_map_url}
+              mapUrl={
+                invitation.reception_map_url
+              }
               language={language}
               accentTextClass={theme.accentText}
-              detailBackgroundClass={theme.detailBackground}
+              detailBackgroundClass={
+                theme.detailBackground
+              }
             />
           </div>
 
@@ -649,8 +672,11 @@ export default async function InvitationPage({
           <Countdown
             eventDate={invitation.event_date}
             eventTime={invitation.event_time}
+            language={language}
             accentTextClass={theme.accentText}
-            boxClassName={theme.detailBackground}
+            boxClassName={
+              theme.detailBackground
+            }
           />
 
           <div
@@ -673,15 +699,24 @@ export default async function InvitationPage({
           <EventPass
             guestName={invitation.guest_name}
             qrToken={invitation.qr_token}
-            allowedGuests={invitation.allowed_guests}
+            allowedGuests={
+              invitation.allowed_guests
+            }
             category={invitation.category}
+            language={language}
             accentTextClass={theme.accentText}
-            boxClassName={theme.detailBackground}
+            boxClassName={
+              theme.detailBackground
+            }
           />
 
           <RsvpButtons
-            invitationToken={invitation.invitation_token}
-            currentStatus={invitation.rsvp_status}
+            invitationToken={
+              invitation.invitation_token
+            }
+            currentStatus={
+              invitation.rsvp_status
+            }
             accentTextClass={theme.accentText}
           />
 
