@@ -1,625 +1,475 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+
 import {
   getAllInvitations,
-  type InvitationWithDetails,
+  InvitationWithDetails,
 } from "@/services/invitationService";
 
-type Language = "sw" | "en";
+type NotificationType = "success" | "error";
 
-function normalizeTanzaniaPhone(
-  phone: string | null
-): string {
+type NotificationState = {
+  message: string;
+  type: NotificationType;
+} | null;
+
+function formatPhoneNumber(phone: string | null | undefined) {
   if (!phone) {
     return "";
   }
 
   let cleanedPhone = phone.replace(/\D/g, "");
 
-  if (cleanedPhone.startsWith("255")) {
-    return cleanedPhone;
-  }
-
+  // Tanzania local number: 0712 345 678
   if (cleanedPhone.startsWith("0")) {
-    return `255${cleanedPhone.slice(1)}`;
+    cleanedPhone = `255${cleanedPhone.slice(1)}`;
   }
 
-  if (cleanedPhone.length === 9) {
-    return `255${cleanedPhone}`;
-  }
-
+  // Remove + if it was included before cleaning.
   return cleanedPhone;
 }
 
 function formatEventDate(
-  eventDate: string | undefined,
-  language: Language
+  eventDate: string | null | undefined,
+  language: string | null | undefined
 ) {
   if (!eventDate) {
     return "";
   }
 
-  return new Intl.DateTimeFormat(
-    language === "sw" ? "sw-TZ" : "en-GB",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  ).format(
-    new Date(`${eventDate}T00:00:00`)
-  );
+  const locale = language === "sw" ? "sw-TZ" : "en-GB";
+
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${eventDate}T00:00:00`));
 }
 
-function formatEventTime(
-  eventTime: string | undefined,
-  language: Language
-) {
-  if (!eventTime) {
-    return "";
-  }
-
-  const shortTime = eventTime.slice(0, 5);
-
-  if (language === "en") {
-    const [hour, minute] = shortTime
-      .split(":")
-      .map(Number);
-
-    return new Intl.DateTimeFormat("en-GB", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(
-      new Date(2026, 0, 1, hour, minute)
-    );
-  }
-
-  const [hourValue, minuteValue] =
-    shortTime.split(":").map(Number);
-
-  const swahiliHourValue =
-    (hourValue + 6) % 12;
-
-  const swahiliHour =
-    swahiliHourValue === 0
-      ? 12
-      : swahiliHourValue;
-
-  let period = "usiku";
-
-  if (hourValue >= 5 && hourValue < 12) {
-    period = "asubuhi";
-  } else if (
-    hourValue >= 12 &&
-    hourValue < 16
-  ) {
-    period = "mchana";
-  } else if (
-    hourValue >= 16 &&
-    hourValue < 19
-  ) {
-    period = "jioni";
-  }
-
-  const minutes = String(
-    minuteValue
-  ).padStart(2, "0");
-
-  return `Saa ${swahiliHour}:${minutes} ${period}`;
+function normalizeLanguage(language: string | null | undefined) {
+  return language?.toLowerCase() === "en" ? "en" : "sw";
 }
 
-function getLanguage(
-  invitation: InvitationWithDetails
-): Language {
-  return invitation.events?.language === "en"
-    ? "en"
-    : "sw";
+function buildInvitationUrl(invitationToken: string) {
+  if (typeof window === "undefined") {
+    return `/invite/${invitationToken}`;
+  }
+
+  return `${window.location.origin}/invite/${invitationToken}`;
 }
 
-function createWhatsAppMessage(
-  invitation: InvitationWithDetails,
-  invitationLink: string
-) {
-  const language = getLanguage(invitation);
+function buildInvitationMessage(invitation: InvitationWithDetails) {
+  const language = normalizeLanguage(invitation.language);
 
-  const guestName =
-    invitation.guests?.full_name ??
-    (language === "sw" ? "Mgeni" : "Guest");
-
-  const eventTitle =
-    invitation.events?.title ??
-    (language === "sw"
-      ? "tukio letu maalumu"
-      : "our special event");
-
+  const guestName = invitation.guests?.full_name ?? "Guest";
+  const eventTitle = invitation.events?.title ?? "Event";
   const eventDate = formatEventDate(
     invitation.events?.event_date,
-    language
+    invitation.language
   );
+  const eventVenue = invitation.events?.venue ?? "";
+  const eventPassId = invitation.event_pass_id ?? "Not available";
+  const allowedGuests = invitation.allowed_guests ?? 1;
+  const invitationUrl = buildInvitationUrl(invitation.invitation_token);
 
-  const eventTime = formatEventTime(
-    invitation.events?.event_time,
-    language
-  );
-
-  const venue =
-    invitation.events?.venue ?? "";
-
-  const eventPassId =
-    invitation.guests?.event_pass_id ??
-    (language === "sw"
-      ? "Haijapatikana"
-      : "Not available");
-
-  const allowedGuests =
-    invitation.guests?.allowed_guests ?? 1;
-
-  if (language === "sw") {
+  if (language === "en") {
     return [
-      `Habari ${guestName},`,
+      `Hello ${guestName},`,
       "",
-      `Unaalikwa kwenye ${eventTitle}.`,
-      "",
-      eventDate
-        ? `Tarehe: ${eventDate}`
-        : "",
-      eventTime
-        ? `Muda: ${eventTime}`
-        : "",
-      venue ? `Mahali: ${venue}` : "",
-      "",
+      `You are warmly invited to ${eventTitle}.`,
+      eventDate ? `Date: ${eventDate}` : "",
+      eventVenue ? `Venue: ${eventVenue}` : "",
+      `Allowed guests: ${allowedGuests}`,
       `Event Pass ID: ${eventPassId}`,
-      `Mwaliko unaruhusu: ${allowedGuests} ${
-        allowedGuests === 1
-          ? "mgeni"
-          : "wageni"
-      }`,
       "",
-      "Fungua mwaliko wako kupitia link hii:",
-      invitationLink,
+      "Open your invitation using the link below:",
+      invitationUrl,
       "",
-      "Onyesha QR Code au Event Pass ID mlangoni.",
+      "Please keep your Event Pass ID or QR code ready for check-in.",
       "",
-      "Tunatarajia kukukaribisha.",
+      "Smart Event Pass",
     ]
-      .filter((line) => line !== "")
+      .filter(Boolean)
       .join("\n");
   }
 
   return [
-    `Hello ${guestName},`,
+    `Habari ${guestName},`,
     "",
-    `You are warmly invited to ${eventTitle}.`,
-    "",
-    eventDate
-      ? `Date: ${eventDate}`
-      : "",
-    eventTime
-      ? `Time: ${eventTime}`
-      : "",
-    venue ? `Venue: ${venue}` : "",
-    "",
+    `Unakaribishwa kwa moyo mkunjufu kwenye ${eventTitle}.`,
+    eventDate ? `Tarehe: ${eventDate}` : "",
+    eventVenue ? `Mahali: ${eventVenue}` : "",
+    `Idadi ya wageni wanaoruhusiwa: ${allowedGuests}`,
     `Event Pass ID: ${eventPassId}`,
-    `Invitation admits: ${allowedGuests} ${
-      allowedGuests === 1
-        ? "guest"
-        : "guests"
-    }`,
     "",
-    "Open your personal invitation using this link:",
-    invitationLink,
+    "Fungua mwaliko wako kupitia link hii:",
+    invitationUrl,
     "",
-    "Present your QR Code or Event Pass ID at the entrance.",
+    "Tafadhali hifadhi Event Pass ID au QR code yako kwa ajili ya check-in.",
     "",
-    "We look forward to welcoming you.",
+    "Smart Event Pass",
   ]
-    .filter((line) => line !== "")
+    .filter(Boolean)
     .join("\n");
 }
 
-function createSmsMessage(
-  invitation: InvitationWithDetails
-) {
-  const language = getLanguage(invitation);
-
-  const guestName =
-    invitation.guests?.full_name ??
-    (language === "sw" ? "Mgeni" : "Guest");
-
-  const eventTitle =
-    invitation.events?.title ??
-    (language === "sw"
-      ? "tukio letu"
-      : "our event");
-
-  const eventDate = formatEventDate(
-    invitation.events?.event_date,
-    language
-  );
-
-  const eventTime = formatEventTime(
-    invitation.events?.event_time,
-    language
-  );
-
-  const venue =
-    invitation.events?.venue ?? "";
-
-  const eventPassId =
-    invitation.guests?.event_pass_id ??
-    "N/A";
-
-  const allowedGuests =
-    invitation.guests?.allowed_guests ?? 1;
-
-  if (language === "sw") {
-    return [
-      `Habari ${guestName}.`,
-      `Unaalikwa kwenye ${eventTitle}.`,
-      eventDate,
-      eventTime,
-      venue,
-      `Event Pass ID: ${eventPassId}.`,
-      `Inaruhusu wageni ${allowedGuests}.`,
-      "Onyesha code hii mlangoni.",
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  return [
-    `Hello ${guestName}.`,
-    `You are invited to ${eventTitle}.`,
-    eventDate,
-    eventTime,
-    venue,
-    `Event Pass ID: ${eventPassId}.`,
-    `Admits ${allowedGuests} ${
-      allowedGuests === 1
-        ? "guest"
-        : "guests"
-    }.`,
-    "Present this code at the entrance.",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
 export default function InvitationsPage() {
-  const [invitations, setInvitations] =
-    useState<InvitationWithDetails[]>([]);
-
-  const [isLoading, setIsLoading] =
-    useState(true);
-
-  const [errorMessage, setErrorMessage] =
-    useState("");
-
-  const [copiedInvitationId, setCopiedInvitationId] =
-    useState<number | null>(null);
+  const [invitations, setInvitations] = useState<InvitationWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] =
+    useState<NotificationState>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function loadInvitations() {
       try {
-        setIsLoading(true);
-        setErrorMessage("");
+        setLoading(true);
 
-        const data =
-          await getAllInvitations();
+        const invitationData = await getAllInvitations();
 
-        setInvitations(data);
+        setInvitations(invitationData ?? []);
       } catch (error) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Failed to load invitations."
+        console.error("Error loading invitations:", error);
+
+        showNotification(
+          "Imeshindikana kupakua invitations. Jaribu tena.",
+          "error"
         );
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     }
 
-    void loadInvitations();
+    loadInvitations();
   }, []);
 
-  function getInvitationLink(
-    invitationToken: string
+  function showNotification(
+    message: string,
+    type: NotificationType = "success"
   ) {
-    return `${window.location.origin}/invite/${invitationToken}`;
+    setNotification({
+      message,
+      type,
+    });
+
+    window.setTimeout(() => {
+      setNotification(null);
+    }, 3500);
   }
 
-  function handleViewInvitation(
-    invitationToken: string
-  ) {
-    window.open(
-      getInvitationLink(invitationToken),
-      "_blank",
-      "noopener,noreferrer"
-    );
-  }
+  function handleWhatsApp(invitation: InvitationWithDetails) {
+    const phoneNumber = formatPhoneNumber(invitation.guests?.phone);
 
-  function handleWhatsAppShare(
-    invitation: InvitationWithDetails
-  ) {
-    const invitationLink =
-      getInvitationLink(
-        invitation.invitation_token
+    if (!phoneNumber) {
+      showNotification(
+        "Mgeni huyu hana namba ya simu. Ongeza namba kwanza.",
+        "error"
       );
 
-    const message =
-      createWhatsAppMessage(
-        invitation,
-        invitationLink
-      );
-
-    const phone =
-      normalizeTanzaniaPhone(
-        invitation.guests?.phone ?? null
-      );
-
-    const whatsappUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(
-          message
-        )}`
-      : `https://wa.me/?text=${encodeURIComponent(
-          message
-        )}`;
-
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
-    );
-  }
-
-  function handleSmsShare(
-    invitation: InvitationWithDetails
-  ) {
-    const message =
-      createSmsMessage(invitation);
-
-    const phone =
-      normalizeTanzaniaPhone(
-        invitation.guests?.phone ?? null
-      );
-
-    if (!phone) {
-      setErrorMessage(
-        "Mgeni huyu hana namba ya simu."
-      );
       return;
     }
 
-    const smsUrl =
-      `sms:+${phone}?body=${encodeURIComponent(
-        message
-      )}`;
+    const message = buildInvitationMessage(invitation);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+      message
+    )}`;
+
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  }
+
+  function handleSMS(invitation: InvitationWithDetails) {
+    const phoneNumber = formatPhoneNumber(invitation.guests?.phone);
+
+    if (!phoneNumber) {
+      showNotification(
+        "Mgeni huyu hana namba ya simu. Ongeza namba kwanza.",
+        "error"
+      );
+
+      return;
+    }
+
+    const message = buildInvitationMessage(invitation);
+
+    /*
+     * Android kwa kawaida hutumia ?body=
+     * iPhone wakati mwingine hutumia &body=.
+     * Mfumo huu unatumia ?body= ambayo hufanya kazi vizuri
+     * kwenye simu nyingi za Android.
+     */
+    const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
 
     window.location.href = smsUrl;
   }
 
-  async function handleCopyMessage(
-    invitation: InvitationWithDetails
-  ) {
-    const invitationLink =
-      getInvitationLink(
-        invitation.invitation_token
-      );
-
-    const message =
-      createWhatsAppMessage(
-        invitation,
-        invitationLink
-      );
+  async function handleCopyMessage(invitation: InvitationWithDetails) {
+    const message = buildInvitationMessage(invitation);
 
     try {
-      await navigator.clipboard.writeText(
-        message
-      );
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(message);
+      } else {
+        const textArea = document.createElement("textarea");
 
-      setCopiedInvitationId(
-        invitation.id
-      );
+        textArea.value = message;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
 
-      window.setTimeout(() => {
-        setCopiedInvitationId(null);
-      }, 2000);
-    } catch {
-      setErrorMessage(
-        "Message haikuweza kunakiliwa."
+        document.body.appendChild(textArea);
+
+        textArea.focus();
+        textArea.select();
+
+        const copied = document.execCommand("copy");
+
+        document.body.removeChild(textArea);
+
+        if (!copied) {
+          throw new Error("Fallback copy failed.");
+        }
+      }
+
+      showNotification("Ujumbe umenakiliwa vizuri.");
+    } catch (error) {
+      console.error("Error copying message:", error);
+
+      showNotification(
+        "Imeshindikana kunakili ujumbe. Jaribu tena.",
+        "error"
       );
     }
   }
 
-  return (
-    <main className="p-4 sm:p-8">
-      <div className="rounded-xl bg-white p-5 shadow-sm sm:p-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Invitations
-        </h1>
+  const filteredInvitations = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
 
-        <p className="mt-2 text-slate-500">
-          Manage invitations, WhatsApp,
-          SMS and RSVP responses.
-        </p>
+    if (!normalizedSearch) {
+      return invitations;
+    }
 
-        {errorMessage && (
-          <div className="mt-6 rounded-lg bg-red-50 p-4 text-red-700">
-            {errorMessage}
-          </div>
-        )}
+    return invitations.filter((invitation) => {
+      const guestName =
+        invitation.guests?.full_name?.toLowerCase() ?? "";
+      const phone = invitation.guests?.phone?.toLowerCase() ?? "";
+      const eventTitle =
+        invitation.events?.title?.toLowerCase() ?? "";
+      const eventPassId =
+        invitation.event_pass_id?.toLowerCase() ?? "";
 
-        {isLoading ? (
-          <div className="mt-8 rounded-lg border border-slate-200 p-8 text-center text-slate-500">
-            Loading invitations...
-          </div>
-        ) : invitations.length === 0 ? (
-          <div className="mt-8 rounded-lg border border-dashed border-slate-300 p-10 text-center">
-            <p className="text-lg font-medium text-slate-700">
-              No invitations found.
-            </p>
+      return (
+        guestName.includes(normalizedSearch) ||
+        phone.includes(normalizedSearch) ||
+        eventTitle.includes(normalizedSearch) ||
+        eventPassId.includes(normalizedSearch)
+      );
+    });
+  }, [invitations, searchTerm]);
 
-            <p className="mt-2 text-sm text-slate-500">
-              Add a guest to generate an
-              invitation automatically.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-8 overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 text-left">
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Guest
-                  </th>
+  if (loading) {
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
 
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Event
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Event Pass ID
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Invitation
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    RSVP
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {invitations.map(
-                  (invitation) => (
-                    <tr
-                      key={invitation.id}
-                      className="border-b border-slate-100 align-top"
-                    >
-                      <td className="px-4 py-4 text-sm text-slate-800">
-                        <p className="font-semibold">
-                          {invitation.guests
-                            ?.full_name ??
-                            "Unknown guest"}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-500">
-                          {invitation.guests
-                            ?.phone ??
-                            "No phone number"}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-slate-800">
-                        <p className="font-medium">
-                          {invitation.events
-                            ?.title ??
-                            "Unknown event"}
-                        </p>
-
-                        <p className="mt-1 text-xs uppercase text-slate-500">
-                          {invitation.events
-                            ?.language === "en"
-                            ? "English"
-                            : "Kiswahili"}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 font-mono text-sm font-bold tracking-wider text-blue-700">
-                          {invitation.guests
-                            ?.event_pass_id ??
-                            "N/A"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm">
-                        <span className="rounded-full bg-blue-50 px-3 py-1 capitalize text-blue-700">
-                          {
-                            invitation.invitation_status
-                          }
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm">
-                        <span className="rounded-full bg-amber-50 px-3 py-1 capitalize text-amber-700">
-                          {
-                            invitation.rsvp_status
-                          }
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex min-w-max flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleViewInvitation(
-                                invitation.invitation_token
-                              )
-                            }
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-                          >
-                            View
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleWhatsAppShare(
-                                invitation
-                              )
-                            }
-                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                          >
-                            WhatsApp
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSmsShare(
-                                invitation
-                              )
-                            }
-                            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                          >
-                            SMS
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleCopyMessage(
-                                invitation
-                              )
-                            }
-                            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                          >
-                            {copiedInvitationId ===
-                            invitation.id
-                              ? "Copied"
-                              : "Copy"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+          <p className="mt-4 text-sm text-slate-600">
+            Inapakua invitations...
+          </p>
+        </div>
       </div>
-    </main>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {notification && (
+        <div
+          className={`fixed right-4 top-4 z-50 max-w-sm rounded-xl px-5 py-4 text-sm font-medium text-white shadow-lg ${
+            notification.type === "success"
+              ? "bg-emerald-600"
+              : "bg-red-600"
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Invitations
+          </h1>
+
+          <p className="mt-1 text-sm text-slate-600">
+            Tuma na usimamie mialiko ya wageni.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Total Invitations
+          </p>
+
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {invitations.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label
+          htmlFor="invitation-search"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Search invitation
+        </label>
+
+        <input
+          id="invitation-search"
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Tafuta jina, simu, event au Event Pass ID..."
+          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+        />
+      </div>
+
+      {filteredInvitations.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Hakuna invitation iliyopatikana
+          </h2>
+
+          <p className="mt-2 text-sm text-slate-600">
+            {searchTerm
+              ? "Badilisha neno la utafutaji na ujaribu tena."
+              : "Invitations zitakapotengenezwa zitaonekana hapa."}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filteredInvitations.map((invitation) => {
+            const language = normalizeLanguage(invitation.language);
+            const guestName =
+              invitation.guests?.full_name ?? "Guest name unavailable";
+            const phone =
+              invitation.guests?.phone ?? "No phone number";
+            const eventTitle =
+              invitation.events?.title ?? "Event unavailable";
+            const allowedGuests = invitation.allowed_guests ?? 1;
+            const eventPassId =
+              invitation.event_pass_id ?? "Not assigned";
+
+            return (
+              <article
+                key={invitation.id}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold text-slate-900">
+                        {guestName}
+                      </h2>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        {phone}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+                      {language}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 p-5">
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                        Event
+                      </p>
+
+                      <p className="mt-1 font-medium text-slate-800">
+                        {eventTitle}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Allowed Guests
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-800">
+                          {allowedGuests}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Status
+                        </p>
+
+                        <p className="mt-1 capitalize text-slate-800">
+                          {invitation.invitation_status ?? "pending"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-900 px-4 py-3 text-white">
+                      <p className="text-xs uppercase tracking-wider text-slate-300">
+                        Event Pass ID
+                      </p>
+
+                      <p className="mt-1 font-mono text-lg font-bold tracking-wider">
+                        {eventPassId}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href={`/invite/${invitation.invitation_token}`}
+                      target="_blank"
+                      className="flex items-center justify-center rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                    >
+                      View
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleWhatsApp(invitation)}
+                      className="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                    >
+                      WhatsApp
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSMS(invitation)}
+                      className="rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      SMS
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopyMessage(invitation)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Copy Message
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

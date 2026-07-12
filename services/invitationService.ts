@@ -13,34 +13,49 @@ export type Invitation = {
   created_at: string;
 };
 
+export type InvitationEventDetails = {
+  title: string;
+  event_type: string;
+  language: EventLanguage;
+
+  ceremony_title: string | null;
+  ceremony_date: string | null;
+  ceremony_time: string | null;
+  ceremony_venue: string | null;
+  ceremony_map_url: string | null;
+
+  event_date: string;
+  event_time: string;
+  venue: string;
+  reception_map_url: string | null;
+
+  dress_code: string | null;
+  cover_image_url: string | null;
+};
+
+export type InvitationGuestDetails = {
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  event_pass_id: string | null;
+  allowed_guests: number;
+};
+
 export type InvitationWithDetails = Invitation & {
-  events: {
-    title: string;
-    event_type: string;
-    language: EventLanguage;
+  /*
+   * Fields hizi tatu zinawekwa juu ili Invitations page
+   * iweze kutumia:
+   *
+   * invitation.language
+   * invitation.event_pass_id
+   * invitation.allowed_guests
+   */
+  language: EventLanguage;
+  event_pass_id: string | null;
+  allowed_guests: number;
 
-    ceremony_title: string | null;
-    ceremony_date: string | null;
-    ceremony_time: string | null;
-    ceremony_venue: string | null;
-    ceremony_map_url: string | null;
-
-    event_date: string;
-    event_time: string;
-    venue: string;
-    reception_map_url: string | null;
-
-    dress_code: string | null;
-    cover_image_url: string | null;
-  } | null;
-
-  guests: {
-    full_name: string;
-    phone: string | null;
-    email: string | null;
-    event_pass_id: string | null;
-    allowed_guests: number;
-  } | null;
+  events: InvitationEventDetails | null;
+  guests: InvitationGuestDetails | null;
 };
 
 export type PublicInvitation = {
@@ -79,6 +94,32 @@ export type PublicInvitation = {
   dress_code: string | null;
   cover_image_url: string | null;
 };
+
+type RawInvitationWithDetails = Invitation & {
+  events:
+    | InvitationEventDetails
+    | InvitationEventDetails[]
+    | null;
+
+  guests:
+    | InvitationGuestDetails
+    | InvitationGuestDetails[]
+    | null;
+};
+
+function getSingleRelation<T>(
+  relation: T | T[] | null
+): T | null {
+  if (!relation) {
+    return null;
+  }
+
+  if (Array.isArray(relation)) {
+    return relation[0] ?? null;
+  }
+
+  return relation;
+}
 
 export async function createInvitation(
   eventId: number,
@@ -181,5 +222,29 @@ export async function getAllInvitations(): Promise<
     throw new Error(error.message);
   }
 
-  return (data ?? []) as InvitationWithDetails[];
+  const rawInvitations =
+    (data ?? []) as unknown as RawInvitationWithDetails[];
+
+  return rawInvitations.map((invitation) => {
+    const eventDetails = getSingleRelation(invitation.events);
+    const guestDetails = getSingleRelation(invitation.guests);
+
+    return {
+      id: invitation.id,
+      event_id: invitation.event_id,
+      guest_id: invitation.guest_id,
+      invitation_token: invitation.invitation_token,
+      invitation_status: invitation.invitation_status,
+      rsvp_status: invitation.rsvp_status,
+      viewed_at: invitation.viewed_at,
+      created_at: invitation.created_at,
+
+      language: eventDetails?.language ?? "sw",
+      event_pass_id: guestDetails?.event_pass_id ?? null,
+      allowed_guests: guestDetails?.allowed_guests ?? 1,
+
+      events: eventDetails,
+      guests: guestDetails,
+    };
+  });
 }
