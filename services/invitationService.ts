@@ -17,7 +17,6 @@ export type InvitationWithDetails = Invitation & {
   events: {
     title: string;
     event_type: string;
-
     language: EventLanguage;
 
     ceremony_title: string | null;
@@ -39,6 +38,8 @@ export type InvitationWithDetails = Invitation & {
     full_name: string;
     phone: string | null;
     email: string | null;
+    event_pass_id: string | null;
+    allowed_guests: number;
   } | null;
 };
 
@@ -167,7 +168,9 @@ export async function getAllInvitations(): Promise<
       guests (
         full_name,
         phone,
-        email
+        email,
+        event_pass_id,
+        allowed_guests
       )
     `)
     .order("created_at", {
