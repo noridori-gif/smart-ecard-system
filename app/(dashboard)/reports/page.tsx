@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 
 import {
   calculateEventReportSummary,
@@ -53,6 +54,20 @@ function formatDateTime(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatExportDateTime(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function formatEventDate(value: string) {
   if (!value) {
     return "-";
@@ -66,7 +81,7 @@ function formatEventDate(value: string) {
   }).format(new Date(`${value}T00:00:00`));
 }
 
-function formatStatusLabel(status: string) {
+function formatStatusLabel(status: string | null | undefined) {
   if (status === "checked_in") {
     return "Checked In";
   }
@@ -94,7 +109,9 @@ function formatStatusLabel(status: string) {
   return "Pending";
 }
 
-function getStatusClass(status: string) {
+function getStatusClass(
+  status: string | null | undefined
+) {
   if (
     status === "checked_in" ||
     status === "accepted"
@@ -115,6 +132,22 @@ function getStatusClass(status: string) {
   }
 
   return "bg-slate-100 text-slate-700";
+}
+
+function sanitizeFileName(value: string) {
+  return value
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, "")
+    .replace(/\s+/g, "_");
+}
+
+function setWorksheetColumnWidths(
+  worksheet: XLSX.WorkSheet,
+  widths: number[]
+) {
+  worksheet["!cols"] = widths.map((width) => ({
+    wch: width,
+  }));
 }
 
 export default function ReportsPage() {
@@ -150,6 +183,9 @@ export default function ReportsPage() {
     useState(true);
 
   const [loadingReport, setLoadingReport] =
+    useState(false);
+
+  const [exportingExcel, setExportingExcel] =
     useState(false);
 
   const [errorMessage, setErrorMessage] =
@@ -194,6 +230,7 @@ export default function ReportsPage() {
       setGuests([]);
       setInvitations([]);
       setSummary(initialSummary);
+
       return;
     }
 
@@ -335,6 +372,248 @@ export default function ReportsPage() {
       safeCurrentPage * ROWS_PER_PAGE
     );
 
+  function handleExportExcel() {
+    if (!selectedEvent) {
+      setErrorMessage(
+        "Chagua event kwanza kabla ya ku-export report."
+      );
+
+      return;
+    }
+
+    try {
+      setExportingExcel(true);
+      setErrorMessage("");
+
+      const workbook = XLSX.utils.book_new();
+
+      /*
+       * SHEET 1: EVENT SUMMARY
+       */
+      const summaryRows = [
+        {
+          "Report Item": "Event Name",
+          Value: selectedEvent.title,
+        },
+        {
+          "Report Item": "Event Type",
+          Value: selectedEvent.event_type,
+        },
+        {
+          "Report Item": "Event Date",
+          Value: formatEventDate(
+            selectedEvent.event_date
+          ),
+        },
+        {
+          "Report Item": "Event Time",
+          Value: selectedEvent.event_time,
+        },
+        {
+          "Report Item": "Venue",
+          Value: selectedEvent.venue,
+        },
+        {
+          "Report Item": "Total Guests",
+          Value: summary.totalGuests,
+        },
+        {
+          "Report Item": "Checked In",
+          Value: summary.checkedIn,
+        },
+        {
+          "Report Item": "Pending Check-In",
+          Value: summary.pending,
+        },
+        {
+          "Report Item": "Attendance Percentage",
+          Value: `${summary.attendancePercentage}%`,
+        },
+        {
+          "Report Item": "Total Invitations",
+          Value: summary.totalInvitations,
+        },
+        {
+          "Report Item": "Invitations Viewed",
+          Value: summary.viewed,
+        },
+        {
+          "Report Item": "Invitations Not Viewed",
+          Value: summary.notViewed,
+        },
+        {
+          "Report Item": "RSVP Accepted",
+          Value: summary.accepted,
+        },
+        {
+          "Report Item": "RSVP Maybe",
+          Value: summary.maybe,
+        },
+        {
+          "Report Item": "RSVP Declined",
+          Value: summary.declined,
+        },
+        {
+          "Report Item": "RSVP No Response",
+          Value: summary.noResponse,
+        },
+        {
+          "Report Item": "Generated At",
+          Value: formatExportDateTime(
+            new Date().toISOString()
+          ),
+        },
+      ];
+
+      const summaryWorksheet =
+        XLSX.utils.json_to_sheet(summaryRows);
+
+      setWorksheetColumnWidths(
+        summaryWorksheet,
+        [30, 45]
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        summaryWorksheet,
+        "Event Summary"
+      );
+
+      /*
+       * SHEET 2: ATTENDANCE
+       */
+      const attendanceRows = guests.map(
+        (guest, index) => ({
+          No: index + 1,
+          "Guest Name": guest.full_name,
+          Phone: guest.phone ?? "",
+          "Event Pass ID":
+            guest.event_pass_id ?? "",
+          Status:
+            guest.status === "checked_in"
+              ? "Checked In"
+              : "Pending",
+          "Checked In At": formatExportDateTime(
+            guest.checked_in_at
+          ),
+        })
+      );
+
+      const attendanceWorksheet =
+        XLSX.utils.json_to_sheet(attendanceRows);
+
+      setWorksheetColumnWidths(
+        attendanceWorksheet,
+        [7, 28, 18, 20, 16, 24]
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        attendanceWorksheet,
+        "Attendance"
+      );
+
+      /*
+       * SHEET 3: GUEST LIST
+       */
+      const guestRows = guests.map(
+        (guest, index) => ({
+          No: index + 1,
+          "Guest Name": guest.full_name,
+          Phone: guest.phone ?? "",
+          Email: guest.email ?? "",
+          Category: guest.category ?? "",
+          "Allowed Guests":
+            guest.allowed_guests ?? 1,
+          "Event Pass ID":
+            guest.event_pass_id ?? "",
+          Status:
+            guest.status === "checked_in"
+              ? "Checked In"
+              : "Pending",
+        })
+      );
+
+      const guestWorksheet =
+        XLSX.utils.json_to_sheet(guestRows);
+
+      setWorksheetColumnWidths(
+        guestWorksheet,
+        [7, 28, 18, 30, 18, 16, 20, 16]
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        guestWorksheet,
+        "Guest List"
+      );
+
+      /*
+       * SHEET 4: INVITATIONS & RSVP
+       */
+      const invitationRows = invitations.map(
+        (invitation, index) => ({
+          No: index + 1,
+          "Guest Name":
+            invitation.guests?.full_name ?? "",
+          Phone:
+            invitation.guests?.phone ?? "",
+          "Event Pass ID":
+            invitation.guests?.event_pass_id ?? "",
+          "Invitation Status":
+            formatStatusLabel(
+              invitation.invitation_status
+            ),
+          "RSVP Status":
+            formatStatusLabel(
+              invitation.rsvp_status
+            ),
+          "Viewed At": formatExportDateTime(
+            invitation.viewed_at
+          ),
+        })
+      );
+
+      const invitationWorksheet =
+        XLSX.utils.json_to_sheet(invitationRows);
+
+      setWorksheetColumnWidths(
+        invitationWorksheet,
+        [7, 28, 18, 20, 20, 18, 24]
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        invitationWorksheet,
+        "Invitations RSVP"
+      );
+
+      const eventName = sanitizeFileName(
+        selectedEvent.title
+      );
+
+      const eventDate =
+        selectedEvent.event_date || "report";
+
+      const fileName =
+        `${eventName}_${eventDate}_Report.xlsx`;
+
+      XLSX.writeFile(workbook, fileName, {
+        compression: true,
+      });
+    } catch (error) {
+      console.error("Excel export error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Excel report haikuweza kutengenezwa."
+      );
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -349,38 +628,59 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:w-96">
-          <label
-            htmlFor="report-event"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            Select Event
-          </label>
+        <div className="w-full space-y-3 lg:w-96">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <label
+              htmlFor="report-event"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Select Event
+            </label>
 
-          <select
-            id="report-event"
-            value={selectedEventId}
-            disabled={loadingEvents}
-            onChange={(event) =>
-              setSelectedEventId(event.target.value)
+            <select
+              id="report-event"
+              value={selectedEventId}
+              disabled={loadingEvents}
+              onChange={(event) =>
+                setSelectedEventId(event.target.value)
+              }
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+            >
+              {events.length === 0 && (
+                <option value="">
+                  No events available
+                </option>
+              )}
+
+              {events.map((eventItem) => (
+                <option
+                  key={eventItem.id}
+                  value={String(eventItem.id)}
+                >
+                  {eventItem.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            disabled={
+              !selectedEvent ||
+              loadingReport ||
+              exportingExcel
             }
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {events.length === 0 && (
-              <option value="">
-                No events available
-              </option>
-            )}
+            <span>📊</span>
 
-            {events.map((eventItem) => (
-              <option
-                key={eventItem.id}
-                value={String(eventItem.id)}
-              >
-                {eventItem.title}
-              </option>
-            ))}
-          </select>
+            <span>
+              {exportingExcel
+                ? "Preparing Excel..."
+                : "Export Complete Excel Report"}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -657,8 +957,7 @@ export default function ReportsPage() {
                           <td className="px-5 py-4">
                             <p className="font-semibold text-slate-900">
                               {invitation.guests
-                                ?.full_name ??
-                                "Guest"}
+                                ?.full_name ?? "Guest"}
                             </p>
 
                             <p className="text-xs text-slate-500">
@@ -835,7 +1134,7 @@ export default function ReportsPage() {
                         Math.max(1, page - 1)
                       )
                     }
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Previous
                   </button>
@@ -858,7 +1157,7 @@ export default function ReportsPage() {
                         )
                       )
                     }
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-40"
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next
                   </button>
