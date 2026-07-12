@@ -699,6 +699,7 @@ export default async function InvitationPage({
           <EventPass
             guestName={invitation.guest_name}
             qrToken={invitation.qr_token}
+            eventPassId={invitation.event_pass_id}
             allowedGuests={
               invitation.allowed_guests
             }
@@ -711,17 +712,15 @@ export default async function InvitationPage({
           />
 
           <RsvpButtons
-  invitationToken={
-    invitation.invitation_token
-  }
-  currentStatus={
-    invitation.rsvp_status
-  }
-  language={language}
-  accentTextClass={
-    theme.accentText
-  }
-/>
+            invitationToken={
+              invitation.invitation_token
+            }
+            currentStatus={
+              invitation.rsvp_status
+            }
+            language={language}
+            accentTextClass={theme.accentText}
+          />
 
           <div className="mt-10 border-t border-slate-100 pt-7 text-center">
             <p className="text-sm font-semibold text-slate-500">

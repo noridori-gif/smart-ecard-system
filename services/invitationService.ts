@@ -53,6 +53,7 @@ export type PublicInvitation = {
   allowed_guests: number;
   category: string | null;
   qr_token: string;
+  event_pass_id: string | null;
 
   event_id: number;
   event_title: string;
