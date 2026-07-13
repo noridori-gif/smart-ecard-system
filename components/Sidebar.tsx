@@ -40,6 +40,11 @@ const menuItems = [
     icon: "📈",
   },
   {
+    href: "/import-history",
+    label: "Import History",
+    icon: "📥",
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: "⚙️",
