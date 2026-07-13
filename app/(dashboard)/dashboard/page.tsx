@@ -1,31 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Card from "@/components/Card";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import AnalyticsCards from "@/components/dashboard/AnalyticsCards";
+import EventSelector from "@/components/dashboard/EventSelector";
+import InvitationFunnel from "@/components/dashboard/InvitationFunnel";
+import ProgressCard from "@/components/dashboard/ProgressCard";
+import RSVPSummary from "@/components/dashboard/RSVPSummary";
 
 import {
-  getDashboardStats,
-  type DashboardStats,
-} from "@/services/dashboardService";
+  getDashboardEvents,
+  getEmptyEventDashboardStats,
+  getEventDashboardStats,
+  type DashboardEvent,
+  type EventDashboardStats,
+} from "@/services/eventDashboardService";
 
-import {
-  getEvents,
-  type Event,
-} from "@/services/eventService";
-
-const initialStats: DashboardStats = {
-  totalEvents: 0,
-  totalGuests: 0,
-  checkedIn: 0,
-  pending: 0,
-  viewed: 0,
-  accepted: 0,
-  maybe: 0,
-  declined: 0,
-};
-
-function formatEventDate(dateValue: string) {
-  if (!dateValue) {
+function formatEventDate(value: string) {
+  if (!value) {
     return "-";
   }
 
@@ -34,23 +26,23 @@ function formatEventDate(dateValue: string) {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(`${dateValue}T00:00:00`));
+  }).format(new Date(`${value}T00:00:00`));
 }
 
-function formatEventTime(timeValue: string) {
-  if (!timeValue) {
+function formatEventTime(value: string) {
+  if (!value) {
     return "-";
   }
 
-  const [hours, minutes] = timeValue.split(":");
+  const [hours, minutes] = value.split(":");
 
   if (!hours || !minutes) {
-    return timeValue;
+    return value;
   }
 
-  const timeDate = new Date();
+  const date = new Date();
 
-  timeDate.setHours(
+  date.setHours(
     Number(hours),
     Number(minutes),
     0,
@@ -60,443 +52,415 @@ function formatEventTime(timeValue: string) {
   return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
-  }).format(timeDate);
+  }).format(date);
 }
 
 export default function DashboardPage() {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<
+    DashboardEvent[]
+  >([]);
 
   const [selectedEventId, setSelectedEventId] =
-    useState<string>("all");
+    useState<number | null>(null);
 
   const [stats, setStats] =
-    useState<DashboardStats>(initialStats);
+    useState<EventDashboardStats>(
+      getEmptyEventDashboardStats()
+    );
 
-  const [isLoadingEvents, setIsLoadingEvents] =
-    useState(true);
-
-  const [isLoadingStats, setIsLoadingStats] =
+  const [isLoading, setIsLoading] =
     useState(true);
 
   const [errorMessage, setErrorMessage] =
     useState("");
 
-  useEffect(() => {
-    async function loadEvents() {
-      try {
-        setIsLoadingEvents(true);
-        setErrorMessage("");
-
-        const eventData = await getEvents();
-
-        setEvents(eventData);
-      } catch (error) {
-        console.error("Error loading events:", error);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Events hazikuweza kupatikana."
-        );
-      } finally {
-        setIsLoadingEvents(false);
-      }
-    }
-
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    async function loadDashboardStats() {
-      try {
-        setIsLoadingStats(true);
-        setErrorMessage("");
-
-        const eventId =
-          selectedEventId === "all"
-            ? null
-            : Number(selectedEventId);
-
-        const data = await getDashboardStats(
-          eventId
-        );
-
-        setStats(data);
-      } catch (error) {
-        console.error(
-          "Error loading dashboard stats:",
-          error
-        );
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Dashboard statistics hazikuweza kupatikana."
-        );
-      } finally {
-        setIsLoadingStats(false);
-      }
-    }
-
-    loadDashboardStats();
-  }, [selectedEventId]);
-
   const selectedEvent = useMemo(() => {
-    if (selectedEventId === "all") {
+    if (selectedEventId === null) {
       return null;
     }
 
     return (
       events.find(
         (eventItem) =>
-          String(eventItem.id) === selectedEventId
+          eventItem.id === selectedEventId
       ) ?? null
     );
   }, [events, selectedEventId]);
 
-  const attendancePercentage =
-    stats.totalGuests > 0
-      ? Math.round(
-          (stats.checkedIn / stats.totalGuests) *
-            100
-        )
-      : 0;
+  const loadDashboard = useCallback(
+    async (
+      requestedEventId?: number,
+      refreshEvents = false
+    ) => {
+      try {
+        setIsLoading(true);
+        setErrorMessage("");
 
-  const acceptedPercentage =
-    stats.totalGuests > 0
-      ? Math.round(
-          (stats.accepted / stats.totalGuests) *
-            100
-        )
-      : 0;
+        let availableEvents = events;
 
-  const isLoading =
-    isLoadingEvents || isLoadingStats;
+        if (
+          refreshEvents ||
+          availableEvents.length === 0
+        ) {
+          availableEvents =
+            await getDashboardEvents();
+
+          setEvents(availableEvents);
+        }
+
+        if (availableEvents.length === 0) {
+          setSelectedEventId(null);
+
+          setStats(
+            getEmptyEventDashboardStats()
+          );
+
+          return;
+        }
+
+        const eventStillExists =
+          selectedEventId !== null &&
+          availableEvents.some(
+            (eventItem) =>
+              eventItem.id === selectedEventId
+          );
+
+        const eventIdToLoad =
+          requestedEventId ??
+          (eventStillExists
+            ? selectedEventId
+            : availableEvents[0].id);
+
+        setSelectedEventId(eventIdToLoad);
+
+        const dashboardStats =
+          await getEventDashboardStats(
+            eventIdToLoad
+          );
+
+        setStats(dashboardStats);
+      } catch (error) {
+        console.error(
+          "Dashboard loading error:",
+          error
+        );
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Dashboard haikuweza kupakiwa."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [events, selectedEventId]
+  );
+
+  useEffect(() => {
+    loadDashboard(undefined, true);
+  }, []);
+
+  async function handleEventChange(
+    eventId: number
+  ) {
+    await loadDashboard(eventId);
+  }
+
+  async function handleRefresh() {
+    await loadDashboard(
+      selectedEventId ?? undefined,
+      true
+    );
+  }
 
   return (
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <h1 className="text-4xl font-bold text-blue-700">
-            Dashboard
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+            Smart Event Pass
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
+            Event Analytics Dashboard
           </h1>
 
-          <p className="mt-2 text-gray-600">
-            Welcome to Smart Event Pass
+          <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+            Fuatilia invitations, RSVP na attendance
+            ya event iliyochaguliwa.
           </p>
         </div>
 
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:w-96">
-          <label
-            htmlFor="dashboard-event"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            Select Event
-          </label>
+        {selectedEvent && (
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <p className="font-semibold">
+              Active Event
+            </p>
 
-          <select
-            id="dashboard-event"
-            value={selectedEventId}
-            disabled={isLoadingEvents}
-            onChange={(event) =>
-              setSelectedEventId(event.target.value)
-            }
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-          >
-            <option value="all">
-              All Events
-            </option>
-
-            {events.map((eventItem) => (
-              <option
-                key={eventItem.id}
-                value={String(eventItem.id)}
-              >
-                {eventItem.title}
-              </option>
-            ))}
-          </select>
-        </div>
+            <p className="mt-1">
+              {selectedEvent.title}
+            </p>
+          </div>
+        )}
       </div>
 
       {errorMessage && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {errorMessage}
         </div>
       )}
 
-      {selectedEvent ? (
-        <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-white p-5 shadow-sm">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                Selected Event
-              </p>
+      <EventSelector
+        events={events}
+        selectedEventId={selectedEventId}
+        isLoading={isLoading}
+        onRefresh={handleRefresh}
+        onChange={handleEventChange}
+      />
 
-              <h2 className="mt-1 text-2xl font-bold text-slate-900">
-                {selectedEvent.title}
-              </h2>
-
-              <p className="mt-1 text-sm capitalize text-slate-500">
-                {selectedEvent.event_type}
-              </p>
-            </div>
-
-            <span className="w-fit rounded-full bg-blue-100 px-4 py-2 text-xs font-semibold uppercase text-blue-700">
-              {selectedEvent.language === "en"
-                ? "English"
-                : "Kiswahili"}
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
-                Date
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {formatEventDate(
-                  selectedEvent.event_date
-                )}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
-                Time
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {formatEventTime(
-                  selectedEvent.event_time
-                )}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
-                Venue
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {selectedEvent.venue || "-"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
-                Dress Code
-              </p>
-
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {selectedEvent.dress_code || "-"}
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Current View
-          </p>
-
-          <h2 className="mt-1 text-xl font-bold text-slate-900">
-            All Events Summary
+      {events.length === 0 && !isLoading ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900">
+            Hakuna event iliyopatikana
           </h2>
 
-          <p className="mt-1 text-sm text-slate-600">
-            Statistics hapa yanajumuisha events zote.
+          <p className="mt-2 text-sm text-slate-600">
+            Tengeneza event kwanza ili dashboard
+            iweze kuonyesha analytics.
           </p>
         </div>
-      )}
+      ) : isLoading ? (
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="text-center">
+            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
 
-      {isLoading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
-
-          <p className="mt-4 text-sm text-gray-500">
-            Loading dashboard statistics...
-          </p>
+            <p className="mt-4 text-sm font-medium text-slate-600">
+              Inapakua event analytics...
+            </p>
+          </div>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <Card
-              title={
-                selectedEvent
-                  ? "Selected Event"
-                  : "Total Events"
-              }
-              value={stats.totalEvents}
+          {selectedEvent && (
+            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-5 shadow-sm">
+              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                    Selected Event
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                    {selectedEvent.title}
+                  </h2>
+
+                  <p className="mt-1 text-sm capitalize text-slate-600">
+                    {selectedEvent.event_type}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3 lg:min-w-[580px]">
+                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                    <p className="text-xs font-semibold uppercase text-slate-400">
+                      Date
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {formatEventDate(
+                        selectedEvent.event_date
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                    <p className="text-xs font-semibold uppercase text-slate-400">
+                      Time
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {formatEventTime(
+                        selectedEvent.event_time
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                    <p className="text-xs font-semibold uppercase text-slate-400">
+                      Venue
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {selectedEvent.venue || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AnalyticsCards stats={stats} />
+
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <ProgressCard
+              title="Invitation Rate"
+              value={stats.invitationRate}
+              description={`${stats.totalInvitations} invitations kwa ${stats.totalGuests} guests`}
+              barClassName="bg-indigo-600"
             />
 
-            <Card
-              title="Total Guests"
-              value={stats.totalGuests}
+            <ProgressCard
+              title="View Rate"
+              value={stats.viewRate}
+              description={`${stats.viewed} invitations zimefunguliwa`}
+              barClassName="bg-blue-600"
             />
 
-            <Card
-              title="Checked In"
-              value={stats.checkedIn}
+            <ProgressCard
+              title="Acceptance Rate"
+              value={stats.acceptanceRate}
+              description={`${stats.accepted} guests wamekubali`}
+              barClassName="bg-emerald-600"
             />
 
-            <Card
-              title="Pending Check-In"
-              value={stats.pending}
+            <ProgressCard
+              title="Attendance Rate"
+              value={stats.attendanceRate}
+              description={`${stats.checkedIn} guests wamefanya check-in`}
+              barClassName="bg-violet-600"
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <Card
-              title="Invitations Viewed"
-              value={stats.viewed}
-            />
+          <div className="grid gap-5 xl:grid-cols-2">
+            <RSVPSummary stats={stats} />
 
-            <Card
-              title="RSVP Accepted"
-              value={stats.accepted}
-            />
-
-            <Card
-              title="RSVP Maybe"
-              value={stats.maybe}
-            />
-
-            <Card
-              title="RSVP Declined"
-              value={stats.declined}
-            />
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">
+                <h2 className="text-xl font-bold text-slate-900">
                   Attendance Summary
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  {selectedEvent
-                    ? selectedEvent.title
-                    : "Events zote"}
+                  Hali ya wageni walioingia na
+                  wanaosubiri check-in.
                 </p>
               </div>
 
-              <span className="w-fit rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
-                {attendancePercentage}% Checked In
-              </span>
-            </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                  <p className="text-sm font-semibold text-emerald-700">
+                    Checked In
+                  </p>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="rounded-xl bg-blue-50 p-5">
-                <p className="text-sm font-medium text-blue-700">
-                  Total Guests
-                </p>
+                  <p className="mt-2 text-4xl font-bold text-emerald-700">
+                    {stats.checkedIn}
+                  </p>
+                </div>
 
-                <p className="mt-2 text-3xl font-bold text-blue-900">
-                  {stats.totalGuests}
-                </p>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                  <p className="text-sm font-semibold text-amber-700">
+                    Pending Check-In
+                  </p>
+
+                  <p className="mt-2 text-4xl font-bold text-amber-700">
+                    {stats.pendingCheckIn}
+                  </p>
+                </div>
               </div>
 
-              <div className="rounded-xl bg-emerald-50 p-5">
-                <p className="text-sm font-medium text-emerald-700">
-                  Checked In
-                </p>
+              <div className="mt-5">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-semibold text-slate-700">
+                    Check-In Progress
+                  </span>
 
-                <p className="mt-2 text-3xl font-bold text-emerald-900">
-                  {stats.checkedIn}
-                </p>
-              </div>
+                  <span className="font-bold text-violet-700">
+                    {stats.attendanceRate}%
+                  </span>
+                </div>
 
-              <div className="rounded-xl bg-amber-50 p-5">
-                <p className="text-sm font-medium text-amber-700">
-                  Remaining
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-amber-900">
-                  {stats.pending}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
-                <span>Check-in Progress</span>
-
-                <span className="font-semibold">
-                  {attendancePercentage}%
-                </span>
-              </div>
-
-              <div className="h-3 overflow-hidden rounded-full bg-gray-200">
-                <div
-                  className="h-full rounded-full bg-emerald-600 transition-all duration-500"
-                  style={{
-                    width: `${attendancePercentage}%`,
-                  }}
-                />
+                <div className="h-4 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-violet-600 transition-all duration-500"
+                    style={{
+                      width: `${Math.min(
+                        Math.max(
+                          stats.attendanceRate,
+                          0
+                        ),
+                        100
+                      )}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">
-                  RSVP Summary
-                </h2>
+          <InvitationFunnel stats={stats} />
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Majibu ya wageni kwa invitation
-                </p>
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm text-slate-500">
+                Invitations Not Viewed
+              </p>
 
-              <span className="w-fit rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700">
-                {acceptedPercentage}% Accepted
-              </span>
+              <p className="mt-2 text-3xl font-bold text-slate-900">
+                {stats.notViewed}
+              </p>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl bg-slate-50 p-5">
-                <p className="text-sm font-medium text-slate-600">
-                  Viewed
-                </p>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+              <p className="text-sm text-emerald-700">
+                RSVP Accepted
+              </p>
 
-                <p className="mt-2 text-3xl font-bold text-slate-900">
-                  {stats.viewed}
+              <p className="mt-2 text-3xl font-bold text-emerald-700">
+                {stats.accepted}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+              <p className="text-sm text-amber-700">
+                RSVP Maybe
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-amber-700">
+                {stats.maybe}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+              <p className="text-sm text-red-700">
+                RSVP Declined
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-red-700">
+                {stats.declined}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-xl font-bold">
+                  Live Event Overview
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-300">
+                  Bonyeza Refresh kupata taarifa mpya
+                  za RSVP na check-in.
                 </p>
               </div>
 
-              <div className="rounded-xl bg-emerald-50 p-5">
-                <p className="text-sm font-medium text-emerald-700">
-                  Accepted
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-emerald-900">
-                  {stats.accepted}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-amber-50 p-5">
-                <p className="text-sm font-medium text-amber-700">
-                  Maybe
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-amber-900">
-                  {stats.maybe}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-red-50 p-5">
-                <p className="text-sm font-medium text-red-700">
-                  Declined
-                </p>
-
-                <p className="mt-2 text-3xl font-bold text-red-900">
-                  {stats.declined}
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Refresh Analytics
+              </button>
             </div>
           </div>
         </>
