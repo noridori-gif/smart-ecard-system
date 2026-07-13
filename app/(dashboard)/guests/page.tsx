@@ -72,16 +72,20 @@ function formatDate(dateValue: string | null) {
 export default function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [events, setEvents] = useState<EventOption[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   const [processingGuestId, setProcessingGuestId] =
     useState<number | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+
   const [selectedEventId, setSelectedEventId] =
     useState("all");
+
   const [selectedStatus, setSelectedStatus] =
     useState("all");
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const [notification, setNotification] =
@@ -134,11 +138,15 @@ export default function GuestsPage() {
         ]);
 
       if (guestsResult.error) {
-        throw new Error(guestsResult.error.message);
+        throw new Error(
+          guestsResult.error.message
+        );
       }
 
       if (eventsResult.error) {
-        throw new Error(eventsResult.error.message);
+        throw new Error(
+          eventsResult.error.message
+        );
       }
 
       setGuests(
@@ -149,7 +157,10 @@ export default function GuestsPage() {
         (eventsResult.data ?? []) as EventOption[]
       );
     } catch (error) {
-      console.error("Error loading guests:", error);
+      console.error(
+        "Error loading guests:",
+        error
+      );
 
       showNotification(
         error instanceof Error
@@ -176,6 +187,20 @@ export default function GuestsPage() {
     }, 3500);
   }
 
+  async function handleImportCompleted() {
+    await loadPageData();
+
+    showNotification(
+      "Guest list imesasishwa baada ya Excel import.",
+      "success"
+    );
+
+    setSelectedEventId("all");
+    setSelectedStatus("all");
+    setSearchTerm("");
+    setCurrentPage(1);
+  }
+
   async function handleCheckIn(guest: Guest) {
     if (guest.status === "checked_in") {
       showNotification(
@@ -197,7 +222,8 @@ export default function GuestsPage() {
     try {
       setProcessingGuestId(guest.id);
 
-      const checkedInAt = new Date().toISOString();
+      const checkedInAt =
+        new Date().toISOString();
 
       const { error } = await supabase
         .from("guests")
@@ -228,7 +254,10 @@ export default function GuestsPage() {
         "success"
       );
     } catch (error) {
-      console.error("Check-in error:", error);
+      console.error(
+        "Check-in error:",
+        error
+      );
 
       showNotification(
         error instanceof Error
@@ -253,27 +282,28 @@ export default function GuestsPage() {
     try {
       setProcessingGuestId(guest.id);
 
-      /*
-       * Invitation ya guest inafutwa kwanza ili
-       * kuepuka foreign key error kama database
-       * haina ON DELETE CASCADE.
-       */
-      const { error: invitationError } = await supabase
-        .from("invitations")
-        .delete()
-        .eq("guest_id", guest.id);
+      const { error: invitationError } =
+        await supabase
+          .from("invitations")
+          .delete()
+          .eq("guest_id", guest.id);
 
       if (invitationError) {
-        throw new Error(invitationError.message);
+        throw new Error(
+          invitationError.message
+        );
       }
 
-      const { error: guestError } = await supabase
-        .from("guests")
-        .delete()
-        .eq("id", guest.id);
+      const { error: guestError } =
+        await supabase
+          .from("guests")
+          .delete()
+          .eq("id", guest.id);
 
       if (guestError) {
-        throw new Error(guestError.message);
+        throw new Error(
+          guestError.message
+        );
       }
 
       setGuests((currentGuests) =>
@@ -288,7 +318,10 @@ export default function GuestsPage() {
         "success"
       );
     } catch (error) {
-      console.error("Delete guest error:", error);
+      console.error(
+        "Delete guest error:",
+        error
+      );
 
       showNotification(
         error instanceof Error
@@ -307,9 +340,8 @@ export default function GuestsPage() {
       .toLowerCase();
 
     return guests.filter((guest) => {
-      const guestEvent = getSingleEvent(
-        guest.events
-      );
+      const guestEvent =
+        getSingleEvent(guest.events);
 
       const matchesSearch =
         !normalizedSearch ||
@@ -331,7 +363,8 @@ export default function GuestsPage() {
 
       const matchesEvent =
         selectedEventId === "all" ||
-        String(guest.event_id) === selectedEventId;
+        String(guest.event_id) ===
+          selectedEventId;
 
       const matchesStatus =
         selectedStatus === "all" ||
@@ -353,7 +386,8 @@ export default function GuestsPage() {
   const totalPages = Math.max(
     1,
     Math.ceil(
-      filteredGuests.length / GUESTS_PER_PAGE
+      filteredGuests.length /
+        GUESTS_PER_PAGE
     )
   );
 
@@ -362,18 +396,25 @@ export default function GuestsPage() {
     totalPages
   );
 
-  const paginatedGuests = filteredGuests.slice(
-    (safeCurrentPage - 1) * GUESTS_PER_PAGE,
-    safeCurrentPage * GUESTS_PER_PAGE
-  );
+  const paginatedGuests =
+    filteredGuests.slice(
+      (safeCurrentPage - 1) *
+        GUESTS_PER_PAGE,
+      safeCurrentPage *
+        GUESTS_PER_PAGE
+    );
 
-  const checkedInCount = filteredGuests.filter(
-    (guest) => guest.status === "checked_in"
-  ).length;
+  const checkedInCount =
+    filteredGuests.filter(
+      (guest) =>
+        guest.status === "checked_in"
+    ).length;
 
-  const pendingCount = filteredGuests.filter(
-    (guest) => guest.status !== "checked_in"
-  ).length;
+  const pendingCount =
+    filteredGuests.filter(
+      (guest) =>
+        guest.status !== "checked_in"
+    ).length;
 
   if (loading) {
     return (
@@ -448,10 +489,13 @@ export default function GuestsPage() {
         </div>
       </div>
 
-      {/* Excel import panel */}
-      <GuestImportPanel events={events} />
+      <GuestImportPanel
+        events={events}
+        onImportCompleted={
+          handleImportCompleted
+        }
+      />
 
-      {/* Search and filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
@@ -467,7 +511,9 @@ export default function GuestsPage() {
               type="search"
               value={searchTerm}
               onChange={(event) =>
-                setSearchTerm(event.target.value)
+                setSearchTerm(
+                  event.target.value
+                )
               }
               placeholder="Jina, simu, email au Event Pass ID..."
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
@@ -486,7 +532,9 @@ export default function GuestsPage() {
               id="event-filter"
               value={selectedEventId}
               onChange={(event) =>
-                setSelectedEventId(event.target.value)
+                setSelectedEventId(
+                  event.target.value
+                )
               }
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
@@ -497,7 +545,9 @@ export default function GuestsPage() {
               {events.map((eventItem) => (
                 <option
                   key={eventItem.id}
-                  value={String(eventItem.id)}
+                  value={String(
+                    eventItem.id
+                  )}
                 >
                   {eventItem.title}
                 </option>
@@ -517,7 +567,9 @@ export default function GuestsPage() {
               id="status-filter"
               value={selectedStatus}
               onChange={(event) =>
-                setSelectedStatus(event.target.value)
+                setSelectedStatus(
+                  event.target.value
+                )
               }
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
@@ -550,7 +602,6 @@ export default function GuestsPage() {
         </div>
       ) : (
         <>
-          {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -583,123 +634,139 @@ export default function GuestsPage() {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedGuests.map((guest) => {
-                    const guestEvent = getSingleEvent(
-                      guest.events
-                    );
+                  {paginatedGuests.map(
+                    (guest) => {
+                      const guestEvent =
+                        getSingleEvent(
+                          guest.events
+                        );
 
-                    const isProcessing =
-                      processingGuestId === guest.id;
+                      const isProcessing =
+                        processingGuestId ===
+                        guest.id;
 
-                    return (
-                      <tr
-                        key={guest.id}
-                        className="transition hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-900">
-                            {guest.full_name}
-                          </p>
+                      return (
+                        <tr
+                          key={guest.id}
+                          className="transition hover:bg-slate-50"
+                        >
+                          <td className="px-5 py-4">
+                            <p className="font-semibold text-slate-900">
+                              {
+                                guest.full_name
+                              }
+                            </p>
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {guest.phone ?? "No phone"}
-                          </p>
-                        </td>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {guest.phone ??
+                                "No phone"}
+                            </p>
+                          </td>
 
-                        <td className="px-5 py-4 text-sm text-slate-700">
-                          {guestEvent?.title ??
-                            "Unknown event"}
-                        </td>
+                          <td className="px-5 py-4 text-sm text-slate-700">
+                            {guestEvent?.title ??
+                              "Unknown event"}
+                          </td>
 
-                        <td className="px-5 py-4">
-                          <span className="font-mono text-sm font-semibold text-slate-800">
-                            {guest.event_pass_id ?? "-"}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4 text-center text-sm font-semibold text-slate-800">
-                          {guest.allowed_guests ?? 1}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {guest.status ===
-                          "checked_in" ? (
-                            <div>
-                              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                Checked In
-                              </span>
-
-                              <p className="mt-1 text-xs text-slate-400">
-                                {formatDate(
-                                  guest.checked_in_at
-                                )}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                              Pending
+                          <td className="px-5 py-4">
+                            <span className="font-mono text-sm font-semibold text-slate-800">
+                              {guest.event_pass_id ??
+                                "-"}
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="px-5 py-4">
-                          <div className="flex justify-end gap-2">
-                            <Link
-                              href={`/events/${guest.event_id}/guests`}
-                              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                            >
-                              Open Event
-                            </Link>
+                          <td className="px-5 py-4 text-center text-sm font-semibold text-slate-800">
+                            {guest.allowed_guests ??
+                              1}
+                          </td>
 
-                            <button
-                              type="button"
-                              disabled={
-                                isProcessing ||
-                                guest.status ===
-                                  "checked_in"
-                              }
-                              onClick={() =>
-                                handleCheckIn(guest)
-                              }
-                              className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            >
-                              {isProcessing
-                                ? "Please wait..."
-                                : guest.status ===
-                                  "checked_in"
-                                ? "Checked In"
-                                : "Check-In"}
-                            </button>
+                          <td className="px-5 py-4">
+                            {guest.status ===
+                            "checked_in" ? (
+                              <div>
+                                <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                  Checked In
+                                </span>
 
-                            <button
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() =>
-                                handleDeleteGuest(guest)
-                              }
-                              className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {formatDate(
+                                    guest.checked_in_at
+                                  )}
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                Pending
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              <Link
+                                href={`/events/${guest.event_id}/guests`}
+                                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                              >
+                                Open Event
+                              </Link>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  isProcessing ||
+                                  guest.status ===
+                                    "checked_in"
+                                }
+                                onClick={() =>
+                                  handleCheckIn(
+                                    guest
+                                  )
+                                }
+                                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                              >
+                                {isProcessing
+                                  ? "Please wait..."
+                                  : guest.status ===
+                                    "checked_in"
+                                  ? "Checked In"
+                                  : "Check-In"}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={
+                                  isProcessing
+                                }
+                                onClick={() =>
+                                  handleDeleteGuest(
+                                    guest
+                                  )
+                                }
+                                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {paginatedGuests.map((guest) => {
-              const guestEvent = getSingleEvent(
-                guest.events
-              );
+              const guestEvent =
+                getSingleEvent(
+                  guest.events
+                );
 
               const isProcessing =
-                processingGuestId === guest.id;
+                processingGuestId ===
+                guest.id;
 
               return (
                 <article
@@ -713,18 +780,21 @@ export default function GuestsPage() {
                       </h2>
 
                       <p className="mt-1 text-sm text-slate-500">
-                        {guest.phone ?? "No phone"}
+                        {guest.phone ??
+                          "No phone"}
                       </p>
                     </div>
 
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        guest.status === "checked_in"
+                        guest.status ===
+                        "checked_in"
                           ? "bg-emerald-100 text-emerald-700"
                           : "bg-amber-100 text-amber-700"
                       }`}
                     >
-                      {guest.status === "checked_in"
+                      {guest.status ===
+                      "checked_in"
                         ? "Checked In"
                         : "Pending"}
                     </span>
@@ -748,7 +818,8 @@ export default function GuestsPage() {
                       </p>
 
                       <p className="mt-1 font-semibold text-slate-800">
-                        {guest.allowed_guests ?? 1}
+                        {guest.allowed_guests ??
+                          1}
                       </p>
                     </div>
                   </div>
@@ -759,7 +830,8 @@ export default function GuestsPage() {
                     </p>
 
                     <p className="mt-1 font-mono font-bold">
-                      {guest.event_pass_id ?? "-"}
+                      {guest.event_pass_id ??
+                        "-"}
                     </p>
                   </div>
 
@@ -775,14 +847,16 @@ export default function GuestsPage() {
                       type="button"
                       disabled={
                         isProcessing ||
-                        guest.status === "checked_in"
+                        guest.status ===
+                          "checked_in"
                       }
                       onClick={() =>
                         handleCheckIn(guest)
                       }
                       className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white disabled:bg-slate-300"
                     >
-                      {guest.status === "checked_in"
+                      {guest.status ===
+                      "checked_in"
                         ? "Done"
                         : "Check-In"}
                     </button>
@@ -791,7 +865,9 @@ export default function GuestsPage() {
                       type="button"
                       disabled={isProcessing}
                       onClick={() =>
-                        handleDeleteGuest(guest)
+                        handleDeleteGuest(
+                          guest
+                        )
                       }
                       className="rounded-lg bg-red-600 px-2 py-2 text-xs font-semibold text-white disabled:bg-slate-300"
                     >
@@ -803,7 +879,6 @@ export default function GuestsPage() {
             })}
           </div>
 
-          {/* Pagination */}
           <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row">
             <p className="text-sm text-slate-600">
               Showing{" "}
@@ -829,10 +904,15 @@ export default function GuestsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                disabled={safeCurrentPage === 1}
+                disabled={
+                  safeCurrentPage === 1
+                }
                 onClick={() =>
                   setCurrentPage((page) =>
-                    Math.max(1, page - 1)
+                    Math.max(
+                      1,
+                      page - 1
+                    )
                   )
                 }
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
@@ -848,7 +928,8 @@ export default function GuestsPage() {
               <button
                 type="button"
                 disabled={
-                  safeCurrentPage === totalPages
+                  safeCurrentPage ===
+                  totalPages
                 }
                 onClick={() =>
                   setCurrentPage((page) =>
