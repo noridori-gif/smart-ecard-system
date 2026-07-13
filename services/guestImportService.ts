@@ -38,10 +38,36 @@ function sanitizeFileName(value: string) {
     .replace(/\s+/g, "_");
 }
 
-/**
- * Inatengeneza na kupakua Excel template
- * ya kuingiza guests wengi kwa pamoja.
- */
+function generateRandomCode(length = 6) {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  let result = "";
+
+  for (let index = 0; index < length; index += 1) {
+    const randomIndex = Math.floor(
+      Math.random() * characters.length
+    );
+
+    result += characters[randomIndex];
+  }
+
+  return result;
+}
+
+function generateEventPassId(
+  existingEventPassIds: Set<string>
+) {
+  let eventPassId = "";
+
+  do {
+    eventPassId = `SEP-${generateRandomCode(6)}`;
+  } while (existingEventPassIds.has(eventPassId));
+
+  existingEventPassIds.add(eventPassId);
+
+  return eventPassId;
+}
+
 export function downloadGuestImportTemplate(
   eventTitle?: string
 ) {
@@ -51,18 +77,18 @@ export function downloadGuestImportTemplate(
     {
       "Full Name": "John Peter",
       Phone: "0712345678",
-      Email: "john@example.com",
-      Category: "Normal",
-      "Allowed Guests": 1,
-      "Event Pass ID": "SEP-000001",
+      Email: "",
+      Category: "",
+      "Allowed Guests": "",
+      "Event Pass ID": "",
     },
     {
       "Full Name": "Mary Joseph",
       Phone: "0754321098",
-      Email: "",
+      Email: "mary@example.com",
       Category: "VIP",
       "Allowed Guests": 2,
-      "Event Pass ID": "SEP-VIP-002",
+      "Event Pass ID": "SEP-VIP002",
     },
   ];
 
@@ -71,21 +97,24 @@ export function downloadGuestImportTemplate(
       Field: "Full Name",
       Required: "Yes",
       Instructions:
-        "Andika jina kamili la mgeni.",
+        "Jina la mgeni lazima liwepo.",
+      Default: "-",
       Example: "John Peter",
     },
     {
       Field: "Phone",
-      Required: "Yes",
+      Required: "No",
       Instructions:
-        "Andika namba ya simu. Mfano 0712345678 au 255712345678.",
+        "Inaweza kuachwa wazi. Ikiwepo, iwe namba sahihi.",
+      Default: "Blank",
       Example: "0712345678",
     },
     {
       Field: "Email",
       Required: "No",
       Instructions:
-        "Email inaweza kuachwa wazi.",
+        "Inaweza kuachwa wazi. Ikiwepo, iwe email sahihi.",
+      Default: "Blank",
       Example: "john@example.com",
     },
     {
@@ -93,21 +122,24 @@ export function downloadGuestImportTemplate(
       Required: "No",
       Instructions:
         "Mfano Normal, VIP, Family au Special Guest.",
-      Example: "Normal",
+      Default: "Normal",
+      Example: "VIP",
     },
     {
       Field: "Allowed Guests",
-      Required: "Yes",
+      Required: "No",
       Instructions:
-        "Lazima iwe namba kamili kuanzia 1.",
-      Example: "1",
+        "Lazima iwe namba kuanzia 1 ikiwa imejazwa.",
+      Default: "1",
+      Example: "2",
     },
     {
       Field: "Event Pass ID",
-      Required: "Yes",
+      Required: "No",
       Instructions:
-        "Lazima iwe ya kipekee. Format inayopendekezwa ni SEP-000001.",
-      Example: "SEP-000001",
+        "Ikiwa wazi, mfumo utatengeneza automatically.",
+      Default: "Auto-generated",
+      Example: "SEP-ABC123",
     },
   ];
 
@@ -129,7 +161,8 @@ export function downloadGuestImportTemplate(
   instructionsWorksheet["!cols"] = [
     { wch: 22 },
     { wch: 12 },
-    { wch: 60 },
+    { wch: 62 },
+    { wch: 20 },
     { wch: 25 },
   ];
 
@@ -157,10 +190,6 @@ export function downloadGuestImportTemplate(
   });
 }
 
-/**
- * Inasafisha jina la column ili Excel yenye
- * tofauti ndogo za spacing bado iweze kusomeka.
- */
 function normalizeHeader(value: string) {
   return value
     .trim()
@@ -174,10 +203,8 @@ function getCellValue(
   possibleHeaders: string[]
 ) {
   const normalizedEntries = Object.entries(row).map(
-    ([key, value]) => [
-      normalizeHeader(key),
-      value,
-    ] as const
+    ([key, value]) =>
+      [normalizeHeader(key), value] as const
   );
 
   for (const possibleHeader of possibleHeaders) {
@@ -208,6 +235,14 @@ function textValue(value: unknown) {
 }
 
 function numberValue(value: unknown) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return 0;
+  }
+
   const convertedNumber = Number(value);
 
   if (!Number.isFinite(convertedNumber)) {
@@ -217,10 +252,40 @@ function numberValue(value: unknown) {
   return Math.trunc(convertedNumber);
 }
 
-/**
- * Inasoma file ya Excel na kuigeuza kuwa rows
- * zitakazotumika kwenye preview na validation.
- */
+function normalizePhone(phone: string) {
+  return phone
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[()-]/g, "");
+}
+
+function isValidPhone(phone: string) {
+  if (!phone) {
+    return true;
+  }
+
+  const normalizedPhone =
+    normalizePhone(phone).replace(/^\+/, "");
+
+  return /^\d{7,15}$/.test(normalizedPhone);
+}
+
+function isValidEmail(email: string) {
+  if (!email) {
+    return true;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidEventPassId(eventPassId: string) {
+  if (!eventPassId) {
+    return true;
+  }
+
+  return /^[A-Z0-9-]{4,30}$/.test(eventPassId);
+}
+
 export async function readGuestImportFile(
   file: File
 ): Promise<GuestImportRow[]> {
@@ -259,17 +324,19 @@ export async function readGuestImportFile(
         ])
       );
 
-      const phone = textValue(
-        getCellValue(row, [
-          "Phone",
-          "Phone Number",
-          "Mobile",
-        ])
+      const phone = normalizePhone(
+        textValue(
+          getCellValue(row, [
+            "Phone",
+            "Phone Number",
+            "Mobile",
+          ])
+        )
       );
 
       const email = textValue(
         getCellValue(row, ["Email"])
-      );
+      ).toLowerCase();
 
       const category = textValue(
         getCellValue(row, [
@@ -304,13 +371,151 @@ export async function readGuestImportFile(
         eventPassId,
       };
     })
-    .filter((row) => {
-      return Boolean(
+    .filter((row) =>
+      Boolean(
         row.fullName ||
           row.phone ||
           row.email ||
           row.category ||
           row.eventPassId
+      )
+    );
+}
+
+export function validateGuestImportRows(
+  rows: GuestImportRow[]
+): GuestImportValidationResult {
+  const errors: GuestImportError[] = [];
+
+  const normalizedRows: GuestImportRow[] = [];
+
+  const eventPassIds = new Set<string>();
+  const phones = new Set<string>();
+
+  for (const row of rows) {
+    const normalizedRow: GuestImportRow = {
+      rowNumber: row.rowNumber,
+      fullName: row.fullName.trim(),
+      phone: normalizePhone(row.phone),
+      email: row.email.trim().toLowerCase(),
+      category: row.category.trim() || "Normal",
+      allowedGuests:
+        row.allowedGuests >= 1
+          ? row.allowedGuests
+          : 1,
+      eventPassId: row.eventPassId
+        .trim()
+        .toUpperCase(),
+    };
+
+    if (!normalizedRow.fullName) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Full Name",
+        message: "Jina la mgeni linahitajika.",
+      });
+    }
+
+    if (
+      normalizedRow.phone &&
+      !isValidPhone(normalizedRow.phone)
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Phone",
+        message:
+          "Namba ya simu si sahihi. Tumia digits 7 hadi 15.",
+      });
+    }
+
+    if (
+      normalizedRow.email &&
+      !isValidEmail(normalizedRow.email)
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Email",
+        message: "Email address si sahihi.",
+      });
+    }
+
+    if (
+      row.allowedGuests !== 0 &&
+      row.allowedGuests < 1
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Allowed Guests",
+        message:
+          "Allowed Guests lazima iwe 1 au zaidi.",
+      });
+    }
+
+    if (
+      normalizedRow.eventPassId &&
+      !isValidEventPassId(
+        normalizedRow.eventPassId
+      )
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Event Pass ID",
+        message:
+          "Event Pass ID itumie herufi, namba na dash pekee.",
+      });
+    }
+
+    if (!normalizedRow.eventPassId) {
+      normalizedRow.eventPassId =
+        generateEventPassId(eventPassIds);
+    } else if (
+      eventPassIds.has(
+        normalizedRow.eventPassId
+      )
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Event Pass ID",
+        message:
+          "Event Pass ID imejirudia ndani ya Excel.",
+      });
+    } else {
+      eventPassIds.add(
+        normalizedRow.eventPassId
       );
-    });
+    }
+
+    if (normalizedRow.phone) {
+      if (phones.has(normalizedRow.phone)) {
+        errors.push({
+          rowNumber: row.rowNumber,
+          field: "Phone",
+          message:
+            "Namba ya simu imejirudia ndani ya Excel.",
+        });
+      } else {
+        phones.add(normalizedRow.phone);
+      }
+    }
+
+    normalizedRows.push(normalizedRow);
+  }
+
+  const rowsWithErrors = new Set(
+    errors.map((error) => error.rowNumber)
+  );
+
+  const validRows = normalizedRows.filter(
+    (row) => !rowsWithErrors.has(row.rowNumber)
+  );
+
+  const invalidRows = normalizedRows.filter(
+    (row) => rowsWithErrors.has(row.rowNumber)
+  );
+
+  return {
+    validRows,
+    invalidRows,
+    errors,
+  };
 }
