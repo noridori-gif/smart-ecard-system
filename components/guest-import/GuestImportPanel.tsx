@@ -9,8 +9,10 @@ import {
 
 import {
   downloadGuestImportTemplate,
+  importValidGuests,
   readGuestImportFile,
-  validateGuestImportRows,
+  validateGuestImportRowsForEvent,
+  type GuestImportResult,
   type GuestImportRow,
   type GuestImportValidationResult,
 } from "@/services/guestImportService";
@@ -22,6 +24,7 @@ export type GuestImportEventOption = {
 
 type GuestImportPanelProps = {
   events: GuestImportEventOption[];
+  onImportCompleted?: () => void | Promise<void>;
 };
 
 const PREVIEW_ROWS_LIMIT = 10;
@@ -50,6 +53,7 @@ function isSupportedExcelFile(file: File) {
 
 export default function GuestImportPanel({
   events,
+  onImportCompleted,
 }: GuestImportPanelProps) {
   const fileInputRef =
     useRef<HTMLInputElement | null>(null);
@@ -67,10 +71,16 @@ export default function GuestImportPanel({
   const [validationResult, setValidationResult] =
     useState<GuestImportValidationResult | null>(null);
 
+  const [importResult, setImportResult] =
+    useState<GuestImportResult | null>(null);
+
   const [isReadingFile, setIsReadingFile] =
     useState(false);
 
   const [isValidating, setIsValidating] =
+    useState(false);
+
+  const [isImporting, setIsImporting] =
     useState(false);
 
   const [errorMessage, setErrorMessage] =
@@ -85,17 +95,19 @@ export default function GuestImportPanel({
     );
   }, [events, selectedEventId]);
 
-  const rowsForDisplay =
-    validationResult?.validRows.length ||
-    validationResult?.invalidRows.length
-      ? [
-          ...validationResult.validRows,
-          ...validationResult.invalidRows,
-        ].sort(
-          (firstRow, secondRow) =>
-            firstRow.rowNumber - secondRow.rowNumber
-        )
-      : previewRows;
+  const rowsForDisplay = useMemo(() => {
+    if (!validationResult) {
+      return previewRows;
+    }
+
+    return [
+      ...validationResult.validRows,
+      ...validationResult.invalidRows,
+    ].sort(
+      (firstRow, secondRow) =>
+        firstRow.rowNumber - secondRow.rowNumber
+    );
+  }, [previewRows, validationResult]);
 
   const displayedRows = rowsForDisplay.slice(
     0,
@@ -114,8 +126,20 @@ export default function GuestImportPanel({
     );
   }, [validationResult]);
 
-  function resetValidation() {
+  function resetValidationAndImport() {
     setValidationResult(null);
+    setImportResult(null);
+  }
+
+  function resetFileData() {
+    setSelectedFile(null);
+    setPreviewRows([]);
+    setErrorMessage("");
+    resetValidationAndImport();
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function handleDownloadTemplate() {
@@ -156,9 +180,9 @@ export default function GuestImportPanel({
     }
 
     setErrorMessage("");
-    setPreviewRows([]);
     setSelectedFile(null);
-    resetValidation();
+    setPreviewRows([]);
+    resetValidationAndImport();
 
     if (!isSupportedExcelFile(file)) {
       setErrorMessage(
@@ -166,7 +190,6 @@ export default function GuestImportPanel({
       );
 
       event.target.value = "";
-
       return;
     }
 
@@ -178,7 +201,6 @@ export default function GuestImportPanel({
       );
 
       event.target.value = "";
-
       return;
     }
 
@@ -213,21 +235,18 @@ export default function GuestImportPanel({
     }
   }
 
-  function handleClearFile() {
-    setSelectedFile(null);
-    setPreviewRows([]);
-    setErrorMessage("");
-    resetValidation();
+  async function handleValidate() {
+    if (!selectedEvent) {
+      setErrorMessage(
+        "Chagua event kwanza kabla ya validation."
+      );
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      return;
     }
-  }
 
-  function handleValidate() {
     if (previewRows.length === 0) {
       setErrorMessage(
-        "Chagua na upload Excel kwanza kabla ya validation."
+        "Upload Excel kwanza kabla ya validation."
       );
 
       return;
@@ -236,11 +255,30 @@ export default function GuestImportPanel({
     try {
       setIsValidating(true);
       setErrorMessage("");
+      setImportResult(null);
 
       const result =
-        validateGuestImportRows(previewRows);
+        await validateGuestImportRowsForEvent(
+          previewRows,
+          selectedEvent.id
+        );
 
       setValidationResult(result);
+
+      /*
+       * Tunahifadhi normalized rows ili defaults na
+       * generated Event Pass IDs zisibadilike tena.
+       */
+      const normalizedRows = [
+        ...result.validRows,
+        ...result.invalidRows,
+      ].sort(
+        (firstRow, secondRow) =>
+          firstRow.rowNumber -
+          secondRow.rowNumber
+      );
+
+      setPreviewRows(normalizedRows);
     } catch (error) {
       console.error(
         "Guest validation error:",
@@ -257,6 +295,91 @@ export default function GuestImportPanel({
     }
   }
 
+  async function handleImportGuests() {
+    if (!selectedEvent) {
+      setErrorMessage(
+        "Chagua event kwanza kabla ya import."
+      );
+
+      return;
+    }
+
+    if (
+      !validationResult ||
+      validationResult.validRows.length === 0
+    ) {
+      setErrorMessage(
+        "Hakuna valid guests wa ku-import."
+      );
+
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Una uhakika unataka ku-import guests ${validationResult.validRows.length} kwenye event "${selectedEvent.title}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      setErrorMessage("");
+      setImportResult(null);
+
+      /*
+       * Tunafanya validation tena muda mfupi kabla
+       * ya import ili kuzuia duplicates mpya.
+       */
+      const latestValidation =
+        await validateGuestImportRowsForEvent(
+          validationResult.validRows,
+          selectedEvent.id
+        );
+
+      setValidationResult(latestValidation);
+
+      if (
+        latestValidation.invalidRows.length > 0
+      ) {
+        setErrorMessage(
+          "Baadhi ya guests sasa wana duplicates au errors. Angalia validation result kisha ujaribu tena."
+        );
+
+        return;
+      }
+
+      const result = await importValidGuests(
+        selectedEvent.id,
+        latestValidation.validRows
+      );
+
+      setImportResult(result);
+
+      if (onImportCompleted) {
+        await onImportCompleted();
+      }
+    } catch (error) {
+      console.error(
+        "Guest import error:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Guests hawakuweza ku-import."
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  function handleStartAnotherImport() {
+    resetFileData();
+  }
+
   function getRowErrors(rowNumber: number) {
     if (!validationResult) {
       return [];
@@ -264,12 +387,6 @@ export default function GuestImportPanel({
 
     return validationResult.errors.filter(
       (error) => error.rowNumber === rowNumber
-    );
-  }
-
-  function handleImportGuests() {
-    setErrorMessage(
-      "Supabase import itaongezwa kwenye hatua inayofuata."
     );
   }
 
@@ -282,8 +399,7 @@ export default function GuestImportPanel({
 
         <p className="mt-1 text-sm text-slate-600">
           Pakua template, jaza guest details, upload
-          Excel, kisha fanya validation kabla ya
-          ku-import.
+          Excel, validate data, kisha import wageni.
         </p>
       </div>
 
@@ -293,417 +409,541 @@ export default function GuestImportPanel({
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div>
-          <label
-            htmlFor="guest-import-event"
-            className="mb-2 block text-sm font-semibold text-slate-700"
-          >
-            1. Select Event
-          </label>
-
-          <select
-            id="guest-import-event"
-            value={selectedEventId}
-            onChange={(event) => {
-              setSelectedEventId(event.target.value);
-              handleClearFile();
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-          >
-            <option value="">
-              Chagua event
-            </option>
-
-            {events.map((eventItem) => (
-              <option
-                key={eventItem.id}
-                value={String(eventItem.id)}
-              >
-                {eventItem.title}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <p className="mb-2 block text-sm font-semibold text-slate-700">
-            2. Download Template
-          </p>
-
-          <button
-            type="button"
-            onClick={handleDownloadTemplate}
-            disabled={!selectedEvent}
-            className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            Download Excel Template
-          </button>
-        </div>
-
-        <div>
-          <p className="mb-2 block text-sm font-semibold text-slate-700">
-            3. Upload Completed Excel
-          </p>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          <button
-            type="button"
-            onClick={handleChooseFile}
-            disabled={!selectedEvent || isReadingFile}
-            className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isReadingFile
-              ? "Reading Excel..."
-              : "Choose Excel File"}
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        <p className="font-semibold">
-          Excel columns:
-        </p>
-
-        <p className="mt-1">
-          Full Name ni lazima. Phone, Email, Category,
-          Allowed Guests na Event Pass ID ni optional.
-        </p>
-
-        <p className="mt-2 text-xs text-blue-700">
-          Category ikiwa wazi itawekwa Normal, Allowed
-          Guests itawekwa 1, na Event Pass ID
-          itatengenezwa automatically.
-        </p>
-      </div>
-
-      {selectedFile && (
-        <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center">
-          <div>
-            <p className="font-semibold text-slate-900">
-              {selectedFile.name}
-            </p>
-
-            <p className="mt-1 text-xs text-slate-500">
-              {formatFileSize(selectedFile.size)} ·{" "}
-              {previewRows.length} rows found
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleClearFile}
-            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-          >
-            Remove File
-          </button>
-        </div>
-      )}
-
-      {previewRows.length > 0 && (
-        <div className="space-y-5">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      {importResult && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                Guest Preview
+              <h3 className="text-xl font-bold text-emerald-800">
+                Import imekamilika vizuri
               </h3>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Angalia data kabla ya validation na
-                import.
+              <p className="mt-1 text-sm text-emerald-700">
+                Guest records na invitations
+                zimehifadhiwa kwenye mfumo.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <div className="rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700">
-                {previewRows.length} Guests
-              </div>
+            <span className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-bold text-white">
+              Success
+            </span>
+          </div>
 
-              {validationResult && (
-                <>
-                  <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
-                    {validationResult.validRows.length} Valid
-                  </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-emerald-200 bg-white p-4">
+              <p className="text-sm text-slate-500">
+                Guests Imported
+              </p>
 
-                  <div className="rounded-full bg-red-100 px-4 py-2 text-sm font-bold text-red-700">
-                    {validationResult.invalidRows.length} Invalid
-                  </div>
-                </>
-              )}
+              <p className="mt-2 text-3xl font-bold text-emerald-700">
+                {importResult.importedGuests}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-white p-4">
+              <p className="text-sm text-slate-500">
+                Invitations Created
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-blue-700">
+                {importResult.createdInvitations}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-white p-4">
+              <p className="text-sm text-slate-500">
+                Failed Rows
+              </p>
+
+              <p className="mt-2 text-3xl font-bold text-red-600">
+                {importResult.failedRows}
+              </p>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-900">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Row
-                    </th>
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={handleStartAnotherImport}
+              className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+            >
+              Start Another Import
+            </button>
+          </div>
+        </div>
+      )}
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Full Name
-                    </th>
+      {!importResult && (
+        <>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div>
+              <label
+                htmlFor="guest-import-event"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                1. Select Event
+              </label>
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Phone
-                    </th>
+              <select
+                id="guest-import-event"
+                value={selectedEventId}
+                disabled={isImporting}
+                onChange={(event) => {
+                  setSelectedEventId(
+                    event.target.value
+                  );
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Email
-                    </th>
+                  resetFileData();
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+              >
+                <option value="">
+                  Chagua event
+                </option>
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Category
-                    </th>
+                {events.map((eventItem) => (
+                  <option
+                    key={eventItem.id}
+                    value={String(eventItem.id)}
+                  >
+                    {eventItem.title}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white">
-                      Allowed
-                    </th>
+            <div>
+              <p className="mb-2 block text-sm font-semibold text-slate-700">
+                2. Download Template
+              </p>
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Event Pass ID
-                    </th>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                disabled={
+                  !selectedEvent || isImporting
+                }
+                className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Download Excel Template
+              </button>
+            </div>
 
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                      Validation
-                    </th>
-                  </tr>
-                </thead>
+            <div>
+              <p className="mb-2 block text-sm font-semibold text-slate-700">
+                3. Upload Completed Excel
+              </p>
 
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {displayedRows.map((row) => {
-                    const rowIsInvalid =
-                      invalidRowNumbers.has(row.rowNumber);
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
 
-                    const rowErrors = getRowErrors(
-                      row.rowNumber
-                    );
-
-                    return (
-                      <tr
-                        key={`${row.rowNumber}-${row.eventPassId}`}
-                        className={
-                          rowIsInvalid
-                            ? "bg-red-50"
-                            : "hover:bg-slate-50"
-                        }
-                      >
-                        <td className="px-4 py-3 text-sm text-slate-500">
-                          {row.rowNumber}
-                        </td>
-
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-900">
-                          {row.fullName || "-"}
-                        </td>
-
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {row.phone || "-"}
-                        </td>
-
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {row.email || "-"}
-                        </td>
-
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {row.category || "Normal"}
-                        </td>
-
-                        <td className="px-4 py-3 text-center text-sm font-semibold text-slate-800">
-                          {row.allowedGuests || 1}
-                        </td>
-
-                        <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">
-                          {row.eventPassId ||
-                            "Will be generated"}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {!validationResult ? (
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                              Not validated
-                            </span>
-                          ) : rowIsInvalid ? (
-                            <div className="space-y-1">
-                              <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                                Invalid
-                              </span>
-
-                              {rowErrors.map(
-                                (rowError, index) => (
-                                  <p
-                                    key={`${rowError.field}-${index}`}
-                                    className="text-xs text-red-600"
-                                  >
-                                    {rowError.field}:{" "}
-                                    {rowError.message}
-                                  </p>
-                                )
-                              )}
-                            </div>
-                          ) : (
-                            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                              Valid
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <button
+                type="button"
+                onClick={handleChooseFile}
+                disabled={
+                  !selectedEvent ||
+                  isReadingFile ||
+                  isImporting
+                }
+                className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {isReadingFile
+                  ? "Reading Excel..."
+                  : "Choose Excel File"}
+              </button>
             </div>
           </div>
 
-          {rowsForDisplay.length >
-            PREVIEW_ROWS_LIMIT && (
-            <p className="text-center text-sm text-slate-500">
-              Inaonyesha rows{" "}
-              {PREVIEW_ROWS_LIMIT} za kwanza kati ya{" "}
-              {rowsForDisplay.length}.
+          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <p className="font-semibold">
+              Excel columns:
             </p>
-          )}
 
-          {!validationResult && (
-            <div className="flex flex-col justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center">
+            <p className="mt-1">
+              Full Name ni lazima. Phone, Email,
+              Category, Allowed Guests na Event Pass ID
+              ni optional.
+            </p>
+
+            <p className="mt-2 text-xs text-blue-700">
+              Category tupu itawekwa Normal, Allowed
+              Guests itawekwa 1, na Event Pass ID
+              itatengenezwa automatically.
+            </p>
+          </div>
+
+          {selectedFile && (
+            <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center">
               <div>
-                <p className="font-semibold text-amber-900">
-                  Preview imekamilika
+                <p className="font-semibold text-slate-900">
+                  {selectedFile.name}
                 </p>
 
-                <p className="mt-1 text-sm text-amber-800">
-                  Fanya validation ili kuangalia
-                  missing details, duplicate phone,
-                  duplicate Event Pass ID na invalid
-                  data.
+                <p className="mt-1 text-xs text-slate-500">
+                  {formatFileSize(
+                    selectedFile.size
+                  )}{" "}
+                  · {previewRows.length} rows found
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={handleValidate}
-                disabled={isValidating}
-                className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                onClick={resetFileData}
+                disabled={isImporting}
+                className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
               >
-                {isValidating
-                  ? "Validating..."
-                  : "Validate Guest Data"}
+                Remove File
               </button>
             </div>
           )}
 
-          {validationResult && (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-500">
-                    Total Rows
-                  </p>
+          {previewRows.length > 0 && (
+            <div className="space-y-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Guest Preview
+                  </h3>
 
-                  <p className="mt-2 text-3xl font-bold text-slate-900">
-                    {previewRows.length}
+                  <p className="mt-1 text-sm text-slate-500">
+                    Angalia data kabla ya validation
+                    na import.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-sm font-medium text-emerald-700">
-                    Valid Guests
-                  </p>
+                <div className="flex flex-wrap gap-2">
+                  <div className="rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700">
+                    {previewRows.length} Guests
+                  </div>
 
-                  <p className="mt-2 text-3xl font-bold text-emerald-700">
-                    {validationResult.validRows.length}
-                  </p>
-                </div>
+                  {validationResult && (
+                    <>
+                      <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
+                        {
+                          validationResult.validRows
+                            .length
+                        }{" "}
+                        Valid
+                      </div>
 
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                  <p className="text-sm font-medium text-red-700">
-                    Invalid Guests
-                  </p>
-
-                  <p className="mt-2 text-3xl font-bold text-red-700">
-                    {validationResult.invalidRows.length}
-                  </p>
+                      <div className="rounded-full bg-red-100 px-4 py-2 text-sm font-bold text-red-700">
+                        {
+                          validationResult.invalidRows
+                            .length
+                        }{" "}
+                        Invalid
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {validationResult.errors.length > 0 ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                  <h4 className="font-bold text-red-800">
-                    Validation Errors
-                  </h4>
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-900">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Row
+                        </th>
 
-                  <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
-                    {validationResult.errors.map(
-                      (validationError, index) => (
-                        <div
-                          key={`${validationError.rowNumber}-${validationError.field}-${index}`}
-                          className="rounded-lg border border-red-100 bg-white px-3 py-2 text-sm text-red-700"
-                        >
-                          <span className="font-bold">
-                            Row{" "}
-                            {validationError.rowNumber}
-                          </span>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Full Name
+                        </th>
 
-                          {" — "}
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Phone
+                        </th>
 
-                          <span className="font-semibold">
-                            {validationError.field}:
-                          </span>{" "}
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Email
+                        </th>
 
-                          {validationError.message}
-                        </div>
-                      )
-                    )}
-                  </div>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Category
+                        </th>
+
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white">
+                          Allowed
+                        </th>
+
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Event Pass ID
+                        </th>
+
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                          Validation
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {displayedRows.map((row) => {
+                        const rowIsInvalid =
+                          invalidRowNumbers.has(
+                            row.rowNumber
+                          );
+
+                        const rowErrors =
+                          getRowErrors(
+                            row.rowNumber
+                          );
+
+                        return (
+                          <tr
+                            key={`${row.rowNumber}-${row.eventPassId}`}
+                            className={
+                              rowIsInvalid
+                                ? "bg-red-50"
+                                : "hover:bg-slate-50"
+                            }
+                          >
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {row.rowNumber}
+                            </td>
+
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-900">
+                              {row.fullName || "-"}
+                            </td>
+
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              {row.phone || "-"}
+                            </td>
+
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              {row.email || "-"}
+                            </td>
+
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              {row.category ||
+                                "Normal"}
+                            </td>
+
+                            <td className="px-4 py-3 text-center text-sm font-semibold text-slate-800">
+                              {row.allowedGuests || 1}
+                            </td>
+
+                            <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">
+                              {row.eventPassId ||
+                                "Will be generated"}
+                            </td>
+
+                            <td className="px-4 py-3">
+                              {!validationResult ? (
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                  Not validated
+                                </span>
+                              ) : rowIsInvalid ? (
+                                <div className="space-y-1">
+                                  <span className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                                    Invalid
+                                  </span>
+
+                                  {rowErrors.map(
+                                    (
+                                      rowError,
+                                      index
+                                    ) => (
+                                      <p
+                                        key={`${rowError.field}-${index}`}
+                                        className="text-xs text-red-600"
+                                      >
+                                        {
+                                          rowError.field
+                                        }
+                                        :{" "}
+                                        {
+                                          rowError.message
+                                        }
+                                      </p>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                  Valid
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-800">
-                  <p className="font-bold">
-                    Validation imekamilika vizuri.
-                  </p>
+              </div>
 
-                  <p className="mt-1 text-sm">
-                    Wageni wote wako tayari
-                    ku-import.
-                  </p>
+              {rowsForDisplay.length >
+                PREVIEW_ROWS_LIMIT && (
+                <p className="text-center text-sm text-slate-500">
+                  Inaonyesha rows{" "}
+                  {PREVIEW_ROWS_LIMIT} za kwanza kati
+                  ya {rowsForDisplay.length}.
+                </p>
+              )}
+
+              {!validationResult && (
+                <div className="flex flex-col justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="font-semibold text-amber-900">
+                      Preview imekamilika
+                    </p>
+
+                    <p className="mt-1 text-sm text-amber-800">
+                      Validation itaangalia Excel na
+                      database kwa duplicates na
+                      invalid details.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleValidate}
+                    disabled={
+                      isValidating || isImporting
+                    }
+                    className="rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {isValidating
+                      ? "Checking Database..."
+                      : "Validate Guest Data"}
+                  </button>
                 </div>
               )}
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleValidate}
-                  disabled={isValidating}
-                  className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Validate Again
-                </button>
+              {validationResult && (
+                <div className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-500">
+                        Total Rows
+                      </p>
 
-                <button
-                  type="button"
-                  onClick={handleImportGuests}
-                  disabled={
-                    validationResult.validRows.length ===
-                    0
-                  }
-                  className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  Import{" "}
-                  {validationResult.validRows.length}{" "}
-                  Valid Guests
-                </button>
-              </div>
+                      <p className="mt-2 text-3xl font-bold text-slate-900">
+                        {previewRows.length}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-sm font-medium text-emerald-700">
+                        Valid Guests
+                      </p>
+
+                      <p className="mt-2 text-3xl font-bold text-emerald-700">
+                        {
+                          validationResult.validRows
+                            .length
+                        }
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <p className="text-sm font-medium text-red-700">
+                        Invalid Guests
+                      </p>
+
+                      <p className="mt-2 text-3xl font-bold text-red-700">
+                        {
+                          validationResult.invalidRows
+                            .length
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {validationResult.errors.length >
+                  0 ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h4 className="font-bold text-red-800">
+                        Validation Errors
+                      </h4>
+
+                      <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+                        {validationResult.errors.map(
+                          (
+                            validationError,
+                            index
+                          ) => (
+                            <div
+                              key={`${validationError.rowNumber}-${validationError.field}-${index}`}
+                              className="rounded-lg border border-red-100 bg-white px-3 py-2 text-sm text-red-700"
+                            >
+                              <span className="font-bold">
+                                Row{" "}
+                                {
+                                  validationError.rowNumber
+                                }
+                              </span>
+
+                              {" — "}
+
+                              <span className="font-semibold">
+                                {
+                                  validationError.field
+                                }
+                                :
+                              </span>{" "}
+
+                              {
+                                validationError.message
+                              }
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-emerald-800">
+                      <p className="font-bold">
+                        Validation imekamilika vizuri.
+                      </p>
+
+                      <p className="mt-1 text-sm">
+                        Wageni wote wako tayari
+                        ku-import.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={handleValidate}
+                      disabled={
+                        isValidating || isImporting
+                      }
+                      className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {isValidating
+                        ? "Validating..."
+                        : "Validate Again"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleImportGuests}
+                      disabled={
+                        isImporting ||
+                        validationResult.validRows
+                          .length === 0
+                      }
+                      className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    >
+                      {isImporting
+                        ? "Importing Guests..."
+                        : `Import ${validationResult.validRows.length} Valid Guests`}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </section>
   );
