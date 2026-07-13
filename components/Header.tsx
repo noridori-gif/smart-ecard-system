@@ -10,45 +10,49 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
+import {
+  getCurrentUserProfile,
+  getRoleLabel,
+} from "@/services/profileService";
+
 type HeaderProps = {
   onMenuClick: () => void;
 };
 
-type CurrentUser = {
+type HeaderUser = {
   displayName: string;
   email: string;
   initial: string;
+  roleLabel: string;
 };
 
-function getUserDetails(
-  email?: string,
-  fullName?: unknown
-): CurrentUser {
-  const safeEmail =
-    email?.trim() || "Signed-in user";
+const emptyUser: HeaderUser = {
+  displayName: "User",
+  email: "",
+  initial: "U",
+  roleLabel: "Loading role...",
+};
 
-  const metadataName =
-    typeof fullName === "string"
-      ? fullName.trim()
-      : "";
-
+function createHeaderUser(
+  fullName: string | null,
+  email: string,
+  roleLabel: string
+): HeaderUser {
   const emailName =
-    safeEmail !== "Signed-in user"
-      ? safeEmail.split("@")[0]
-      : "";
+    email.split("@")[0] || "User";
 
   const displayName =
-    metadataName ||
-    emailName ||
-    "User";
+    fullName?.trim() ||
+    emailName;
 
   return {
     displayName,
-    email: safeEmail,
+    email,
     initial:
       displayName
         .charAt(0)
         .toUpperCase() || "U",
+    roleLabel,
   };
 }
 
@@ -63,9 +67,7 @@ export default function Header({
   );
 
   const [currentUser, setCurrentUser] =
-    useState<CurrentUser>(
-      getUserDetails()
-    );
+    useState<HeaderUser>(emptyUser);
 
   const [isUserLoading, setIsUserLoading] =
     useState(true);
@@ -74,40 +76,70 @@ export default function Header({
     useState(false);
 
   const [
-    logoutError,
-    setLogoutError,
+    headerError,
+    setHeaderError,
   ] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadCurrentUser() {
+    async function loadProfile() {
       try {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
+        setHeaderError("");
 
-        if (error) {
-          throw error;
+        const profile =
+          await getCurrentUserProfile();
+
+        if (!isMounted) {
+          return;
         }
 
-        if (!isMounted || !user) {
+        if (!profile) {
+          router.replace("/login");
+          router.refresh();
+
+          return;
+        }
+
+        if (!profile.is_active) {
+          await supabase.auth.signOut({
+            scope: "local",
+          });
+
+          if (!isMounted) {
+            return;
+          }
+
+          setHeaderError(
+            "Account yako imezimwa. Wasiliana na administrator."
+          );
+
+          router.replace("/login");
+          router.refresh();
+
           return;
         }
 
         setCurrentUser(
-          getUserDetails(
-            user.email,
-            user.user_metadata?.full_name ??
-              user.user_metadata?.name
+          createHeaderUser(
+            profile.full_name,
+            profile.email,
+            getRoleLabel(profile.role)
           )
         );
       } catch (error) {
         console.error(
-          "Unable to load user:",
+          "Unable to load profile:",
           error
         );
+
+        if (isMounted) {
+          setHeaderError(
+            error instanceof Error
+              ? error.message
+              : "Profile haikuweza kupakiwa."
+          );
+        }
       } finally {
         if (isMounted) {
           setIsUserLoading(false);
@@ -115,36 +147,12 @@ export default function Header({
       }
     }
 
-    loadCurrentUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!isMounted) {
-          return;
-        }
-
-        if (!session?.user) {
-          return;
-        }
-
-        setCurrentUser(
-          getUserDetails(
-            session.user.email,
-            session.user.user_metadata
-              ?.full_name ??
-              session.user.user_metadata?.name
-          )
-        );
-      }
-    );
+    loadProfile();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [router, supabase]);
 
   async function handleLogout() {
     if (isLoggingOut) {
@@ -153,7 +161,7 @@ export default function Header({
 
     try {
       setIsLoggingOut(true);
-      setLogoutError("");
+      setHeaderError("");
 
       const { error } =
         await supabase.auth.signOut({
@@ -172,7 +180,7 @@ export default function Header({
         error
       );
 
-      setLogoutError(
+      setHeaderError(
         "Logout haikufanikiwa. Jaribu tena."
       );
 
@@ -220,21 +228,28 @@ export default function Header({
                 : currentUser.initial}
             </div>
 
-            <div className="hidden max-w-48 sm:block">
-              <p className="truncate font-semibold capitalize text-slate-900">
+            <div className="hidden max-w-52 sm:block">
+              <p className="truncate font-semibold text-slate-900">
                 {isUserLoading
                   ? "Loading..."
                   : currentUser.displayName}
               </p>
 
-              <p
-                className="truncate text-xs text-slate-500"
-                title={currentUser.email}
-              >
+              <p className="truncate text-xs font-medium text-blue-600">
                 {isUserLoading
-                  ? "Checking session"
-                  : currentUser.email}
+                  ? "Checking profile"
+                  : currentUser.roleLabel}
               </p>
+
+              {!isUserLoading &&
+                currentUser.email && (
+                  <p
+                    className="mt-0.5 truncate text-xs text-slate-400"
+                    title={currentUser.email}
+                  >
+                    {currentUser.email}
+                  </p>
+                )}
             </div>
           </div>
 
@@ -258,12 +273,12 @@ export default function Header({
         </div>
       </div>
 
-      {logoutError && (
+      {headerError && (
         <div
           role="alert"
           className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700"
         >
-          {logoutError}
+          {headerError}
         </div>
       )}
     </header>
