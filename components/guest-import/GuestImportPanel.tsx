@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import {
+  downloadGuestImportErrorReport,
   downloadGuestImportTemplate,
   importValidGuests,
   readGuestImportFile,
@@ -156,6 +157,47 @@ export default function GuestImportPanel({
     downloadGuestImportTemplate(selectedEvent.title);
   }
 
+  function handleDownloadErrorReport() {
+    if (!selectedEvent) {
+      setErrorMessage(
+        "Chagua event kwanza kabla ya kupakua error report."
+      );
+
+      return;
+    }
+
+    if (
+      !validationResult ||
+      validationResult.errors.length === 0
+    ) {
+      setErrorMessage(
+        "Hakuna validation errors za kupakua."
+      );
+
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      downloadGuestImportErrorReport(
+        validationResult,
+        selectedEvent.title
+      );
+    } catch (error) {
+      console.error(
+        "Download error report failed:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Error report haikuweza kupakuliwa."
+      );
+    }
+  }
+
   function handleChooseFile() {
     setErrorMessage("");
 
@@ -265,10 +307,6 @@ export default function GuestImportPanel({
 
       setValidationResult(result);
 
-      /*
-       * Tunahifadhi normalized rows ili defaults na
-       * generated Event Pass IDs zisibadilike tena.
-       */
       const normalizedRows = [
         ...result.validRows,
         ...result.invalidRows,
@@ -328,10 +366,6 @@ export default function GuestImportPanel({
       setErrorMessage("");
       setImportResult(null);
 
-      /*
-       * Tunafanya validation tena muda mfupi kabla
-       * ya import ili kuzuia duplicates mpya.
-       */
       const latestValidation =
         await validateGuestImportRowsForEvent(
           validationResult.validRows,
@@ -859,11 +893,31 @@ export default function GuestImportPanel({
                   {validationResult.errors.length >
                   0 ? (
                     <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                      <h4 className="font-bold text-red-800">
-                        Validation Errors
-                      </h4>
+                      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                        <div>
+                          <h4 className="font-bold text-red-800">
+                            Validation Errors
+                          </h4>
 
-                      <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+                          <p className="mt-1 text-sm text-red-700">
+                            Pakua Excel report ili
+                            kurekebisha rows
+                            zilizokataliwa.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={
+                            handleDownloadErrorReport
+                          }
+                          className="rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-700"
+                        >
+                          Download Error Report
+                        </button>
+                      </div>
+
+                      <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
                         {validationResult.errors.map(
                           (
                             validationError,
