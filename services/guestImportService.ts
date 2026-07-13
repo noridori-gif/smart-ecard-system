@@ -590,10 +590,6 @@ export function validateGuestImportRows(
   };
 }
 
-/**
- * Inaongeza database duplicate checks kwenye
- * validation ya kawaida.
- */
 export async function validateGuestImportRowsForEvent(
   rows: GuestImportRow[],
   eventId: number
@@ -700,10 +696,136 @@ export async function validateGuestImportRowsForEvent(
   };
 }
 
-/**
- * Ina-save valid guests na kutengeneza
- * invitation moja kwa kila guest.
- */
+export function downloadGuestImportErrorReport(
+  validationResult: GuestImportValidationResult,
+  eventTitle?: string
+) {
+  if (validationResult.errors.length === 0) {
+    throw new Error(
+      "Hakuna validation errors za kupakua."
+    );
+  }
+
+  const workbook = XLSX.utils.book_new();
+
+  const errorRows =
+    validationResult.invalidRows.map(
+      (row) => {
+        const rowErrors =
+          validationResult.errors.filter(
+            (error) =>
+              error.rowNumber ===
+              row.rowNumber
+          );
+
+        return {
+          "Excel Row": row.rowNumber,
+          "Full Name": row.fullName,
+          Phone: row.phone,
+          Email: row.email,
+          Category: row.category,
+          "Allowed Guests":
+            row.allowedGuests,
+          "Event Pass ID":
+            row.eventPassId,
+          "Error Fields": rowErrors
+            .map((error) => error.field)
+            .join(", "),
+          "Error Details": rowErrors
+            .map((error) => error.message)
+            .join(" | "),
+        };
+      }
+    );
+
+  const errorsWorksheet =
+    XLSX.utils.json_to_sheet(errorRows);
+
+  errorsWorksheet["!cols"] = [
+    { wch: 12 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 30 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 28 },
+    { wch: 70 },
+  ];
+
+  const summaryRows = [
+    {
+      Item: "Event",
+      Value:
+        eventTitle ?? "Selected Event",
+    },
+    {
+      Item: "Total Rows",
+      Value:
+        validationResult.validRows.length +
+        validationResult.invalidRows.length,
+    },
+    {
+      Item: "Valid Rows",
+      Value:
+        validationResult.validRows.length,
+    },
+    {
+      Item: "Invalid Rows",
+      Value:
+        validationResult.invalidRows.length,
+    },
+    {
+      Item: "Total Errors",
+      Value:
+        validationResult.errors.length,
+    },
+    {
+      Item: "Generated At",
+      Value:
+        new Intl.DateTimeFormat("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date()),
+    },
+  ];
+
+  const summaryWorksheet =
+    XLSX.utils.json_to_sheet(summaryRows);
+
+  summaryWorksheet["!cols"] = [
+    { wch: 24 },
+    { wch: 40 },
+  ];
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    errorsWorksheet,
+    "Import Errors"
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    summaryWorksheet,
+    "Summary"
+  );
+
+  const filePrefix = eventTitle
+    ? sanitizeFileName(eventTitle)
+    : "Smart_Event_Pass";
+
+  XLSX.writeFile(
+    workbook,
+    `${filePrefix}_Guest_Import_Errors.xlsx`,
+    {
+      compression: true,
+    }
+  );
+}
+
 export async function importValidGuests(
   eventId: number,
   rows: GuestImportRow[]
@@ -778,11 +900,6 @@ export async function importValidGuests(
     .select("id");
 
   if (invitationError) {
-    /*
-     * Tukishindwa kutengeneza invitations,
-     * tunafuta guests wa import hii ili kuepuka
-     * data nusu.
-     */
     const insertedGuestIds =
       guestRecords.map(
         (guest) => guest.id
