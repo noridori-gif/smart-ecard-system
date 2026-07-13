@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+
 import { createInvitation } from "@/services/invitationService";
 
 export type NewGuest = {
@@ -47,8 +48,6 @@ const EVENT_PASS_PREFIX = "SEP";
 const EVENT_PASS_LENGTH = 6;
 const MAX_EVENT_PASS_ATTEMPTS = 5;
 
-// Herufi kama O, I, L na namba 0, 1 zimeondolewa
-// ili code iwe rahisi kusoma na kutamka.
 const EVENT_PASS_CHARACTERS =
   "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -63,7 +62,8 @@ function generateEventPassId(): string {
     .map(
       (value) =>
         EVENT_PASS_CHARACTERS[
-          value % EVENT_PASS_CHARACTERS.length
+          value %
+            EVENT_PASS_CHARACTERS.length
         ]
     )
     .join("");
@@ -84,6 +84,114 @@ function isEventPassConflict(error: {
   );
 }
 
+function normalizeCheckInResult(
+  data: unknown
+): CheckInResult {
+  if (
+    !data ||
+    typeof data !== "object"
+  ) {
+    return {
+      success: false,
+      status: "invalid",
+      message:
+        "Check-in response is invalid.",
+      guest: null,
+    };
+  }
+
+  const result = data as {
+    success?: unknown;
+    status?: unknown;
+    message?: unknown;
+    guest?: unknown;
+  };
+
+  const validStatuses = [
+    "checked_in",
+    "already_checked_in",
+    "invalid",
+  ] as const;
+
+  const status =
+    typeof result.status === "string" &&
+    validStatuses.includes(
+      result.status as
+        (typeof validStatuses)[number]
+    )
+      ? (result.status as
+          | "checked_in"
+          | "already_checked_in"
+          | "invalid")
+      : "invalid";
+
+  return {
+    success: result.success === true,
+    status,
+    message:
+      typeof result.message === "string"
+        ? result.message
+        : "Check-in could not be completed.",
+    guest:
+      result.guest &&
+      typeof result.guest === "object"
+        ? (result.guest as Guest)
+        : null,
+  };
+}
+
+async function secureCheckIn(
+  values: {
+    qrToken?: string;
+    eventPassId?: string;
+  }
+): Promise<CheckInResult> {
+  const qrToken =
+    values.qrToken?.trim() || null;
+
+  const eventPassId =
+    values.eventPassId
+      ?.trim()
+      .toUpperCase() || null;
+
+  if (!qrToken && !eventPassId) {
+    return {
+      success: false,
+      status: "invalid",
+      message:
+        "QR Code or Event Pass ID is required.",
+      guest: null,
+    };
+  }
+
+  const { data, error } =
+    await supabase.rpc(
+      "secure_guest_check_in",
+      {
+        qr_token_input: qrToken,
+        event_pass_id_input:
+          eventPassId,
+      }
+    );
+
+  if (error) {
+    if (
+      error.code === "42501" ||
+      error.message
+        .toLowerCase()
+        .includes("not authorized")
+    ) {
+      throw new Error(
+        "Huna ruhusa ya kufanya guest check-in."
+      );
+    }
+
+    throw new Error(error.message);
+  }
+
+  return normalizeCheckInResult(data);
+}
+
 export async function createGuest(
   guest: NewGuest
 ): Promise<Guest> {
@@ -95,26 +203,36 @@ export async function createGuest(
     attempt <= MAX_EVENT_PASS_ATTEMPTS;
     attempt += 1
   ) {
-    const eventPassId = generateEventPassId();
+    const eventPassId =
+      generateEventPassId();
 
-    const { data, error } = await supabase
-      .from("guests")
-      .insert({
-        event_id: guest.event_id,
-        full_name: guest.full_name.trim(),
-        phone: guest.phone?.trim() || null,
-        email: guest.email?.trim() || null,
-        category:
-          guest.category?.trim() || "Normal",
-        allowed_guests:
-          guest.allowed_guests ?? 1,
-        event_pass_id: eventPassId,
-      })
-      .select()
-      .single();
+    const { data, error } =
+      await supabase
+        .from("guests")
+        .insert({
+          event_id: guest.event_id,
+          full_name:
+            guest.full_name.trim(),
+          phone:
+            guest.phone?.trim() ||
+            null,
+          email:
+            guest.email?.trim() ||
+            null,
+          category:
+            guest.category?.trim() ||
+            "Normal",
+          allowed_guests:
+            guest.allowed_guests ?? 1,
+          event_pass_id:
+            eventPassId,
+        })
+        .select()
+        .single();
 
     if (error) {
-      lastErrorMessage = error.message;
+      lastErrorMessage =
+        error.message;
 
       if (isEventPassConflict(error)) {
         continue;
@@ -123,7 +241,8 @@ export async function createGuest(
       throw new Error(error.message);
     }
 
-    const createdGuest = data as Guest;
+    const createdGuest =
+      data as Guest;
 
     try {
       await createInvitation(
@@ -131,8 +250,6 @@ export async function createGuest(
         createdGuest.id
       );
     } catch (error) {
-      // Invitation ikishindwa kutengenezwa,
-      // tunaondoa guest ili tusibaki na data nusu.
       await supabase
         .from("guests")
         .delete()
@@ -156,13 +273,14 @@ export async function createGuest(
 export async function getGuestsByEvent(
   eventId: number
 ): Promise<Guest[]> {
-  const { data, error } = await supabase
-    .from("guests")
-    .select("*")
-    .eq("event_id", eventId)
-    .order("full_name", {
-      ascending: true,
-    });
+  const { data, error } =
+    await supabase
+      .from("guests")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("full_name", {
+        ascending: true,
+      });
 
   if (error) {
     throw new Error(error.message);
@@ -174,11 +292,12 @@ export async function getGuestsByEvent(
 export async function getGuestById(
   guestId: number
 ): Promise<Guest> {
-  const { data, error } = await supabase
-    .from("guests")
-    .select("*")
-    .eq("id", guestId)
-    .single();
+  const { data, error } =
+    await supabase
+      .from("guests")
+      .select("*")
+      .eq("id", guestId)
+      .single();
 
   if (error) {
     throw new Error(error.message);
@@ -191,20 +310,27 @@ export async function updateGuest(
   guestId: number,
   guest: UpdateGuest
 ): Promise<Guest> {
-  const { data, error } = await supabase
-    .from("guests")
-    .update({
-      full_name: guest.full_name.trim(),
-      phone: guest.phone?.trim() || null,
-      email: guest.email?.trim() || null,
-      category:
-        guest.category?.trim() || "Normal",
-      allowed_guests:
-        guest.allowed_guests ?? 1,
-    })
-    .eq("id", guestId)
-    .select()
-    .single();
+  const { data, error } =
+    await supabase
+      .from("guests")
+      .update({
+        full_name:
+          guest.full_name.trim(),
+        phone:
+          guest.phone?.trim() ||
+          null,
+        email:
+          guest.email?.trim() ||
+          null,
+        category:
+          guest.category?.trim() ||
+          "Normal",
+        allowed_guests:
+          guest.allowed_guests ?? 1,
+      })
+      .eq("id", guestId)
+      .select()
+      .single();
 
   if (error) {
     throw new Error(error.message);
@@ -216,17 +342,22 @@ export async function updateGuest(
 export async function getGuestByQrToken(
   qrToken: string
 ): Promise<Guest | null> {
-  const normalizedQrToken = qrToken.trim();
+  const normalizedQrToken =
+    qrToken.trim();
 
   if (!normalizedQrToken) {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from("guests")
-    .select("*")
-    .eq("qr_token", normalizedQrToken)
-    .maybeSingle();
+  const { data, error } =
+    await supabase
+      .from("guests")
+      .select("*")
+      .eq(
+        "qr_token",
+        normalizedQrToken
+      )
+      .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -239,20 +370,23 @@ export async function getGuestByEventPassId(
   eventPassId: string
 ): Promise<Guest | null> {
   const normalizedEventPassId =
-    eventPassId.trim().toUpperCase();
+    eventPassId
+      .trim()
+      .toUpperCase();
 
   if (!normalizedEventPassId) {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from("guests")
-    .select("*")
-    .eq(
-      "event_pass_id",
-      normalizedEventPassId
-    )
-    .maybeSingle();
+  const { data, error } =
+    await supabase
+      .from("guests")
+      .select("*")
+      .eq(
+        "event_pass_id",
+        normalizedEventPassId
+      )
+      .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
@@ -261,91 +395,30 @@ export async function getGuestByEventPassId(
   return data as Guest | null;
 }
 
-async function completeGuestCheckIn(
-  guest: Guest
-): Promise<CheckInResult> {
-  if (guest.status === "checked_in") {
-    return {
-      success: false,
-      status: "already_checked_in",
-      message:
-        "Guest has already checked in",
-      guest,
-    };
-  }
-
-  const checkedInAt =
-    new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("guests")
-    .update({
-      status: "checked_in",
-      checked_in_at: checkedInAt,
-    })
-    .eq("id", guest.id)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return {
-    success: true,
-    status: "checked_in",
-    message:
-      "Guest checked in successfully",
-    guest: data as Guest,
-  };
-}
-
 export async function checkInGuest(
   qrToken: string
 ): Promise<CheckInResult> {
-  const guest =
-    await getGuestByQrToken(qrToken);
-
-  if (!guest) {
-    return {
-      success: false,
-      status: "invalid",
-      message: "Invalid QR Code",
-      guest: null,
-    };
-  }
-
-  return completeGuestCheckIn(guest);
+  return secureCheckIn({
+    qrToken,
+  });
 }
 
 export async function checkInGuestByEventPassId(
   eventPassId: string
 ): Promise<CheckInResult> {
-  const guest =
-    await getGuestByEventPassId(
-      eventPassId
-    );
-
-  if (!guest) {
-    return {
-      success: false,
-      status: "invalid",
-      message:
-        "Invalid Event Pass ID",
-      guest: null,
-    };
-  }
-
-  return completeGuestCheckIn(guest);
+  return secureCheckIn({
+    eventPassId,
+  });
 }
 
 export async function deleteGuest(
   id: number
 ) {
-  const { error } = await supabase
-    .from("guests")
-    .delete()
-    .eq("id", id);
+  const { error } =
+    await supabase
+      .from("guests")
+      .delete()
+      .eq("id", id);
 
   if (error) {
     throw new Error(error.message);
