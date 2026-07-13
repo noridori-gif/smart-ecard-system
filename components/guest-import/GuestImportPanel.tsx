@@ -386,7 +386,16 @@ export default function GuestImportPanel({
 
       const result = await importValidGuests(
         selectedEvent.id,
-        latestValidation.validRows
+        latestValidation.validRows,
+        {
+          fileName:
+            selectedFile?.name ?? "Excel Import",
+
+          importedBy: "Admin",
+
+          failedRows:
+            validationResult.invalidRows.length,
+        }
       );
 
       setImportResult(result);
@@ -462,7 +471,7 @@ export default function GuestImportPanel({
             </span>
           </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid gap-4 sm:grid-cols-4">
             <div className="rounded-xl border border-emerald-200 bg-white p-4">
               <p className="text-sm text-slate-500">
                 Guests Imported
@@ -492,7 +501,32 @@ export default function GuestImportPanel({
                 {importResult.failedRows}
               </p>
             </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-white p-4">
+              <p className="text-sm text-slate-500">
+                Import History
+              </p>
+
+              <p
+                className={`mt-2 text-lg font-bold ${
+                  importResult.historySaved
+                    ? "text-emerald-700"
+                    : "text-amber-600"
+                }`}
+              >
+                {importResult.historySaved
+                  ? "Saved"
+                  : "Not Saved"}
+              </p>
+            </div>
           </div>
+
+          {!importResult.historySaved && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Wageni wameingizwa vizuri, lakini import
+              history haikuweza kuhifadhiwa.
+            </div>
+          )}
 
           <div className="mt-5 flex justify-end">
             <button
@@ -546,7 +580,7 @@ export default function GuestImportPanel({
             </div>
 
             <div>
-              <p className="mb-2 block text-sm font-semibold text-slate-700">
+              <p className="mb-2 text-sm font-semibold text-slate-700">
                 2. Download Template
               </p>
 
@@ -563,7 +597,7 @@ export default function GuestImportPanel({
             </div>
 
             <div>
-              <p className="mb-2 block text-sm font-semibold text-slate-700">
+              <p className="mb-2 text-sm font-semibold text-slate-700">
                 3. Upload Completed Excel
               </p>
 
@@ -682,37 +716,23 @@ export default function GuestImportPanel({
                   <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-900">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Row
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Full Name
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Phone
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Email
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Category
-                        </th>
-
-                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-white">
-                          Allowed
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Event Pass ID
-                        </th>
-
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                          Validation
-                        </th>
+                        {[
+                          "Row",
+                          "Full Name",
+                          "Phone",
+                          "Email",
+                          "Category",
+                          "Allowed",
+                          "Event Pass ID",
+                          "Validation",
+                        ].map((heading) => (
+                          <th
+                            key={heading}
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-white"
+                          >
+                            {heading}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
 
@@ -724,9 +744,7 @@ export default function GuestImportPanel({
                           );
 
                         const rowErrors =
-                          getRowErrors(
-                            row.rowNumber
-                          );
+                          getRowErrors(row.rowNumber);
 
                         return (
                           <tr
@@ -787,13 +805,8 @@ export default function GuestImportPanel({
                                         key={`${rowError.field}-${index}`}
                                         className="text-xs text-red-600"
                                       >
-                                        {
-                                          rowError.field
-                                        }
-                                        :{" "}
-                                        {
-                                          rowError.message
-                                        }
+                                        {rowError.field}:{" "}
+                                        {rowError.message}
                                       </p>
                                     )
                                   )}
@@ -852,9 +865,9 @@ export default function GuestImportPanel({
 
               {validationResult && (
                 <div className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-3">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-medium text-slate-500">
+                      <p className="text-sm text-slate-500">
                         Total Rows
                       </p>
 
@@ -864,7 +877,7 @@ export default function GuestImportPanel({
                     </div>
 
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-sm font-medium text-emerald-700">
+                      <p className="text-sm text-emerald-700">
                         Valid Guests
                       </p>
 
@@ -877,7 +890,7 @@ export default function GuestImportPanel({
                     </div>
 
                     <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                      <p className="text-sm font-medium text-red-700">
+                      <p className="text-sm text-red-700">
                         Invalid Guests
                       </p>
 
