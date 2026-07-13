@@ -11,6 +11,7 @@ import AnalyticsCards from "@/components/dashboard/AnalyticsCards";
 import EventSelector from "@/components/dashboard/EventSelector";
 import InvitationFunnel from "@/components/dashboard/InvitationFunnel";
 import ProgressCard from "@/components/dashboard/ProgressCard";
+import RecentActivityFeed from "@/components/dashboard/RecentActivityFeed";
 
 import AttendanceDonutChart from "@/components/dashboard/charts/AttendanceDonutChart";
 import RSVPPieChart from "@/components/dashboard/charts/RSVPPieChart";
@@ -19,6 +20,8 @@ import {
   getDashboardEvents,
   getEmptyEventDashboardStats,
   getEventDashboardStats,
+  getRecentEventActivities,
+  type DashboardActivity,
   type DashboardEvent,
   type EventDashboardStats,
 } from "@/services/eventDashboardService";
@@ -75,6 +78,10 @@ export default function DashboardPage() {
       getEmptyEventDashboardStats()
     );
 
+  const [activities, setActivities] = useState<
+    DashboardActivity[]
+  >([]);
+
   const [isLoading, setIsLoading] =
     useState(true);
 
@@ -122,6 +129,8 @@ export default function DashboardPage() {
             getEmptyEventDashboardStats()
           );
 
+          setActivities([]);
+
           return;
         }
 
@@ -140,12 +149,22 @@ export default function DashboardPage() {
 
         setSelectedEventId(eventIdToLoad);
 
-        const dashboardStats =
-          await getEventDashboardStats(
+        const [
+          dashboardStats,
+          recentActivities,
+        ] = await Promise.all([
+          getEventDashboardStats(
             eventIdToLoad
-          );
+          ),
+
+          getRecentEventActivities(
+            eventIdToLoad,
+            10
+          ),
+        ]);
 
         setStats(dashboardStats);
+        setActivities(recentActivities);
       } catch (error) {
         console.error(
           "Dashboard loading error:",
@@ -346,6 +365,11 @@ export default function DashboardPage() {
             />
           </div>
 
+          <RecentActivityFeed
+            activities={activities}
+            isLoading={isLoading}
+          />
+
           <InvitationFunnel stats={stats} />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -399,7 +423,7 @@ export default function DashboardPage() {
 
                 <p className="mt-1 text-sm text-slate-300">
                   Bonyeza Refresh kupata taarifa mpya
-                  za RSVP na check-in.
+                  za RSVP, activities na check-in.
                 </p>
               </div>
 
