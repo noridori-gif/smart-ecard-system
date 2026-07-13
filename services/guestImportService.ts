@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
 
+import { supabase } from "@/lib/supabase";
+
 export type GuestImportRow = {
   rowNumber: number;
   fullName: string;
@@ -22,6 +24,23 @@ export type GuestImportValidationResult = {
   errors: GuestImportError[];
 };
 
+export type GuestImportResult = {
+  importedGuests: number;
+  createdInvitations: number;
+  failedRows: number;
+};
+
+type ExistingGuestRecord = {
+  phone: string | null;
+  event_pass_id: string | null;
+};
+
+type InsertedGuestRecord = {
+  id: number;
+  event_id: number;
+  full_name: string;
+};
+
 export const GUEST_IMPORT_HEADERS = [
   "Full Name",
   "Phone",
@@ -39,11 +58,16 @@ function sanitizeFileName(value: string) {
 }
 
 function generateRandomCode(length = 6) {
-  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const characters =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
   let result = "";
 
-  for (let index = 0; index < length; index += 1) {
+  for (
+    let index = 0;
+    index < length;
+    index += 1
+  ) {
     const randomIndex = Math.floor(
       Math.random() * characters.length
     );
@@ -54,6 +78,19 @@ function generateRandomCode(length = 6) {
   return result;
 }
 
+function generateUniqueToken() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
 function generateEventPassId(
   existingEventPassIds: Set<string>
 ) {
@@ -61,7 +98,9 @@ function generateEventPassId(
 
   do {
     eventPassId = `SEP-${generateRandomCode(6)}`;
-  } while (existingEventPassIds.has(eventPassId));
+  } while (
+    existingEventPassIds.has(eventPassId)
+  );
 
   existingEventPassIds.add(eventPassId);
 
@@ -156,7 +195,9 @@ export function downloadGuestImportTemplate(
   ];
 
   const instructionsWorksheet =
-    XLSX.utils.json_to_sheet(instructionsRows);
+    XLSX.utils.json_to_sheet(
+      instructionsRows
+    );
 
   instructionsWorksheet["!cols"] = [
     { wch: 22 },
@@ -202,7 +243,9 @@ function getCellValue(
   row: Record<string, unknown>,
   possibleHeaders: string[]
 ) {
-  const normalizedEntries = Object.entries(row).map(
+  const normalizedEntries = Object.entries(
+    row
+  ).map(
     ([key, value]) =>
       [normalizeHeader(key), value] as const
   );
@@ -211,9 +254,10 @@ function getCellValue(
     const normalizedHeader =
       normalizeHeader(possibleHeader);
 
-    const matchingEntry = normalizedEntries.find(
-      ([key]) => key === normalizedHeader
-    );
+    const matchingEntry =
+      normalizedEntries.find(
+        ([key]) => key === normalizedHeader
+      );
 
     if (matchingEntry) {
       return matchingEntry[1];
@@ -267,7 +311,9 @@ function isValidPhone(phone: string) {
   const normalizedPhone =
     normalizePhone(phone).replace(/^\+/, "");
 
-  return /^\d{7,15}$/.test(normalizedPhone);
+  return /^\d{7,15}$/.test(
+    normalizedPhone
+  );
 }
 
 function isValidEmail(email: string) {
@@ -275,15 +321,21 @@ function isValidEmail(email: string) {
     return true;
   }
 
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    email
+  );
 }
 
-function isValidEventPassId(eventPassId: string) {
+function isValidEventPassId(
+  eventPassId: string
+) {
   if (!eventPassId) {
     return true;
   }
 
-  return /^[A-Z0-9-]{4,30}$/.test(eventPassId);
+  return /^[A-Z0-9-]{4,30}$/.test(
+    eventPassId
+  );
 }
 
 export async function readGuestImportFile(
@@ -295,7 +347,8 @@ export async function readGuestImportFile(
     type: "array",
   });
 
-  const firstSheetName = workbook.SheetNames[0];
+  const firstSheetName =
+    workbook.SheetNames[0];
 
   if (!firstSheetName) {
     throw new Error(
@@ -387,7 +440,8 @@ export function validateGuestImportRows(
 ): GuestImportValidationResult {
   const errors: GuestImportError[] = [];
 
-  const normalizedRows: GuestImportRow[] = [];
+  const normalizedRows: GuestImportRow[] =
+    [];
 
   const eventPassIds = new Set<string>();
   const phones = new Set<string>();
@@ -397,8 +451,11 @@ export function validateGuestImportRows(
       rowNumber: row.rowNumber,
       fullName: row.fullName.trim(),
       phone: normalizePhone(row.phone),
-      email: row.email.trim().toLowerCase(),
-      category: row.category.trim() || "Normal",
+      email: row.email
+        .trim()
+        .toLowerCase(),
+      category:
+        row.category.trim() || "Normal",
       allowedGuests:
         row.allowedGuests >= 1
           ? row.allowedGuests
@@ -412,7 +469,8 @@ export function validateGuestImportRows(
       errors.push({
         rowNumber: row.rowNumber,
         field: "Full Name",
-        message: "Jina la mgeni linahitajika.",
+        message:
+          "Jina la mgeni linahitajika.",
       });
     }
 
@@ -435,7 +493,8 @@ export function validateGuestImportRows(
       errors.push({
         rowNumber: row.rowNumber,
         field: "Email",
-        message: "Email address si sahihi.",
+        message:
+          "Email address si sahihi.",
       });
     }
 
@@ -486,7 +545,9 @@ export function validateGuestImportRows(
     }
 
     if (normalizedRow.phone) {
-      if (phones.has(normalizedRow.phone)) {
+      if (
+        phones.has(normalizedRow.phone)
+      ) {
         errors.push({
           rowNumber: row.rowNumber,
           field: "Phone",
@@ -494,7 +555,9 @@ export function validateGuestImportRows(
             "Namba ya simu imejirudia ndani ya Excel.",
         });
       } else {
-        phones.add(normalizedRow.phone);
+        phones.add(
+          normalizedRow.phone
+        );
       }
     }
 
@@ -502,20 +565,243 @@ export function validateGuestImportRows(
   }
 
   const rowsWithErrors = new Set(
-    errors.map((error) => error.rowNumber)
+    errors.map(
+      (error) => error.rowNumber
+    )
   );
 
-  const validRows = normalizedRows.filter(
-    (row) => !rowsWithErrors.has(row.rowNumber)
-  );
+  const validRows =
+    normalizedRows.filter(
+      (row) =>
+        !rowsWithErrors.has(
+          row.rowNumber
+        )
+    );
 
-  const invalidRows = normalizedRows.filter(
-    (row) => rowsWithErrors.has(row.rowNumber)
-  );
+  const invalidRows =
+    normalizedRows.filter((row) =>
+      rowsWithErrors.has(row.rowNumber)
+    );
 
   return {
     validRows,
     invalidRows,
     errors,
+  };
+}
+
+/**
+ * Inaongeza database duplicate checks kwenye
+ * validation ya kawaida.
+ */
+export async function validateGuestImportRowsForEvent(
+  rows: GuestImportRow[],
+  eventId: number
+): Promise<GuestImportValidationResult> {
+  const localValidation =
+    validateGuestImportRows(rows);
+
+  const errors = [
+    ...localValidation.errors,
+  ];
+
+  const { data, error } = await supabase
+    .from("guests")
+    .select("phone, event_pass_id")
+    .eq("event_id", eventId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const existingGuests =
+    (data ?? []) as ExistingGuestRecord[];
+
+  const existingPhones = new Set(
+    existingGuests
+      .map((guest) =>
+        normalizePhone(guest.phone ?? "")
+      )
+      .filter(Boolean)
+  );
+
+  const existingEventPassIds = new Set(
+    existingGuests
+      .map((guest) =>
+        (guest.event_pass_id ?? "")
+          .trim()
+          .toUpperCase()
+      )
+      .filter(Boolean)
+  );
+
+  for (
+    const row of localValidation.validRows
+  ) {
+    if (
+      row.phone &&
+      existingPhones.has(
+        normalizePhone(row.phone)
+      )
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Phone",
+        message:
+          "Namba hii tayari ipo kwenye event iliyochaguliwa.",
+      });
+    }
+
+    if (
+      row.eventPassId &&
+      existingEventPassIds.has(
+        row.eventPassId
+      )
+    ) {
+      errors.push({
+        rowNumber: row.rowNumber,
+        field: "Event Pass ID",
+        message:
+          "Event Pass ID hii tayari ipo kwenye database.",
+      });
+    }
+  }
+
+  const rowsWithErrors = new Set(
+    errors.map(
+      (validationError) =>
+        validationError.rowNumber
+    )
+  );
+
+  const allNormalizedRows = [
+    ...localValidation.validRows,
+    ...localValidation.invalidRows,
+  ].sort(
+    (firstRow, secondRow) =>
+      firstRow.rowNumber -
+      secondRow.rowNumber
+  );
+
+  return {
+    validRows: allNormalizedRows.filter(
+      (row) =>
+        !rowsWithErrors.has(
+          row.rowNumber
+        )
+    ),
+    invalidRows: allNormalizedRows.filter(
+      (row) =>
+        rowsWithErrors.has(
+          row.rowNumber
+        )
+    ),
+    errors,
+  };
+}
+
+/**
+ * Ina-save valid guests na kutengeneza
+ * invitation moja kwa kila guest.
+ */
+export async function importValidGuests(
+  eventId: number,
+  rows: GuestImportRow[]
+): Promise<GuestImportResult> {
+  if (!Number.isInteger(eventId)) {
+    throw new Error(
+      "Event iliyochaguliwa si sahihi."
+    );
+  }
+
+  if (rows.length === 0) {
+    throw new Error(
+      "Hakuna valid guests wa ku-import."
+    );
+  }
+
+  const guestPayload = rows.map((row) => ({
+    event_id: eventId,
+    full_name: row.fullName,
+    phone: row.phone || null,
+    email: row.email || null,
+    category:
+      row.category || "Normal",
+    allowed_guests:
+      row.allowedGuests || 1,
+    event_pass_id: row.eventPassId,
+    qr_token: generateUniqueToken(),
+    status: "pending",
+    checked_in_at: null,
+  }));
+
+  const { data: insertedGuests, error } =
+    await supabase
+      .from("guests")
+      .insert(guestPayload)
+      .select(
+        "id, event_id, full_name"
+      );
+
+  if (error) {
+    throw new Error(
+      `Guests hawakuweza ku-import: ${error.message}`
+    );
+  }
+
+  const guestRecords =
+    (insertedGuests ??
+      []) as InsertedGuestRecord[];
+
+  if (guestRecords.length === 0) {
+    throw new Error(
+      "Hakuna guest aliyehifadhiwa kwenye database."
+    );
+  }
+
+  const invitationPayload =
+    guestRecords.map((guest) => ({
+      event_id: guest.event_id,
+      guest_id: guest.id,
+      invitation_token:
+        generateUniqueToken(),
+      invitation_status: "created",
+      rsvp_status: "pending",
+    }));
+
+  const {
+    data: insertedInvitations,
+    error: invitationError,
+  } = await supabase
+    .from("invitations")
+    .insert(invitationPayload)
+    .select("id");
+
+  if (invitationError) {
+    /*
+     * Tukishindwa kutengeneza invitations,
+     * tunafuta guests wa import hii ili kuepuka
+     * data nusu.
+     */
+    const insertedGuestIds =
+      guestRecords.map(
+        (guest) => guest.id
+      );
+
+    await supabase
+      .from("guests")
+      .delete()
+      .in("id", insertedGuestIds);
+
+    throw new Error(
+      `Invitations hazikuweza kutengenezwa: ${invitationError.message}`
+    );
+  }
+
+  return {
+    importedGuests: guestRecords.length,
+    createdInvitations:
+      insertedInvitations?.length ?? 0,
+    failedRows: 0,
   };
 }
