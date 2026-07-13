@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+
+import GuestImportPanel from "@/components/guest-import/GuestImportPanel";
 import { supabase } from "@/lib/supabase";
 
 type GuestStatus = "pending" | "checked_in";
@@ -71,13 +73,15 @@ export default function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [events, setEvents] = useState<EventOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingGuestId, setProcessingGuestId] = useState<number | null>(
-    null
-  );
+
+  const [processingGuestId, setProcessingGuestId] =
+    useState<number | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEventId, setSelectedEventId] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedEventId, setSelectedEventId] =
+    useState("all");
+  const [selectedStatus, setSelectedStatus] =
+    useState("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const [notification, setNotification] =
@@ -95,38 +99,39 @@ export default function GuestsPage() {
     try {
       setLoading(true);
 
-      const [guestsResult, eventsResult] = await Promise.all([
-        supabase
-          .from("guests")
-          .select(`
-            id,
-            event_id,
-            full_name,
-            phone,
-            email,
-            category,
-            allowed_guests,
-            qr_token,
-            event_pass_id,
-            status,
-            checked_in_at,
-            created_at,
-            events (
+      const [guestsResult, eventsResult] =
+        await Promise.all([
+          supabase
+            .from("guests")
+            .select(`
               id,
-              title
-            )
-          `)
-          .order("created_at", {
-            ascending: false,
-          }),
+              event_id,
+              full_name,
+              phone,
+              email,
+              category,
+              allowed_guests,
+              qr_token,
+              event_pass_id,
+              status,
+              checked_in_at,
+              created_at,
+              events (
+                id,
+                title
+              )
+            `)
+            .order("created_at", {
+              ascending: false,
+            }),
 
-        supabase
-          .from("events")
-          .select("id, title")
-          .order("event_date", {
-            ascending: false,
-          }),
-      ]);
+          supabase
+            .from("events")
+            .select("id, title")
+            .order("event_date", {
+              ascending: false,
+            }),
+        ]);
 
       if (guestsResult.error) {
         throw new Error(guestsResult.error.message);
@@ -136,8 +141,13 @@ export default function GuestsPage() {
         throw new Error(eventsResult.error.message);
       }
 
-      setGuests((guestsResult.data ?? []) as unknown as Guest[]);
-      setEvents((eventsResult.data ?? []) as EventOption[]);
+      setGuests(
+        (guestsResult.data ?? []) as unknown as Guest[]
+      );
+
+      setEvents(
+        (eventsResult.data ?? []) as EventOption[]
+      );
     } catch (error) {
       console.error("Error loading guests:", error);
 
@@ -244,8 +254,9 @@ export default function GuestsPage() {
       setProcessingGuestId(guest.id);
 
       /*
-       * Invitation ya guest inafutwa kwanza ili kuepuka
-       * foreign key error kama database haina ON DELETE CASCADE.
+       * Invitation ya guest inafutwa kwanza ili
+       * kuepuka foreign key error kama database
+       * haina ON DELETE CASCADE.
        */
       const { error: invitationError } = await supabase
         .from("invitations")
@@ -267,7 +278,8 @@ export default function GuestsPage() {
 
       setGuests((currentGuests) =>
         currentGuests.filter(
-          (currentGuest) => currentGuest.id !== guest.id
+          (currentGuest) =>
+            currentGuest.id !== guest.id
         )
       );
 
@@ -290,16 +302,26 @@ export default function GuestsPage() {
   }
 
   const filteredGuests = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const normalizedSearch = searchTerm
+      .trim()
+      .toLowerCase();
 
     return guests.filter((guest) => {
-      const guestEvent = getSingleEvent(guest.events);
+      const guestEvent = getSingleEvent(
+        guest.events
+      );
 
       const matchesSearch =
         !normalizedSearch ||
-        guest.full_name.toLowerCase().includes(normalizedSearch) ||
-        (guest.phone ?? "").toLowerCase().includes(normalizedSearch) ||
-        (guest.email ?? "").toLowerCase().includes(normalizedSearch) ||
+        guest.full_name
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        (guest.phone ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        (guest.email ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch) ||
         (guest.event_pass_id ?? "")
           .toLowerCase()
           .includes(normalizedSearch) ||
@@ -315,16 +337,30 @@ export default function GuestsPage() {
         selectedStatus === "all" ||
         guest.status === selectedStatus;
 
-      return matchesSearch && matchesEvent && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesEvent &&
+        matchesStatus
+      );
     });
-  }, [guests, searchTerm, selectedEventId, selectedStatus]);
+  }, [
+    guests,
+    searchTerm,
+    selectedEventId,
+    selectedStatus,
+  ]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredGuests.length / GUESTS_PER_PAGE)
+    Math.ceil(
+      filteredGuests.length / GUESTS_PER_PAGE
+    )
   );
 
-  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const safeCurrentPage = Math.min(
+    currentPage,
+    totalPages
+  );
 
   const paginatedGuests = filteredGuests.slice(
     (safeCurrentPage - 1) * GUESTS_PER_PAGE,
@@ -374,7 +410,8 @@ export default function GuestsPage() {
           </h1>
 
           <p className="mt-1 text-sm text-slate-600">
-            Tafuta, chuja na usimamie wageni wa events zote.
+            Tafuta, chuja na usimamie wageni wa
+            events zote.
           </p>
         </div>
 
@@ -411,6 +448,10 @@ export default function GuestsPage() {
         </div>
       </div>
 
+      {/* Excel import panel */}
+      <GuestImportPanel events={events} />
+
+      {/* Search and filters */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
@@ -425,7 +466,9 @@ export default function GuestsPage() {
               id="guest-search"
               type="search"
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) =>
+                setSearchTerm(event.target.value)
+              }
               placeholder="Jina, simu, email au Event Pass ID..."
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
@@ -447,7 +490,9 @@ export default function GuestsPage() {
               }
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
-              <option value="all">Events zote</option>
+              <option value="all">
+                Events zote
+              </option>
 
               {events.map((eventItem) => (
                 <option
@@ -476,9 +521,17 @@ export default function GuestsPage() {
               }
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
-              <option value="all">Status zote</option>
-              <option value="pending">Pending</option>
-              <option value="checked_in">Checked In</option>
+              <option value="all">
+                Status zote
+              </option>
+
+              <option value="pending">
+                Pending
+              </option>
+
+              <option value="checked_in">
+                Checked In
+              </option>
             </select>
           </div>
         </div>
@@ -491,7 +544,8 @@ export default function GuestsPage() {
           </h2>
 
           <p className="mt-2 text-sm text-slate-600">
-            Badilisha search au filters kisha ujaribu tena.
+            Badilisha search au filters kisha
+            ujaribu tena.
           </p>
         </div>
       ) : (
@@ -530,7 +584,10 @@ export default function GuestsPage() {
 
                 <tbody className="divide-y divide-slate-100">
                   {paginatedGuests.map((guest) => {
-                    const guestEvent = getSingleEvent(guest.events);
+                    const guestEvent = getSingleEvent(
+                      guest.events
+                    );
+
                     const isProcessing =
                       processingGuestId === guest.id;
 
@@ -550,7 +607,8 @@ export default function GuestsPage() {
                         </td>
 
                         <td className="px-5 py-4 text-sm text-slate-700">
-                          {guestEvent?.title ?? "Unknown event"}
+                          {guestEvent?.title ??
+                            "Unknown event"}
                         </td>
 
                         <td className="px-5 py-4">
@@ -564,14 +622,17 @@ export default function GuestsPage() {
                         </td>
 
                         <td className="px-5 py-4">
-                          {guest.status === "checked_in" ? (
+                          {guest.status ===
+                          "checked_in" ? (
                             <div>
                               <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
                                 Checked In
                               </span>
 
                               <p className="mt-1 text-xs text-slate-400">
-                                {formatDate(guest.checked_in_at)}
+                                {formatDate(
+                                  guest.checked_in_at
+                                )}
                               </p>
                             </div>
                           ) : (
@@ -594,14 +655,18 @@ export default function GuestsPage() {
                               type="button"
                               disabled={
                                 isProcessing ||
-                                guest.status === "checked_in"
+                                guest.status ===
+                                  "checked_in"
                               }
-                              onClick={() => handleCheckIn(guest)}
+                              onClick={() =>
+                                handleCheckIn(guest)
+                              }
                               className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                               {isProcessing
                                 ? "Please wait..."
-                                : guest.status === "checked_in"
+                                : guest.status ===
+                                  "checked_in"
                                 ? "Checked In"
                                 : "Check-In"}
                             </button>
@@ -609,7 +674,9 @@ export default function GuestsPage() {
                             <button
                               type="button"
                               disabled={isProcessing}
-                              onClick={() => handleDeleteGuest(guest)}
+                              onClick={() =>
+                                handleDeleteGuest(guest)
+                              }
                               className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                               Delete
@@ -627,7 +694,10 @@ export default function GuestsPage() {
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {paginatedGuests.map((guest) => {
-              const guestEvent = getSingleEvent(guest.events);
+              const guestEvent = getSingleEvent(
+                guest.events
+              );
+
               const isProcessing =
                 processingGuestId === guest.id;
 
@@ -667,7 +737,8 @@ export default function GuestsPage() {
                       </p>
 
                       <p className="mt-1 font-medium text-slate-800">
-                        {guestEvent?.title ?? "Unknown event"}
+                        {guestEvent?.title ??
+                          "Unknown event"}
                       </p>
                     </div>
 
@@ -706,7 +777,9 @@ export default function GuestsPage() {
                         isProcessing ||
                         guest.status === "checked_in"
                       }
-                      onClick={() => handleCheckIn(guest)}
+                      onClick={() =>
+                        handleCheckIn(guest)
+                      }
                       className="rounded-lg bg-emerald-600 px-2 py-2 text-xs font-semibold text-white disabled:bg-slate-300"
                     >
                       {guest.status === "checked_in"
@@ -717,7 +790,9 @@ export default function GuestsPage() {
                     <button
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => handleDeleteGuest(guest)}
+                      onClick={() =>
+                        handleDeleteGuest(guest)
+                      }
                       className="rounded-lg bg-red-600 px-2 py-2 text-xs font-semibold text-white disabled:bg-slate-300"
                     >
                       Delete
@@ -728,16 +803,20 @@ export default function GuestsPage() {
             })}
           </div>
 
+          {/* Pagination */}
           <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row">
             <p className="text-sm text-slate-600">
               Showing{" "}
               <span className="font-semibold">
-                {(safeCurrentPage - 1) * GUESTS_PER_PAGE + 1}
+                {(safeCurrentPage - 1) *
+                  GUESTS_PER_PAGE +
+                  1}
               </span>{" "}
               to{" "}
               <span className="font-semibold">
                 {Math.min(
-                  safeCurrentPage * GUESTS_PER_PAGE,
+                  safeCurrentPage *
+                    GUESTS_PER_PAGE,
                   filteredGuests.length
                 )}
               </span>{" "}
@@ -762,15 +841,21 @@ export default function GuestsPage() {
               </button>
 
               <span className="px-2 text-sm font-medium text-slate-700">
-                Page {safeCurrentPage} of {totalPages}
+                Page {safeCurrentPage} of{" "}
+                {totalPages}
               </span>
 
               <button
                 type="button"
-                disabled={safeCurrentPage === totalPages}
+                disabled={
+                  safeCurrentPage === totalPages
+                }
                 onClick={() =>
                   setCurrentPage((page) =>
-                    Math.min(totalPages, page + 1)
+                    Math.min(
+                      totalPages,
+                      page + 1
+                    )
                   )
                 }
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
