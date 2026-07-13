@@ -5,7 +5,9 @@ type InputProps = {
   name: string;
   value: string;
   required?: boolean;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => void;
 };
 
 export default function Input({
@@ -21,7 +23,7 @@ export default function Input({
     <div className="space-y-2">
       <label
         htmlFor={name}
-        className="block text-sm font-medium text-gray-700"
+        className="block text-sm font-semibold text-slate-700"
       >
         {label}
       </label>
@@ -34,7 +36,7 @@ export default function Input({
         placeholder={placeholder}
         required={required}
         onChange={onChange}
-        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 caret-blue-600 shadow-sm outline-none [color-scheme:light] placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
       />
     </div>
   );
