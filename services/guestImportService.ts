@@ -28,6 +28,13 @@ export type GuestImportResult = {
   importedGuests: number;
   createdInvitations: number;
   failedRows: number;
+  historySaved: boolean;
+};
+
+export type GuestImportOptions = {
+  fileName?: string;
+  importedBy?: string;
+  failedRows?: number;
 };
 
 type ExistingGuestRecord = {
@@ -107,6 +114,117 @@ function generateEventPassId(
   return eventPassId;
 }
 
+function normalizeHeader(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function getCellValue(
+  row: Record<string, unknown>,
+  possibleHeaders: string[]
+) {
+  const normalizedEntries = Object.entries(
+    row
+  ).map(
+    ([key, value]) =>
+      [normalizeHeader(key), value] as const
+  );
+
+  for (const possibleHeader of possibleHeaders) {
+    const normalizedHeader =
+      normalizeHeader(possibleHeader);
+
+    const matchingEntry =
+      normalizedEntries.find(
+        ([key]) => key === normalizedHeader
+      );
+
+    if (matchingEntry) {
+      return matchingEntry[1];
+    }
+  }
+
+  return undefined;
+}
+
+function textValue(value: unknown) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "";
+  }
+
+  return String(value).trim();
+}
+
+function numberValue(value: unknown) {
+  if (
+    value === null ||
+    value === undefined ||
+    String(value).trim() === ""
+  ) {
+    return 0;
+  }
+
+  const convertedNumber = Number(value);
+
+  if (!Number.isFinite(convertedNumber)) {
+    return 0;
+  }
+
+  return Math.trunc(convertedNumber);
+}
+
+function normalizePhone(phone: string) {
+  return phone
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[()-]/g, "");
+}
+
+function isValidPhone(phone: string) {
+  if (!phone) {
+    return true;
+  }
+
+  const normalizedPhone =
+    normalizePhone(phone).replace(/^\+/, "");
+
+  return /^\d{7,15}$/.test(
+    normalizedPhone
+  );
+}
+
+function isValidEmail(email: string) {
+  if (!email) {
+    return true;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    email
+  );
+}
+
+function isValidEventPassId(
+  eventPassId: string
+) {
+  if (!eventPassId) {
+    return true;
+  }
+
+  return /^[A-Z0-9-]{4,30}$/.test(
+    eventPassId
+  );
+}
+
+/**
+ * Inatengeneza Excel template ya kuingiza
+ * wageni wengi kwa pamoja.
+ */
 export function downloadGuestImportTemplate(
   eventTitle?: string
 ) {
@@ -231,113 +349,10 @@ export function downloadGuestImportTemplate(
   });
 }
 
-function normalizeHeader(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ");
-}
-
-function getCellValue(
-  row: Record<string, unknown>,
-  possibleHeaders: string[]
-) {
-  const normalizedEntries = Object.entries(
-    row
-  ).map(
-    ([key, value]) =>
-      [normalizeHeader(key), value] as const
-  );
-
-  for (const possibleHeader of possibleHeaders) {
-    const normalizedHeader =
-      normalizeHeader(possibleHeader);
-
-    const matchingEntry =
-      normalizedEntries.find(
-        ([key]) => key === normalizedHeader
-      );
-
-    if (matchingEntry) {
-      return matchingEntry[1];
-    }
-  }
-
-  return undefined;
-}
-
-function textValue(value: unknown) {
-  if (
-    value === null ||
-    value === undefined
-  ) {
-    return "";
-  }
-
-  return String(value).trim();
-}
-
-function numberValue(value: unknown) {
-  if (
-    value === null ||
-    value === undefined ||
-    String(value).trim() === ""
-  ) {
-    return 0;
-  }
-
-  const convertedNumber = Number(value);
-
-  if (!Number.isFinite(convertedNumber)) {
-    return 0;
-  }
-
-  return Math.trunc(convertedNumber);
-}
-
-function normalizePhone(phone: string) {
-  return phone
-    .trim()
-    .replace(/\s+/g, "")
-    .replace(/[()-]/g, "");
-}
-
-function isValidPhone(phone: string) {
-  if (!phone) {
-    return true;
-  }
-
-  const normalizedPhone =
-    normalizePhone(phone).replace(/^\+/, "");
-
-  return /^\d{7,15}$/.test(
-    normalizedPhone
-  );
-}
-
-function isValidEmail(email: string) {
-  if (!email) {
-    return true;
-  }
-
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    email
-  );
-}
-
-function isValidEventPassId(
-  eventPassId: string
-) {
-  if (!eventPassId) {
-    return true;
-  }
-
-  return /^[A-Z0-9-]{4,30}$/.test(
-    eventPassId
-  );
-}
-
+/**
+ * Inasoma file ya Excel na kuigeuza kuwa
+ * rows zinazotumika kwenye preview.
+ */
 export async function readGuestImportFile(
   file: File
 ): Promise<GuestImportRow[]> {
@@ -358,6 +373,12 @@ export async function readGuestImportFile(
 
   const worksheet =
     workbook.Sheets[firstSheetName];
+
+  if (!worksheet) {
+    throw new Error(
+      "Worksheet ya Excel haikuweza kusomeka."
+    );
+  }
 
   const rawRows =
     XLSX.utils.sheet_to_json<
@@ -435,6 +456,10 @@ export async function readGuestImportFile(
     );
 }
 
+/**
+ * Inafanya validation ya data ndani ya Excel
+ * kabla ya kuangalia database.
+ */
 export function validateGuestImportRows(
   rows: GuestImportRow[]
 ): GuestImportValidationResult {
@@ -590,10 +615,20 @@ export function validateGuestImportRows(
   };
 }
 
+/**
+ * Inaangalia kama phone au Event Pass ID
+ * tayari zipo kwenye event iliyochaguliwa.
+ */
 export async function validateGuestImportRowsForEvent(
   rows: GuestImportRow[],
   eventId: number
 ): Promise<GuestImportValidationResult> {
+  if (!Number.isInteger(eventId)) {
+    throw new Error(
+      "Event iliyochaguliwa si sahihi."
+    );
+  }
+
   const localValidation =
     validateGuestImportRows(rows);
 
@@ -686,21 +721,29 @@ export async function validateGuestImportRowsForEvent(
           row.rowNumber
         )
     ),
+
     invalidRows: allNormalizedRows.filter(
       (row) =>
         rowsWithErrors.has(
           row.rowNumber
         )
     ),
+
     errors,
   };
 }
 
+/**
+ * Inatengeneza Excel report yenye rows
+ * zilizokataliwa na sababu za kukataliwa.
+ */
 export function downloadGuestImportErrorReport(
   validationResult: GuestImportValidationResult,
   eventTitle?: string
 ) {
-  if (validationResult.errors.length === 0) {
+  if (
+    validationResult.errors.length === 0
+  ) {
     throw new Error(
       "Hakuna validation errors za kupakua."
     );
@@ -826,9 +869,14 @@ export function downloadGuestImportErrorReport(
   );
 }
 
+/**
+ * Ina-save guests, inatengeneza invitations,
+ * na kuhifadhi import history.
+ */
 export async function importValidGuests(
   eventId: number,
-  rows: GuestImportRow[]
+  rows: GuestImportRow[],
+  options: GuestImportOptions = {}
 ): Promise<GuestImportResult> {
   if (!Number.isInteger(eventId)) {
     throw new Error(
@@ -841,6 +889,11 @@ export async function importValidGuests(
       "Hakuna valid guests wa ku-import."
     );
   }
+
+  const failedRows = Math.max(
+    options.failedRows ?? 0,
+    0
+  );
 
   const guestPayload = rows.map((row) => ({
     event_id: eventId,
@@ -857,17 +910,19 @@ export async function importValidGuests(
     checked_in_at: null,
   }));
 
-  const { data: insertedGuests, error } =
-    await supabase
-      .from("guests")
-      .insert(guestPayload)
-      .select(
-        "id, event_id, full_name"
-      );
+  const {
+    data: insertedGuests,
+    error: guestInsertError,
+  } = await supabase
+    .from("guests")
+    .insert(guestPayload)
+    .select(
+      "id, event_id, full_name"
+    );
 
-  if (error) {
+  if (guestInsertError) {
     throw new Error(
-      `Guests hawakuweza ku-import: ${error.message}`
+      `Guests hawakuweza ku-import: ${guestInsertError.message}`
     );
   }
 
@@ -915,10 +970,49 @@ export async function importValidGuests(
     );
   }
 
+  /*
+   * Tunahifadhi import history.
+   * Import haitafeli ikiwa history pekee
+   * imeshindwa, kwa sababu guests tayari
+   * wamehifadhiwa kwa mafanikio.
+   */
+  const {
+    error: historyError,
+  } = await supabase
+    .from("guest_import_history")
+    .insert({
+      event_id: eventId,
+      file_name:
+        options.fileName?.trim() ||
+        "Excel Import",
+      total_rows:
+        rows.length + failedRows,
+      imported_rows:
+        guestRecords.length,
+      failed_rows: failedRows,
+      imported_by:
+        options.importedBy?.trim() ||
+        "Admin",
+    });
+
+  const historySaved = !historyError;
+
+  if (historyError) {
+    console.error(
+      "Import history haikuweza kuhifadhiwa:",
+      historyError.message
+    );
+  }
+
   return {
-    importedGuests: guestRecords.length,
+    importedGuests:
+      guestRecords.length,
+
     createdInvitations:
       insertedInvitations?.length ?? 0,
-    failedRows: 0,
+
+    failedRows,
+
+    historySaved,
   };
 }
