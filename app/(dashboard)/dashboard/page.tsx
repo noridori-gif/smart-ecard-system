@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import AnalyticsCards from "@/components/dashboard/AnalyticsCards";
 import EventSelector from "@/components/dashboard/EventSelector";
 import InvitationFunnel from "@/components/dashboard/InvitationFunnel";
 import ProgressCard from "@/components/dashboard/ProgressCard";
-import RSVPSummary from "@/components/dashboard/RSVPSummary";
+
+import AttendanceDonutChart from "@/components/dashboard/charts/AttendanceDonutChart";
+import RSVPPieChart from "@/components/dashboard/charts/RSVPPieChart";
 
 import {
   getDashboardEvents,
@@ -331,69 +338,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-5 xl:grid-cols-2">
-            <RSVPSummary stats={stats} />
+            <RSVPPieChart stats={stats} />
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  Attendance Summary
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Hali ya wageni walioingia na
-                  wanaosubiri check-in.
-                </p>
-              </div>
-
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                  <p className="text-sm font-semibold text-emerald-700">
-                    Checked In
-                  </p>
-
-                  <p className="mt-2 text-4xl font-bold text-emerald-700">
-                    {stats.checkedIn}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-                  <p className="text-sm font-semibold text-amber-700">
-                    Pending Check-In
-                  </p>
-
-                  <p className="mt-2 text-4xl font-bold text-amber-700">
-                    {stats.pendingCheckIn}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-slate-700">
-                    Check-In Progress
-                  </span>
-
-                  <span className="font-bold text-violet-700">
-                    {stats.attendanceRate}%
-                  </span>
-                </div>
-
-                <div className="h-4 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full rounded-full bg-violet-600 transition-all duration-500"
-                    style={{
-                      width: `${Math.min(
-                        Math.max(
-                          stats.attendanceRate,
-                          0
-                        ),
-                        100
-                      )}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
+            <AttendanceDonutChart
+              checkedIn={stats.checkedIn}
+              pending={stats.pendingCheckIn}
+            />
           </div>
 
           <InvitationFunnel stats={stats} />
@@ -459,7 +409,9 @@ export default function DashboardPage() {
                 disabled={isLoading}
                 className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Refresh Analytics
+                {isLoading
+                  ? "Refreshing..."
+                  : "Refresh Analytics"}
               </button>
             </div>
           </div>
