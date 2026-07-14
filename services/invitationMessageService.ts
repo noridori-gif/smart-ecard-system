@@ -6,6 +6,20 @@ type MessageLanguage =
   | "sw"
   | "en";
 
+type InvitationEventDetails = {
+  title?: string | null;
+  event_date?: string | null;
+  event_time?: string | null;
+  venue?: string | null;
+};
+
+type InvitationGuestDetails = {
+  full_name?: string | null;
+  category?: string | null;
+  allowed_guests?: number | null;
+  event_pass_id?: string | null;
+};
+
 export function formatGuestPhoneNumber(
   phone:
     | string
@@ -26,12 +40,6 @@ export function formatGuestPhoneNumber(
       `255${cleanedPhone.slice(1)}`;
   }
 
-  if (
-    cleanedPhone.startsWith("255")
-  ) {
-    return cleanedPhone;
-  }
-
   return cleanedPhone;
 }
 
@@ -42,6 +50,26 @@ function getLanguage(
   return invitation.language === "en"
     ? "en"
     : "sw";
+}
+
+function getEventDetails(
+  invitation:
+    InvitationWithDetails
+) {
+  return invitation.events as
+    | InvitationEventDetails
+    | null
+    | undefined;
+}
+
+function getGuestDetails(
+  invitation:
+    InvitationWithDetails
+) {
+  return invitation.guests as
+    | InvitationGuestDetails
+    | null
+    | undefined;
 }
 
 function formatEventDate(
@@ -56,6 +84,19 @@ function formatEventDate(
     return "";
   }
 
+  const parsedDate =
+    new Date(
+      `${eventDate}T00:00:00`
+    );
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return eventDate;
+  }
+
   return new Intl.DateTimeFormat(
     language === "en"
       ? "en-GB"
@@ -65,11 +106,81 @@ function formatEventDate(
       month: "long",
       year: "numeric",
     }
-  ).format(
+  ).format(parsedDate);
+}
+
+function formatEventTime(
+  eventTime:
+    | string
+    | null
+    | undefined,
+
+  language: MessageLanguage
+) {
+  if (!eventTime) {
+    return "";
+  }
+
+  const timeParts =
+    eventTime
+      .trim()
+      .match(
+        /^(\d{1,2}):(\d{2})/
+      );
+
+  if (!timeParts) {
+    return eventTime;
+  }
+
+  const hours =
+    Number(timeParts[1]);
+
+  const minutes =
+    Number(timeParts[2]);
+
+  const parsedTime =
     new Date(
-      `${eventDate}T00:00:00`
+      2000,
+      0,
+      1,
+      hours,
+      minutes
+    );
+
+  if (
+    Number.isNaN(
+      parsedTime.getTime()
     )
-  );
+  ) {
+    return eventTime;
+  }
+
+  return new Intl.DateTimeFormat(
+    language === "en"
+      ? "en-GB"
+      : "sw-TZ",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  ).format(parsedTime);
+}
+
+function formatCategory(
+  category:
+    | string
+    | null
+    | undefined
+) {
+  if (!category) {
+    return "-";
+  }
+
+  return category
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase()
+    );
 }
 
 export function buildInvitationUrl(
@@ -79,7 +190,10 @@ export function buildInvitationUrl(
   const cleanOrigin =
     siteOrigin.replace(/\/$/, "");
 
-  return `${cleanOrigin}/invite/${invitationToken}`;
+  return (
+    `${cleanOrigin}/invite/` +
+    invitationToken
+  );
 }
 
 export function buildWhatsAppMessage(
@@ -91,31 +205,48 @@ export function buildWhatsAppMessage(
   const language =
     getLanguage(invitation);
 
+  const event =
+    getEventDetails(invitation);
+
+  const guest =
+    getGuestDetails(invitation);
+
   const guestName =
-    invitation.guests
-      ?.full_name ?? "Guest";
+    guest?.full_name ??
+    "Guest";
 
   const eventTitle =
-    invitation.events
-      ?.title ?? "Event";
+    event?.title ??
+    "Event";
 
   const eventDate =
     formatEventDate(
-      invitation.events
-        ?.event_date,
+      event?.event_date,
+      language
+    );
+
+  const eventTime =
+    formatEventTime(
+      event?.event_time,
       language
     );
 
   const venue =
-    invitation.events
-      ?.venue ?? "";
+    event?.venue ?? "";
+
+  const category =
+    formatCategory(
+      guest?.category
+    );
 
   const eventPassId =
     invitation.event_pass_id ??
+    guest?.event_pass_id ??
     "-";
 
   const allowedGuests =
     invitation.allowed_guests ??
+    guest?.allowed_guests ??
     1;
 
   const invitationUrl =
@@ -130,15 +261,19 @@ export function buildWhatsAppMessage(
       "",
       `You are invited to *${eventTitle}*.`,
       eventDate
-        ? `📅 ${eventDate}`
+        ? `Date: ${eventDate}`
+        : "",
+      eventTime
+        ? `Time: ${eventTime}`
         : "",
       venue
-        ? `📍 ${venue}`
+        ? `Venue: ${venue}`
         : "",
-      `👥 Entry: ${allowedGuests}`,
-      `🎟 Pass ID: *${eventPassId}*`,
+      `Category: ${category}`,
+      `Allowed guests: ${allowedGuests}`,
+      `Pass ID: *${eventPassId}*`,
       "",
-      `Open invitation:`,
+      "Open invitation:",
       invitationUrl,
       "",
       "Please present your QR code or Pass ID at check-in.",
@@ -152,15 +287,19 @@ export function buildWhatsAppMessage(
     "",
     `Umealikwa kwenye *${eventTitle}*.`,
     eventDate
-      ? `📅 ${eventDate}`
+      ? `Tarehe: ${eventDate}`
+      : "",
+    eventTime
+      ? `Muda: ${eventTime}`
       : "",
     venue
-      ? `📍 ${venue}`
+      ? `Mahali: ${venue}`
       : "",
-    `👥 Ruhusa: Wageni ${allowedGuests}`,
-    `🎟 Pass ID: *${eventPassId}*`,
+    `Kundi: ${category}`,
+    `Idadi inayoruhusiwa: ${allowedGuests}`,
+    `Pass ID: *${eventPassId}*`,
     "",
-    `Fungua mwaliko:`,
+    "Fungua mwaliko:",
     invitationUrl,
     "",
     "Onyesha QR code au Pass ID wakati wa kuingia.",
@@ -178,17 +317,49 @@ export function buildSmsMessage(
   const language =
     getLanguage(invitation);
 
+  const event =
+    getEventDetails(invitation);
+
+  const guest =
+    getGuestDetails(invitation);
+
   const guestName =
-    invitation.guests
-      ?.full_name ?? "Guest";
+    guest?.full_name ??
+    "Guest";
 
   const eventTitle =
-    invitation.events
-      ?.title ?? "Event";
+    event?.title ??
+    "Event";
+
+  const eventDate =
+    formatEventDate(
+      event?.event_date,
+      language
+    );
+
+  const eventTime =
+    formatEventTime(
+      event?.event_time,
+      language
+    );
+
+  const venue =
+    event?.venue ?? "-";
+
+  const category =
+    formatCategory(
+      guest?.category
+    );
 
   const eventPassId =
     invitation.event_pass_id ??
+    guest?.event_pass_id ??
     "-";
+
+  const allowedGuests =
+    invitation.allowed_guests ??
+    guest?.allowed_guests ??
+    1;
 
   const invitationUrl =
     buildInvitationUrl(
@@ -199,18 +370,40 @@ export function buildSmsMessage(
   if (language === "en") {
     return [
       `Hello ${guestName}.`,
-      `Invitation: ${eventTitle}.`,
-      `Pass: ${eventPassId}.`,
-      invitationUrl,
-    ].join(" ");
+      `You are invited to ${eventTitle}.`,
+      eventDate
+        ? `Date: ${eventDate}.`
+        : "",
+      eventTime
+        ? `Time: ${eventTime}.`
+        : "",
+      `Venue: ${venue}.`,
+      `Category: ${category}.`,
+      `Pass ID: ${eventPassId}.`,
+      `Guests: ${allowedGuests}.`,
+      `Invitation: ${invitationUrl}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   return [
     `Habari ${guestName}.`,
-    `Mwaliko: ${eventTitle}.`,
-    `Pass: ${eventPassId}.`,
-    invitationUrl,
-  ].join(" ");
+    `Umealikwa kwenye ${eventTitle}.`,
+    eventDate
+      ? `Tarehe: ${eventDate}.`
+      : "",
+    eventTime
+      ? `Muda: ${eventTime}.`
+      : "",
+    `Mahali: ${venue}.`,
+    `Kundi: ${category}.`,
+    `Pass ID: ${eventPassId}.`,
+    `Idadi: ${allowedGuests}.`,
+    `Mwaliko: ${invitationUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function buildWhatsAppUrl(
