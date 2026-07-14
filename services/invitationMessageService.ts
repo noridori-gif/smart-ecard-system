@@ -162,6 +162,7 @@ function formatEventTime(
     {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     }
   ).format(parsedTime);
 }
@@ -259,7 +260,7 @@ export function buildWhatsAppMessage(
     return [
       `Hello ${guestName},`,
       "",
-      `You are invited to *${eventTitle}*.`,
+      `You are invited to the wedding of *${eventTitle}*.`,
       eventDate
         ? `Date: ${eventDate}`
         : "",
@@ -278,14 +279,18 @@ export function buildWhatsAppMessage(
       "",
       "Please present your QR code or Pass ID at check-in.",
     ]
-      .filter(Boolean)
+      .filter(
+        (line) =>
+          line !== undefined &&
+          line !== null
+      )
       .join("\n");
   }
 
   return [
     `Habari ${guestName},`,
     "",
-    `Umealikwa kwenye *${eventTitle}*.`,
+    `Umealikwa kwenye harusi ya *${eventTitle}*.`,
     eventDate
       ? `Tarehe: ${eventDate}`
       : "",
@@ -304,7 +309,11 @@ export function buildWhatsAppMessage(
     "",
     "Onyesha QR code au Pass ID wakati wa kuingia.",
   ]
-    .filter(Boolean)
+    .filter(
+      (line) =>
+        line !== undefined &&
+        line !== null
+    )
     .join("\n");
 }
 
@@ -346,11 +355,6 @@ export function buildSmsMessage(
   const venue =
     event?.venue ?? "-";
 
-  const category =
-    formatCategory(
-      guest?.category
-    );
-
   const eventPassId =
     invitation.event_pass_id ??
     guest?.event_pass_id ??
@@ -369,8 +373,9 @@ export function buildSmsMessage(
 
   if (language === "en") {
     return [
-      `Hello ${guestName}.`,
-      `You are invited to ${eventTitle}.`,
+      `Hello ${guestName},`,
+      "",
+      `You are invited to the wedding of ${eventTitle}.`,
       eventDate
         ? `Date: ${eventDate}.`
         : "",
@@ -378,18 +383,25 @@ export function buildSmsMessage(
         ? `Time: ${eventTime}.`
         : "",
       `Venue: ${venue}.`,
-      `Category: ${category}.`,
+      "",
       `Pass ID: ${eventPassId}.`,
-      `Guests: ${allowedGuests}.`,
-      `Invitation: ${invitationUrl}`,
+      `Allowed guests: ${allowedGuests}.`,
+      "",
+      "Open invitation:",
+      invitationUrl,
     ]
-      .filter(Boolean)
+      .filter(
+        (line) =>
+          line !== undefined &&
+          line !== null
+      )
       .join("\n");
   }
 
   return [
-    `Habari ${guestName}.`,
-    `Umealikwa kwenye ${eventTitle}.`,
+    `Habari ${guestName},`,
+    "",
+    `Umealikwa kwenye harusi ya ${eventTitle}.`,
     eventDate
       ? `Tarehe: ${eventDate}.`
       : "",
@@ -397,12 +409,18 @@ export function buildSmsMessage(
       ? `Muda: ${eventTime}.`
       : "",
     `Mahali: ${venue}.`,
-    `Kundi: ${category}.`,
+    "",
     `Pass ID: ${eventPassId}.`,
     `Idadi: ${allowedGuests}.`,
-    `Mwaliko: ${invitationUrl}`,
+    "",
+    "Fungua mwaliko:",
+    invitationUrl,
   ]
-    .filter(Boolean)
+    .filter(
+      (line) =>
+        line !== undefined &&
+        line !== null
+    )
     .join("\n");
 }
 
