@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import ShareInvitationCardButton from "@/components/invitations/ShareInvitationCardButton";
+import ShareInvitationCardButton from "@/components/invitation/ShareInvitationCardButton";
 
 import {
   getAllInvitations,
