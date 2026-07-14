@@ -5,7 +5,10 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
+
+import ShareInvitationCardButton from "@/components/invitations/ShareInvitationCardButton";
 
 import {
   getAllInvitations,
@@ -244,8 +247,7 @@ export default function InvitationsPage() {
             "textarea"
           );
 
-        textArea.value =
-          message;
+        textArea.value = message;
 
         textArea.style.position =
           "fixed";
@@ -277,7 +279,7 @@ export default function InvitationsPage() {
       }
 
       showNotification(
-        "Ujumbe mfupi umenakiliwa vizuri.",
+        "Ujumbe umenakiliwa vizuri.",
         "success"
       );
     } catch (error) {
@@ -878,11 +880,15 @@ function InvitationActions({
 }: InvitationActionsProps & {
   compact?: boolean;
 }) {
+  const guestName =
+    invitation.guests
+      ?.full_name ?? "Guest";
+
   return (
     <div
       className={
         compact
-          ? "flex justify-end gap-2"
+          ? "flex flex-wrap justify-end gap-2"
           : "mt-4 grid grid-cols-2 gap-2"
       }
     >
@@ -924,6 +930,17 @@ function InvitationActions({
       >
         Copy
       </button>
+
+      <ShareInvitationCardButton
+        invitationToken={
+          invitation.invitation_token
+        }
+        guestName={guestName}
+        eventPassId={
+          invitation.event_pass_id
+        }
+        compact={compact}
+      />
     </div>
   );
 }
@@ -945,7 +962,7 @@ function TableHeading({
   center = false,
   right = false,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   center?: boolean;
   right?: boolean;
 }) {
