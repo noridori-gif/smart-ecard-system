@@ -195,6 +195,11 @@ export async function GET(
             specialFor:
               "Mwaliko maalumu kwa",
 
+            message: (
+              eventTitle: string
+            ) =>
+              `Tunafurahi kukualika kushiriki nasi katika sherehe ya ${eventTitle}.`,
+
             date: "TAREHE",
             time: "MUDA",
             venue: "MAHALI",
@@ -218,6 +223,11 @@ export async function GET(
 
             specialFor:
               "Special invitation for",
+
+            message: (
+              eventTitle: string
+            ) =>
+              `We are delighted to invite you to celebrate ${eventTitle} with us.`,
 
             date: "DATE",
             time: "TIME",
@@ -263,21 +273,42 @@ export async function GET(
             }}
           >
             {invitation.cover_image_url ? (
-              <img
-                src={
-                  invitation.cover_image_url
-                }
-                alt=""
-                width="1080"
-                height="410"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  position: "absolute",
-                  inset: 0,
-                }}
-              />
+              <>
+                <img
+                  src={
+                    invitation.cover_image_url
+                  }
+                  alt=""
+                  width="1080"
+                  height="410"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    position: "absolute",
+                    inset: 0,
+                    opacity: 0.55,
+                  }}
+                />
+
+                <img
+                  src={
+                    invitation.cover_image_url
+                  }
+                  alt=""
+                  width="1080"
+                  height="410"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    objectPosition:
+                      "center center",
+                    position: "absolute",
+                    inset: 0,
+                  }}
+                />
+              </>
             ) : null}
 
             <div
@@ -396,6 +427,22 @@ export async function GET(
                 {
                   invitation.guest_name
                 }
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  maxWidth: 760,
+                  marginTop: 14,
+                  fontSize: 22,
+                  lineHeight: 1.45,
+                  color: "#475569",
+                  textAlign: "center",
+                }}
+              >
+                {translations.message(
+                  invitation.event_title
+                )}
               </div>
             </div>
 
