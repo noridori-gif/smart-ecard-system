@@ -7,14 +7,17 @@ import {
 type ShareInvitationCardButtonProps = {
   invitationToken: string;
   guestName: string;
+
   eventPassId:
     | string
     | null;
+
   compact?: boolean;
 };
 
 function createSafeFileName(
   guestName: string,
+
   eventPassId:
     | string
     | null
@@ -49,26 +52,29 @@ function createSafeFileName(
   );
 }
 
-function downloadFile(
+function downloadCardFile(
   file: File
 ) {
   const fileUrl =
     URL.createObjectURL(file);
 
-  const anchor =
+  const downloadLink =
     document.createElement("a");
 
-  anchor.href = fileUrl;
-  anchor.download = file.name;
+  downloadLink.href =
+    fileUrl;
+
+  downloadLink.download =
+    file.name;
 
   document.body.appendChild(
-    anchor
+    downloadLink
   );
 
-  anchor.click();
+  downloadLink.click();
 
   document.body.removeChild(
-    anchor
+    downloadLink
   );
 
   window.setTimeout(() => {
@@ -143,26 +149,30 @@ export default function ShareInvitationCardButton({
           }
         );
 
-      const canShareFile =
+      const shareData = {
+        files: [cardFile],
+
+        title:
+          "Smart Event Pass",
+
+        text:
+          `Mwaliko maalumu kwa ${guestName}`,
+      };
+
+      const canShareCard =
         typeof navigator.share ===
           "function" &&
         typeof navigator.canShare ===
           "function" &&
-        navigator.canShare({
-          files: [cardFile],
-        });
+        navigator.canShare(
+          shareData
+        );
 
-      if (canShareFile) {
+      if (canShareCard) {
         try {
-          await navigator.share({
-            files: [cardFile],
-
-            title:
-              "Smart Event Pass",
-
-            text:
-              `Mwaliko maalumu kwa ${guestName}`,
-          });
+          await navigator.share(
+            shareData
+          );
 
           return;
         } catch (error) {
@@ -179,7 +189,9 @@ export default function ShareInvitationCardButton({
         }
       }
 
-      downloadFile(cardFile);
+      downloadCardFile(
+        cardFile
+      );
     } catch (error) {
       console.error(
         "Share invitation card error:",
