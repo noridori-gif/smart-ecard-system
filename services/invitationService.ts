@@ -31,6 +31,10 @@ export type InvitationEventDetails = {
 
   dress_code: string | null;
   cover_image_url: string | null;
+
+  theme_primary_color: string;
+  theme_secondary_color: string;
+  theme_accent_color: string;
 };
 
 export type InvitationGuestDetails = {
@@ -41,22 +45,20 @@ export type InvitationGuestDetails = {
   allowed_guests: number;
 };
 
-export type InvitationWithDetails = Invitation & {
-  /*
-   * Fields hizi tatu zinawekwa juu ili Invitations page
-   * iweze kutumia:
-   *
-   * invitation.language
-   * invitation.event_pass_id
-   * invitation.allowed_guests
-   */
-  language: EventLanguage;
-  event_pass_id: string | null;
-  allowed_guests: number;
+export type InvitationWithDetails =
+  Invitation & {
+    language: EventLanguage;
+    event_pass_id: string | null;
+    allowed_guests: number;
 
-  events: InvitationEventDetails | null;
-  guests: InvitationGuestDetails | null;
-};
+    events:
+      | InvitationEventDetails
+      | null;
+
+    guests:
+      | InvitationGuestDetails
+      | null;
+  };
 
 export type PublicInvitation = {
   invitation_id: number;
@@ -93,19 +95,33 @@ export type PublicInvitation = {
 
   dress_code: string | null;
   cover_image_url: string | null;
+
+  theme_primary_color: string;
+  theme_secondary_color: string;
+  theme_accent_color: string;
 };
 
-type RawInvitationWithDetails = Invitation & {
-  events:
-    | InvitationEventDetails
-    | InvitationEventDetails[]
-    | null;
+type RawInvitationWithDetails =
+  Invitation & {
+    events:
+      | InvitationEventDetails
+      | InvitationEventDetails[]
+      | null;
 
-  guests:
-    | InvitationGuestDetails
-    | InvitationGuestDetails[]
-    | null;
-};
+    guests:
+      | InvitationGuestDetails
+      | InvitationGuestDetails[]
+      | null;
+  };
+
+const DEFAULT_PRIMARY_COLOR =
+  "#BE123C";
+
+const DEFAULT_SECONDARY_COLOR =
+  "#FFF1F2";
+
+const DEFAULT_ACCENT_COLOR =
+  "#D4AF37";
 
 function getSingleRelation<T>(
   relation: T | T[] | null
@@ -121,18 +137,70 @@ function getSingleRelation<T>(
   return relation;
 }
 
+function normalizeEventDetails(
+  event:
+    | InvitationEventDetails
+    | null
+): InvitationEventDetails | null {
+  if (!event) {
+    return null;
+  }
+
+  return {
+    ...event,
+
+    theme_primary_color:
+      event.theme_primary_color ||
+      DEFAULT_PRIMARY_COLOR,
+
+    theme_secondary_color:
+      event.theme_secondary_color ||
+      DEFAULT_SECONDARY_COLOR,
+
+    theme_accent_color:
+      event.theme_accent_color ||
+      DEFAULT_ACCENT_COLOR,
+  };
+}
+
+function normalizePublicInvitation(
+  invitation: PublicInvitation
+): PublicInvitation {
+  return {
+    ...invitation,
+
+    language:
+      invitation.language === "en"
+        ? "en"
+        : "sw",
+
+    theme_primary_color:
+      invitation.theme_primary_color ||
+      DEFAULT_PRIMARY_COLOR,
+
+    theme_secondary_color:
+      invitation.theme_secondary_color ||
+      DEFAULT_SECONDARY_COLOR,
+
+    theme_accent_color:
+      invitation.theme_accent_color ||
+      DEFAULT_ACCENT_COLOR,
+  };
+}
+
 export async function createInvitation(
   eventId: number,
   guestId: number
 ): Promise<Invitation> {
-  const { data, error } = await supabase
-    .from("invitations")
-    .insert({
-      event_id: eventId,
-      guest_id: guestId,
-    })
-    .select()
-    .single();
+  const { data, error } =
+    await supabase
+      .from("invitations")
+      .insert({
+        event_id: eventId,
+        guest_id: guestId,
+      })
+      .select()
+      .single();
 
   if (error) {
     throw new Error(error.message);
@@ -144,34 +212,49 @@ export async function createInvitation(
 export async function getInvitationByToken(
   token: string
 ): Promise<PublicInvitation | null> {
-  const { data, error } = await supabase.rpc(
-    "get_public_invitation",
-    {
-      token_input: token,
-    }
-  );
+  const normalizedToken =
+    token.trim();
+
+  if (!normalizedToken) {
+    return null;
+  }
+
+  const { data, error } =
+    await supabase.rpc(
+      "get_public_invitation",
+      {
+        token_input:
+          normalizedToken,
+      }
+    );
 
   if (error) {
     throw new Error(error.message);
   }
 
-  if (!data || data.length === 0) {
+  if (
+    !data ||
+    data.length === 0
+  ) {
     return null;
   }
 
-  return data[0] as PublicInvitation;
+  return normalizePublicInvitation(
+    data[0] as PublicInvitation
+  );
 }
 
 export async function getInvitationsByEvent(
   eventId: number
 ): Promise<Invitation[]> {
-  const { data, error } = await supabase
-    .from("invitations")
-    .select("*")
-    .eq("event_id", eventId)
-    .order("created_at", {
-      ascending: false,
-    });
+  const { data, error } =
+    await supabase
+      .from("invitations")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("created_at", {
+        ascending: false,
+      });
 
   if (error) {
     throw new Error(error.message);
@@ -183,68 +266,108 @@ export async function getInvitationsByEvent(
 export async function getAllInvitations(): Promise<
   InvitationWithDetails[]
 > {
-  const { data, error } = await supabase
-    .from("invitations")
-    .select(`
-      *,
-      events (
-        title,
-        event_type,
-        language,
+  const { data, error } =
+    await supabase
+      .from("invitations")
+      .select(`
+        *,
+        events (
+          title,
+          event_type,
+          language,
 
-        ceremony_title,
-        ceremony_date,
-        ceremony_time,
-        ceremony_venue,
-        ceremony_map_url,
+          ceremony_title,
+          ceremony_date,
+          ceremony_time,
+          ceremony_venue,
+          ceremony_map_url,
 
-        event_date,
-        event_time,
-        venue,
-        reception_map_url,
+          event_date,
+          event_time,
+          venue,
+          reception_map_url,
 
-        dress_code,
-        cover_image_url
-      ),
-      guests (
-        full_name,
-        phone,
-        email,
-        event_pass_id,
-        allowed_guests
-      )
-    `)
-    .order("created_at", {
-      ascending: false,
-    });
+          dress_code,
+          cover_image_url,
+
+          theme_primary_color,
+          theme_secondary_color,
+          theme_accent_color
+        ),
+        guests (
+          full_name,
+          phone,
+          email,
+          event_pass_id,
+          allowed_guests
+        )
+      `)
+      .order("created_at", {
+        ascending: false,
+      });
 
   if (error) {
     throw new Error(error.message);
   }
 
   const rawInvitations =
-    (data ?? []) as unknown as RawInvitationWithDetails[];
+    (data ??
+      []) as unknown as RawInvitationWithDetails[];
 
-  return rawInvitations.map((invitation) => {
-    const eventDetails = getSingleRelation(invitation.events);
-    const guestDetails = getSingleRelation(invitation.guests);
+  return rawInvitations.map(
+    (invitation) => {
+      const rawEventDetails =
+        getSingleRelation(
+          invitation.events
+        );
 
-    return {
-      id: invitation.id,
-      event_id: invitation.event_id,
-      guest_id: invitation.guest_id,
-      invitation_token: invitation.invitation_token,
-      invitation_status: invitation.invitation_status,
-      rsvp_status: invitation.rsvp_status,
-      viewed_at: invitation.viewed_at,
-      created_at: invitation.created_at,
+      const eventDetails =
+        normalizeEventDetails(
+          rawEventDetails
+        );
 
-      language: eventDetails?.language ?? "sw",
-      event_pass_id: guestDetails?.event_pass_id ?? null,
-      allowed_guests: guestDetails?.allowed_guests ?? 1,
+      const guestDetails =
+        getSingleRelation(
+          invitation.guests
+        );
 
-      events: eventDetails,
-      guests: guestDetails,
-    };
-  });
+      return {
+        id: invitation.id,
+        event_id:
+          invitation.event_id,
+        guest_id:
+          invitation.guest_id,
+
+        invitation_token:
+          invitation.invitation_token,
+
+        invitation_status:
+          invitation.invitation_status,
+
+        rsvp_status:
+          invitation.rsvp_status,
+
+        viewed_at:
+          invitation.viewed_at,
+
+        created_at:
+          invitation.created_at,
+
+        language:
+          eventDetails?.language ??
+          "sw",
+
+        event_pass_id:
+          guestDetails?.event_pass_id ??
+          null,
+
+        allowed_guests:
+          guestDetails?.allowed_guests ??
+          1,
+
+        events: eventDetails,
+        guests: guestDetails,
+      };
+    }
+  );
 }

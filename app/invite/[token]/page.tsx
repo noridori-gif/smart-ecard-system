@@ -1,13 +1,18 @@
+import type {
+  CSSProperties,
+} from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import Countdown from "@/components/invitation/Countdown";
-import EventPass from "@/components/invitation/EventPass";
-import InvitationHero from "@/components/invitation/InvitationHero";
-import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
-import RsvpButtons from "@/components/invitation/RsvpButtons";
+import {
+  getInvitationByToken,
+} from "@/services/invitationService";
 
-import { getInvitationByToken } from "@/services/invitationService";
+import Countdown from "@/components/invitation/Countdown";
+import InvitationHero from "@/components/invitation/InvitationHero";
+import EventPass from "@/components/invitation/EventPass";
+import RsvpButtons from "@/components/invitation/RsvpButtons";
+import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,18 +25,11 @@ type Props = {
 
 type Language = "sw" | "en";
 
-type InvitationTheme = {
+type InvitationContent = {
   icon: string;
   invitationLabel: string;
   eventLabel: string;
   message: string;
-  pageBackground: string;
-  heroBackground: string;
-  accentText: string;
-  accentBackground: string;
-  detailBackground: string;
-  guestBoxStyle: string;
-  buttonStyle: string;
 };
 
 type Translation = {
@@ -57,6 +55,7 @@ function getTranslation(
     return {
       specialInvitationFor:
         "Mwaliko Maalumu Kwa",
+
       ceremony: "Ibada",
       reception: "Mapokezi / Sherehe",
       date: "Tarehe",
@@ -64,12 +63,16 @@ function getTranslation(
       venue: "Mahali",
       openMap: "Fungua Ramani",
       dressCode: "Mavazi",
+
       invitationAdmits:
         "Mwaliko huu unaruhusu",
+
       guest: "Mgeni",
       guests: "Wageni",
+
       footer:
         "Mwaliko wako. Tukio lako.",
+
       invitationDescription:
         "Fungua mwaliko wako maalumu wa tukio.",
     };
@@ -78,219 +81,176 @@ function getTranslation(
   return {
     specialInvitationFor:
       "Special Invitation For",
+
     ceremony: "Ceremony",
     reception: "Reception",
     date: "Date",
     time: "Time",
     venue: "Venue",
-    openMap: "Open Map",
+    openMap: "Open Google Maps",
     dressCode: "Dress Code",
+
     invitationAdmits:
       "This invitation admits",
+
     guest: "Guest",
     guests: "Guests",
+
     footer:
       "Your invitation. Your moment.",
+
     invitationDescription:
       "Open your personal event invitation.",
   };
 }
 
-function getInvitationTheme(
+function getInvitationContent(
   eventType: string,
   language: Language
-): InvitationTheme {
-  const normalizedType =
+): InvitationContent {
+  const event =
     eventType.trim().toLowerCase();
 
   if (
-    normalizedType === "wedding" ||
-    normalizedType.includes("harusi")
+    event === "wedding" ||
+    event.includes("harusi")
   ) {
     return {
       icon: "💍",
+
       invitationLabel:
         language === "sw"
           ? "Unaalikwa"
           : "You Are Invited",
+
       eventLabel:
         language === "sw"
           ? "Sherehe ya Harusi"
           : "Wedding Celebration",
+
       message:
         language === "sw"
-          ? "Pamoja na familia zao, wanayo furaha kukualika kushiriki katika siku yao maalumu."
+          ? "Pamoja na familia zao, wanakualika kushiriki katika siku yao maalumu."
           : "Together with their families, they warmly invite you to celebrate their special day.",
-      pageBackground:
-        "bg-gradient-to-br from-rose-100 via-white to-amber-100",
-      heroBackground:
-        "bg-gradient-to-r from-rose-600 via-pink-500 to-amber-400",
-      accentText: "text-rose-700",
-      accentBackground: "bg-rose-700",
-      detailBackground: "bg-rose-50",
-      guestBoxStyle:
-        "border-rose-200 bg-rose-50",
-      buttonStyle:
-        "bg-rose-700 hover:bg-rose-800",
     };
   }
 
   if (
-    normalizedType === "send-off" ||
-    normalizedType === "sendoff" ||
-    normalizedType.includes("send")
+    event === "send-off" ||
+    event === "sendoff" ||
+    event.includes("send")
   ) {
     return {
       icon: "✨",
+
       invitationLabel:
         language === "sw"
           ? "Mwaliko Maalumu"
           : "Special Invitation",
+
       eventLabel:
         language === "sw"
           ? "Sherehe ya Send-Off"
           : "Send-Off Ceremony",
+
       message:
         language === "sw"
-          ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili muhimu na la kipekee."
-          : "We warmly invite you to join us for this beautiful and important occasion.",
-      pageBackground:
-        "bg-gradient-to-br from-orange-100 via-white to-yellow-100",
-      heroBackground:
-        "bg-gradient-to-r from-orange-600 via-rose-500 to-amber-400",
-      accentText: "text-orange-700",
-      accentBackground: "bg-orange-700",
-      detailBackground: "bg-orange-50",
-      guestBoxStyle:
-        "border-amber-300 bg-amber-50",
-      buttonStyle:
-        "bg-orange-700 hover:bg-orange-800",
+          ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
+          : "We warmly invite you to join us for this special occasion.",
     };
   }
 
   if (
-    normalizedType === "birthday" ||
-    normalizedType.includes("birthday")
+    event === "birthday" ||
+    event.includes("birthday")
   ) {
     return {
       icon: "🎂",
+
       invitationLabel:
         language === "sw"
           ? "Karibu Tusherehekee"
           : "Come Celebrate With Us",
+
       eventLabel:
         language === "sw"
-          ? "Sherehe ya Siku ya Kuzaliwa"
+          ? "Sherehe ya Kuzaliwa"
           : "Birthday Celebration",
+
       message:
         language === "sw"
-          ? "Karibu tusherehekee pamoja katika siku hii yenye furaha na kumbukumbu nzuri."
-          : "Join us for a joyful birthday celebration filled with wonderful memories.",
-      pageBackground:
-        "bg-gradient-to-br from-purple-100 via-white to-pink-100",
-      heroBackground:
-        "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500",
-      accentText: "text-purple-700",
-      accentBackground: "bg-purple-700",
-      detailBackground: "bg-purple-50",
-      guestBoxStyle:
-        "border-purple-200 bg-purple-50",
-      buttonStyle:
-        "bg-purple-700 hover:bg-purple-800",
+          ? "Karibu tusherehekee pamoja siku hii yenye furaha na kumbukumbu nzuri."
+          : "Join us for a joyful celebration filled with wonderful memories.",
     };
   }
 
   if (
-    normalizedType === "corporate" ||
-    normalizedType.includes("conference") ||
-    normalizedType.includes("seminar") ||
-    normalizedType.includes("business")
-  ) {
-    return {
-      icon: "💼",
-      invitationLabel:
-        language === "sw"
-          ? "Mwaliko Rasmi"
-          : "Official Invitation",
-      eventLabel:
-        language === "sw"
-          ? "Tukio la Kikampuni"
-          : "Corporate Event",
-      message:
-        language === "sw"
-          ? "Unaalikwa rasmi kuhudhuria tukio hili muhimu."
-          : "You are formally invited to attend this important event.",
-      pageBackground:
-        "bg-gradient-to-br from-slate-200 via-white to-blue-100",
-      heroBackground:
-        "bg-gradient-to-r from-slate-900 via-blue-800 to-blue-600",
-      accentText: "text-blue-800",
-      accentBackground: "bg-blue-800",
-      detailBackground: "bg-blue-50",
-      guestBoxStyle:
-        "border-blue-200 bg-blue-50",
-      buttonStyle:
-        "bg-blue-800 hover:bg-blue-900",
-    };
-  }
-
-  if (
-    normalizedType === "graduation" ||
-    normalizedType.includes("graduation")
+    event === "graduation" ||
+    event.includes("graduation")
   ) {
     return {
       icon: "🎓",
+
       invitationLabel:
         language === "sw"
           ? "Unaalikwa"
           : "You Are Invited",
+
       eventLabel:
         language === "sw"
           ? "Sherehe ya Mahafali"
           : "Graduation Celebration",
+
       message:
         language === "sw"
-          ? "Karibu tusherehekee mafanikio haya makubwa na mwanzo wa hatua mpya."
-          : "Join us as we celebrate this remarkable achievement and a new chapter.",
-      pageBackground:
-        "bg-gradient-to-br from-indigo-100 via-white to-amber-100",
-      heroBackground:
-        "bg-gradient-to-r from-indigo-800 via-indigo-600 to-amber-500",
-      accentText: "text-indigo-700",
-      accentBackground: "bg-indigo-700",
-      detailBackground: "bg-indigo-50",
-      guestBoxStyle:
-        "border-indigo-200 bg-indigo-50",
-      buttonStyle:
-        "bg-indigo-700 hover:bg-indigo-800",
+          ? "Karibu tusherehekee mafanikio haya na mwanzo wa hatua mpya."
+          : "Join us as we celebrate this achievement and a new chapter.",
+    };
+  }
+
+  if (
+    event === "corporate" ||
+    event.includes("conference") ||
+    event.includes("seminar") ||
+    event.includes("business")
+  ) {
+    return {
+      icon: "💼",
+
+      invitationLabel:
+        language === "sw"
+          ? "Mwaliko Rasmi"
+          : "Official Invitation",
+
+      eventLabel:
+        language === "sw"
+          ? "Tukio la Kikampuni"
+          : "Corporate Event",
+
+      message:
+        language === "sw"
+          ? "Unaalikwa rasmi kuhudhuria tukio hili muhimu."
+          : "You are formally invited to attend this important event.",
     };
   }
 
   return {
     icon: "🎉",
+
     invitationLabel:
       language === "sw"
         ? "Unaalikwa"
         : "You Are Invited",
+
     eventLabel:
       language === "sw"
         ? "Tukio Maalumu"
         : "Special Event",
+
     message:
       language === "sw"
         ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
         : "We warmly invite you to join us for this special occasion.",
-    pageBackground:
-      "bg-gradient-to-br from-slate-100 via-white to-blue-100",
-    heroBackground:
-      "bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500",
-    accentText: "text-blue-700",
-    accentBackground: "bg-blue-700",
-    detailBackground: "bg-slate-50",
-    guestBoxStyle:
-      "border-blue-200 bg-blue-50",
-    buttonStyle:
-      "bg-blue-700 hover:bg-blue-800",
   };
 }
 
@@ -313,7 +273,9 @@ function formatEventDate(
       year: "numeric",
     }
   ).format(
-    new Date(`${eventDate}T00:00:00`)
+    new Date(
+      `${eventDate}T00:00:00`
+    )
   );
 }
 
@@ -325,11 +287,13 @@ function formatEventTime(
     return "";
   }
 
-  const [hourValue, minuteValue] =
-    eventTime
-      .slice(0, 5)
-      .split(":")
-      .map(Number);
+  const [
+    hourValue,
+    minuteValue,
+  ] = eventTime
+    .slice(0, 5)
+    .split(":")
+    .map(Number);
 
   if (language === "en") {
     return new Intl.DateTimeFormat(
@@ -377,12 +341,24 @@ function formatEventTime(
     period = "jioni";
   }
 
-  const minute = String(
-    minuteValue
-  ).padStart(2, "0");
+  const minute =
+    String(minuteValue).padStart(
+      2,
+      "0"
+    );
 
   return `Saa ${swahiliHour}:${minute} ${period}`;
 }
+
+type LocationSectionProps = {
+  icon: string;
+  title: string;
+  date: string | null;
+  time: string | null;
+  venue: string | null;
+  mapUrl: string | null;
+  language: Language;
+};
 
 function EventLocationSection({
   icon,
@@ -392,108 +368,83 @@ function EventLocationSection({
   venue,
   mapUrl,
   language,
-  accentTextClass,
-  detailBackgroundClass,
-  buttonClass,
-}: {
-  icon: string;
-  title: string;
-  date: string | null;
-  time: string | null;
-  venue: string | null;
-  mapUrl: string | null;
-  language: Language;
-  accentTextClass: string;
-  detailBackgroundClass: string;
-  buttonClass: string;
-}) {
+}: LocationSectionProps) {
   const translation =
     getTranslation(language);
 
+  const details = [
+    date
+      ? {
+          icon: "📅",
+          label: translation.date,
+          value: formatEventDate(
+            date,
+            language
+          ),
+        }
+      : null,
+
+    time
+      ? {
+          icon: "🕒",
+          label: translation.time,
+          value: formatEventTime(
+            time,
+            language
+          ),
+        }
+      : null,
+
+    venue
+      ? {
+          icon: "📍",
+          label: translation.venue,
+          value: venue,
+        }
+      : null,
+  ].filter(
+    (
+      item
+    ): item is {
+      icon: string;
+      label: string;
+      value: string;
+    } => Boolean(item)
+  );
+
   return (
-    <section
-      className={`rounded-2xl border border-slate-200 p-4 shadow-sm ${detailBackgroundClass}`}
-    >
+    <section className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] p-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
+        <div className="text-2xl">
           {icon}
         </div>
 
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            {language === "sw"
-              ? "Ratiba"
-              : "Schedule"}
-          </p>
-
-          <h3
-            className={`truncate text-lg font-bold ${accentTextClass}`}
-          >
-            {title}
-          </h3>
-        </div>
+        <h3 className="text-lg font-bold text-[var(--theme-primary)]">
+          {title}
+        </h3>
       </div>
 
-      <div className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {date && (
-          <div className="flex items-start gap-3 px-4 py-3">
+      <div className="mt-4 divide-y divide-slate-200 rounded-xl bg-white/90 px-4">
+        {details.map((detail) => (
+          <div
+            key={detail.label}
+            className="flex items-start gap-3 py-3"
+          >
             <span className="text-lg">
-              📅
+              {detail.icon}
             </span>
 
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                {translation.date}
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                {detail.label}
               </p>
 
-              <p className="mt-0.5 text-sm font-semibold text-slate-900">
-                {formatEventDate(
-                  date,
-                  language
-                )}
+              <p className="mt-1 font-semibold leading-5 text-slate-900">
+                {detail.value}
               </p>
             </div>
           </div>
-        )}
-
-        {time && (
-          <div className="flex items-start gap-3 px-4 py-3">
-            <span className="text-lg">
-              🕒
-            </span>
-
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                {translation.time}
-              </p>
-
-              <p className="mt-0.5 text-sm font-semibold text-slate-900">
-                {formatEventTime(
-                  time,
-                  language
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {venue && (
-          <div className="flex items-start gap-3 px-4 py-3">
-            <span className="text-lg">
-              📍
-            </span>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                {translation.venue}
-              </p>
-
-              <p className="mt-0.5 break-words text-sm font-semibold text-slate-900">
-                {venue}
-              </p>
-            </div>
-          </div>
-        )}
+        ))}
       </div>
 
       {mapUrl && (
@@ -501,7 +452,7 @@ function EventLocationSection({
           href={mapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition ${buttonClass}`}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--theme-primary)] shadow-sm"
         >
           <span>📍</span>
           <span>
@@ -533,6 +484,7 @@ export async function generateMetadata({
       return {
         title:
           "Invitation Not Found | Smart Event Pass",
+
         description:
           "This invitation could not be found.",
       };
@@ -565,6 +517,7 @@ export async function generateMetadata({
       language === "sw"
         ? `Mwaliko maalumu kwa ${invitation.guest_name}.`
         : `A special invitation for ${invitation.guest_name}.`,
+
       formattedDate,
       formattedTime,
       invitation.venue,
@@ -578,6 +531,7 @@ export async function generateMetadata({
 
     return {
       title,
+
       description:
         description ||
         translation.invitationDescription,
@@ -586,6 +540,7 @@ export async function generateMetadata({
         title,
         description,
         type: "website",
+
         images: imageUrl
           ? [
               {
@@ -603,8 +558,10 @@ export async function generateMetadata({
         card: imageUrl
           ? "summary_large_image"
           : "summary",
+
         title,
         description,
+
         images: imageUrl
           ? [imageUrl]
           : undefined,
@@ -614,6 +571,7 @@ export async function generateMetadata({
     return {
       title:
         "Invitation | Smart Event Pass",
+
       description:
         "Open your personal event invitation.",
     };
@@ -644,11 +602,34 @@ export default async function InvitationPage({
   const translation =
     getTranslation(language);
 
-  const theme =
-    getInvitationTheme(
+  const content =
+    getInvitationContent(
       invitation.event_type,
       language
     );
+
+  const primaryColor =
+    invitation.theme_primary_color ||
+    "#BE123C";
+
+  const secondaryColor =
+    invitation.theme_secondary_color ||
+    "#FFF1F2";
+
+  const accentColor =
+    invitation.theme_accent_color ||
+    "#D4AF37";
+
+  const themeVariables = {
+    "--theme-primary":
+      primaryColor,
+
+    "--theme-secondary":
+      secondaryColor,
+
+    "--theme-accent":
+      accentColor,
+  } as CSSProperties;
 
   const normalizedEventType =
     invitation.event_type
@@ -656,7 +637,8 @@ export default async function InvitationPage({
       .toLowerCase();
 
   const isWedding =
-    normalizedEventType === "wedding" ||
+    normalizedEventType ===
+      "wedding" ||
     normalizedEventType.includes(
       "harusi"
     );
@@ -689,7 +671,13 @@ export default async function InvitationPage({
 
   return (
     <main
-      className={`min-h-screen px-3 py-4 sm:px-4 sm:py-8 ${theme.pageBackground}`}
+      style={{
+        ...themeVariables,
+
+        background:
+          `linear-gradient(135deg, ${secondaryColor} 0%, #ffffff 50%, ${accentColor}22 100%)`,
+      }}
+      className="min-h-screen px-3 py-5 sm:px-4 sm:py-10"
     >
       <InvitationViewedTracker
         invitationToken={
@@ -697,47 +685,53 @@ export default async function InvitationPage({
         }
       />
 
-      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
         <InvitationHero
-          icon={theme.icon}
+          icon={content.icon}
           invitationLabel={
-            theme.invitationLabel
+            content.invitationLabel
           }
           heroTitle={heroTitle}
-          eventLabel={theme.eventLabel}
+          eventLabel={
+            content.eventLabel
+          }
           eventTitle={
             invitation.event_title
           }
-          heroBackground={
-            theme.heroBackground
-          }
+          heroBackground="bg-[linear-gradient(135deg,var(--theme-primary),var(--theme-accent))]"
           coverImageUrl={
             invitation.cover_image_url
           }
         />
 
-        <section className="px-4 py-5 sm:px-7 sm:py-7">
-          <div
-            className={`rounded-2xl border px-4 py-4 text-center ${theme.guestBoxStyle}`}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+        <section className="px-4 py-6 sm:px-8 sm:py-8">
+          <div className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-4 py-5 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.23em] text-slate-500">
               {
                 translation.specialInvitationFor
               }
             </p>
 
-            <h2
-              className={`mt-1.5 text-2xl font-bold sm:text-3xl ${theme.accentText}`}
-            >
+            <h2 className="mt-2 text-2xl font-bold leading-tight text-[var(--theme-primary)] sm:text-3xl">
               {invitation.guest_name}
             </h2>
           </div>
 
-          <p className="mx-auto mt-4 max-w-lg text-center text-sm leading-6 text-slate-600">
-            {theme.message}
+          <p className="mx-auto mt-5 max-w-lg text-center text-sm leading-6 text-slate-600">
+            {content.message}
           </p>
 
-          <div className="mt-5 space-y-3">
+          <div className="my-6 flex items-center gap-3">
+            <div className="h-px flex-1 bg-slate-200" />
+
+            <span className="text-xl text-[var(--theme-accent)]">
+              ✦
+            </span>
+
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <div className="space-y-4">
             {hasCeremonyDetails && (
               <EventLocationSection
                 icon="⛪"
@@ -758,15 +752,6 @@ export default async function InvitationPage({
                   invitation.ceremony_map_url
                 }
                 language={language}
-                accentTextClass={
-                  theme.accentText
-                }
-                detailBackgroundClass={
-                  theme.detailBackground
-                }
-                buttonClass={
-                  theme.buttonStyle
-                }
               />
             )}
 
@@ -781,45 +766,48 @@ export default async function InvitationPage({
               time={
                 invitation.event_time
               }
-              venue={invitation.venue}
+              venue={
+                invitation.venue
+              }
               mapUrl={
                 invitation.reception_map_url
               }
               language={language}
-              accentTextClass={
-                theme.accentText
-              }
-              detailBackgroundClass={
-                theme.detailBackground
-              }
-              buttonClass={
-                theme.buttonStyle
-              }
             />
           </div>
 
           {invitation.dress_code && (
-            <section
-              className={`mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 shadow-sm ${theme.detailBackground}`}
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
+            <section className="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] p-4 shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm">
                 👔
               </div>
 
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                  {
-                    translation.dressCode
-                  }
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                  {translation.dressCode}
                 </p>
 
-                <p
-                  className={`mt-0.5 break-words text-lg font-bold ${theme.accentText}`}
-                >
-                  {
-                    invitation.dress_code
-                  }
+                <p className="mt-1 text-lg font-bold text-[var(--theme-primary)]">
+                  {invitation.dress_code}
                 </p>
+              </div>
+
+              <div className="ml-auto hidden gap-1 sm:flex">
+                <span
+                  className="h-6 w-6 rounded-full border border-black/10"
+                  style={{
+                    backgroundColor:
+                      primaryColor,
+                  }}
+                />
+
+                <span
+                  className="h-6 w-6 rounded-full border border-black/10"
+                  style={{
+                    backgroundColor:
+                      accentColor,
+                  }}
+                />
               </div>
             </section>
           )}
@@ -832,44 +820,26 @@ export default async function InvitationPage({
               invitation.event_time
             }
             language={language}
-            accentTextClass={
-              theme.accentText
-            }
-            boxClassName={
-              theme.detailBackground
-            }
+            accentTextClass="text-[var(--theme-primary)]"
+            boxClassName="bg-[var(--theme-secondary)]"
           />
 
-          <div
-            className={`mt-4 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${theme.guestBoxStyle}`}
-          >
-            <div>
-              <p className="text-xs text-slate-500">
-                {
-                  translation.invitationAdmits
-                }
-              </p>
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-5 py-4">
+            <p className="text-sm text-slate-600">
+              {
+                translation.invitationAdmits
+              }
+            </p>
 
-              <p
-                className={`mt-0.5 text-lg font-bold ${theme.accentText}`}
-              >
-                {
-                  invitation.allowed_guests
-                }{" "}
-                {invitation.allowed_guests ===
-                1
-                  ? translation.guest
-                  : translation.guests}
-              </p>
-            </div>
-
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white ${theme.accentBackground}`}
-            >
+            <p className="ml-3 whitespace-nowrap text-xl font-bold text-[var(--theme-primary)]">
               {
                 invitation.allowed_guests
-              }
-            </div>
+              }{" "}
+              {invitation.allowed_guests ===
+              1
+                ? translation.guest
+                : translation.guests}
+            </p>
           </div>
 
           <RsvpButtons
@@ -880,9 +850,7 @@ export default async function InvitationPage({
               invitation.rsvp_status
             }
             language={language}
-            accentTextClass={
-              theme.accentText
-            }
+            accentTextClass="text-[var(--theme-primary)]"
           />
 
           <EventPass
@@ -902,23 +870,19 @@ export default async function InvitationPage({
               invitation.category
             }
             language={language}
-            accentTextClass={
-              theme.accentText
-            }
-            boxClassName={
-              theme.detailBackground
-            }
+            accentTextClass="text-[var(--theme-primary)]"
+            boxClassName="bg-[var(--theme-secondary)]"
           />
 
-          <div className="mt-6 border-t border-slate-100 pt-5 text-center">
-            <p className="text-sm font-semibold text-slate-500">
+          <footer className="mt-8 border-t border-slate-100 pt-6 text-center">
+            <p className="text-sm font-semibold text-[var(--theme-primary)]">
               Smart Event Pass
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
               {translation.footer}
             </p>
-          </div>
+          </footer>
         </section>
       </div>
     </main>
