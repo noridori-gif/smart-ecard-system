@@ -1,6 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import {
+  supabase,
+} from "@/lib/supabase";
 
-export type EventLanguage = "sw" | "en";
+export type EventLanguage =
+  | "sw"
+  | "en";
 
 export const DEFAULT_EVENT_THEME = {
   primaryColor: "#BE123C",
@@ -13,24 +17,55 @@ export type Event = {
   title: string;
   event_type: string;
 
-  bride_name?: string | null;
-  groom_name?: string | null;
+  bride_name?:
+    | string
+    | null;
+
+  groom_name?:
+    | string
+    | null;
 
   language: EventLanguage;
 
-  ceremony_title?: string | null;
-  ceremony_date?: string | null;
-  ceremony_time?: string | null;
-  ceremony_venue?: string | null;
-  ceremony_map_url?: string | null;
+  ceremony_title?:
+    | string
+    | null;
+
+  ceremony_date?:
+    | string
+    | null;
+
+  ceremony_time?:
+    | string
+    | null;
+
+  ceremony_venue?:
+    | string
+    | null;
+
+  ceremony_map_url?:
+    | string
+    | null;
 
   event_date: string;
   event_time: string;
   venue: string;
-  reception_map_url?: string | null;
 
-  dress_code?: string | null;
-  cover_image_url?: string | null;
+  reception_map_url?:
+    | string
+    | null;
+
+  dress_code?:
+    | string
+    | null;
+
+  cover_image_url?:
+    | string
+    | null;
+
+  invitation_message?:
+    | string
+    | null;
 
   theme_primary_color: string;
   theme_secondary_color: string;
@@ -57,10 +92,16 @@ export type NewEvent = {
   event_date: string;
   event_time: string;
   venue: string;
+
   reception_map_url?: string;
 
   dress_code?: string;
-  cover_image_url?: string | null;
+
+  cover_image_url?:
+    | string
+    | null;
+
+  invitation_message?: string;
 
   theme_primary_color?: string;
   theme_secondary_color?: string;
@@ -85,10 +126,16 @@ export type UpdateEvent = {
   event_date: string;
   event_time: string;
   venue: string;
+
   reception_map_url?: string;
 
   dress_code?: string;
-  cover_image_url?: string | null;
+
+  cover_image_url?:
+    | string
+    | null;
+
+  invitation_message?: string;
 
   theme_primary_color?: string;
   theme_secondary_color?: string;
@@ -98,12 +145,17 @@ export type UpdateEvent = {
 const HEX_COLOR_PATTERN =
   /^#[0-9A-Fa-f]{6}$/;
 
+const MAX_INVITATION_MESSAGE_LENGTH =
+  600;
+
 function normalizeHexColor(
   color: string | undefined,
   fallbackColor: string
 ) {
   const normalizedColor =
-    color?.trim().toUpperCase();
+    color
+      ?.trim()
+      .toUpperCase();
 
   if (
     !normalizedColor ||
@@ -117,11 +169,53 @@ function normalizeHexColor(
   return normalizedColor;
 }
 
-function getEventThemeColors(event: {
-  theme_primary_color?: string;
-  theme_secondary_color?: string;
-  theme_accent_color?: string;
-}) {
+function normalizeOptionalText(
+  value:
+    | string
+    | undefined
+) {
+  const normalizedValue =
+    value?.trim();
+
+  return normalizedValue || null;
+}
+
+function normalizeInvitationMessage(
+  message:
+    | string
+    | undefined
+) {
+  const normalizedMessage =
+    message?.trim();
+
+  if (!normalizedMessage) {
+    return null;
+  }
+
+  if (
+    normalizedMessage.length >
+    MAX_INVITATION_MESSAGE_LENGTH
+  ) {
+    throw new Error(
+      `Ujumbe wa mwaliko usizidi characters ${MAX_INVITATION_MESSAGE_LENGTH}.`
+    );
+  }
+
+  return normalizedMessage;
+}
+
+function getEventThemeColors(
+  event: {
+    theme_primary_color?:
+      string;
+
+    theme_secondary_color?:
+      string;
+
+    theme_accent_color?:
+      string;
+  }
+) {
   return {
     theme_primary_color:
       normalizeHexColor(
@@ -143,29 +237,92 @@ function getEventThemeColors(event: {
   };
 }
 
+function validateRequiredEventFields(
+  event: {
+    title: string;
+    event_type: string;
+    event_date: string;
+    event_time: string;
+    venue: string;
+  }
+) {
+  if (!event.title.trim()) {
+    throw new Error(
+      "Event title inahitajika."
+    );
+  }
+
+  if (
+    !event.event_type.trim()
+  ) {
+    throw new Error(
+      "Event type inahitajika."
+    );
+  }
+
+  if (!event.event_date) {
+    throw new Error(
+      "Event date inahitajika."
+    );
+  }
+
+  if (!event.event_time) {
+    throw new Error(
+      "Event time inahitajika."
+    );
+  }
+
+  if (!event.venue.trim()) {
+    throw new Error(
+      "Event venue inahitajika."
+    );
+  }
+}
+
 export async function uploadEventCover(
   imageFile: File
 ): Promise<string> {
+  if (
+    !imageFile.type.startsWith(
+      "image/"
+    )
+  ) {
+    throw new Error(
+      "File lililochaguliwa si picha."
+    );
+  }
+
   const fileExtension =
     imageFile.name
       .split(".")
       .pop()
-      ?.toLowerCase() ?? "jpg";
+      ?.toLowerCase() ??
+    "jpg";
 
   const fileName =
-    `${crypto.randomUUID()}.${fileExtension}`;
+    `${crypto.randomUUID()}.` +
+    fileExtension;
 
   const filePath =
     `covers/${fileName}`;
 
-  const { error: uploadError } =
-    await supabase.storage
-      .from("event-covers")
-      .upload(filePath, imageFile, {
-        cacheControl: "3600",
+  const {
+    error: uploadError,
+  } = await supabase.storage
+    .from("event-covers")
+    .upload(
+      filePath,
+      imageFile,
+      {
+        cacheControl:
+          "3600",
+
         upsert: false,
-        contentType: imageFile.type,
-      });
+
+        contentType:
+          imageFile.type,
+      }
+    );
 
   if (uploadError) {
     throw new Error(
@@ -173,7 +330,9 @@ export async function uploadEventCover(
     );
   }
 
-  const { data } = supabase.storage
+  const {
+    data,
+  } = supabase.storage
     .from("event-covers")
     .getPublicUrl(filePath);
 
@@ -189,73 +348,110 @@ export async function uploadEventCover(
 export async function createEvent(
   event: NewEvent
 ): Promise<Event> {
+  validateRequiredEventFields(
+    event
+  );
+
   const themeColors =
-    getEventThemeColors(event);
+    getEventThemeColors(
+      event
+    );
 
-  const { data, error } =
-    await supabase
-      .from("events")
-      .insert({
-        title: event.title.trim(),
-        event_type:
-          event.event_type.trim(),
+  const invitationMessage =
+    normalizeInvitationMessage(
+      event.invitation_message
+    );
 
-        bride_name:
-          event.bride_name?.trim() ||
-          null,
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("events")
+    .insert({
+      title:
+        event.title.trim(),
 
-        groom_name:
-          event.groom_name?.trim() ||
-          null,
+      event_type:
+        event.event_type.trim(),
 
-        language:
-          event.language ?? "sw",
+      bride_name:
+        normalizeOptionalText(
+          event.bride_name
+        ),
 
-        ceremony_title:
-          event.ceremony_title?.trim() ||
-          "Ibada ya Ndoa",
+      groom_name:
+        normalizeOptionalText(
+          event.groom_name
+        ),
 
-        ceremony_date:
-          event.ceremony_date || null,
+      language:
+        event.language ??
+        "sw",
 
-        ceremony_time:
-          event.ceremony_time || null,
+      ceremony_title:
+        normalizeOptionalText(
+          event.ceremony_title
+        ) ??
+        (
+          event.language ===
+          "en"
+            ? "Wedding Ceremony"
+            : "Ibada ya Ndoa"
+        ),
 
-        ceremony_venue:
-          event.ceremony_venue?.trim() ||
-          null,
+      ceremony_date:
+        event.ceremony_date ||
+        null,
 
-        ceremony_map_url:
-          event.ceremony_map_url?.trim() ||
-          null,
+      ceremony_time:
+        event.ceremony_time ||
+        null,
 
-        event_date:
-          event.event_date,
+      ceremony_venue:
+        normalizeOptionalText(
+          event.ceremony_venue
+        ),
 
-        event_time:
-          event.event_time,
+      ceremony_map_url:
+        normalizeOptionalText(
+          event.ceremony_map_url
+        ),
 
-        venue:
-          event.venue.trim(),
+      event_date:
+        event.event_date,
 
-        reception_map_url:
-          event.reception_map_url?.trim() ||
-          null,
+      event_time:
+        event.event_time,
 
-        dress_code:
-          event.dress_code?.trim() ||
-          null,
+      venue:
+        event.venue.trim(),
 
-        cover_image_url:
-          event.cover_image_url ?? null,
+      reception_map_url:
+        normalizeOptionalText(
+          event.reception_map_url
+        ),
 
-        ...themeColors,
-      })
-      .select()
-      .single();
+      dress_code:
+        normalizeOptionalText(
+          event.dress_code
+        ),
+
+      cover_image_url:
+        event.cover_image_url ??
+        null,
+
+      invitation_message:
+        invitationMessage,
+
+      ...themeColors,
+    })
+    .select()
+    .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
   return data as Event;
@@ -264,49 +460,90 @@ export async function createEvent(
 export async function getEvents(): Promise<
   Event[]
 > {
-  const { data, error } =
-    await supabase
-      .from("events")
-      .select("*")
-      .order("event_date", {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("events")
+    .select("*")
+    .order(
+      "event_date",
+      {
         ascending: true,
-      });
+      }
+    );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
-  return (data ?? []) as Event[];
+  return (
+    data ?? []
+  ) as Event[];
 }
 
 export async function getEventById(
   id: number
 ): Promise<Event | null> {
-  const { data, error } =
-    await supabase
-      .from("events")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
+  if (!Number.isInteger(id)) {
+    throw new Error(
+      "Event ID si sahihi."
+    );
   }
 
-  return data as Event | null;
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("events")
+    .select("*")
+    .eq(
+      "id",
+      id
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      error.message
+    );
+  }
+
+  return data as
+    | Event
+    | null;
 }
 
 export async function updateEvent(
   id: number,
   event: UpdateEvent
 ): Promise<Event> {
+  if (!Number.isInteger(id)) {
+    throw new Error(
+      "Event ID si sahihi."
+    );
+  }
+
+  validateRequiredEventFields(
+    event
+  );
+
   const themeUpdates: {
-    theme_primary_color?: string;
-    theme_secondary_color?: string;
-    theme_accent_color?: string;
+    theme_primary_color?:
+      string;
+
+    theme_secondary_color?:
+      string;
+
+    theme_accent_color?:
+      string;
   } = {};
 
-  if (event.theme_primary_color) {
+  if (
+    event.theme_primary_color
+  ) {
     themeUpdates.theme_primary_color =
       normalizeHexColor(
         event.theme_primary_color,
@@ -314,7 +551,9 @@ export async function updateEvent(
       );
   }
 
-  if (event.theme_secondary_color) {
+  if (
+    event.theme_secondary_color
+  ) {
     themeUpdates.theme_secondary_color =
       normalizeHexColor(
         event.theme_secondary_color,
@@ -322,7 +561,9 @@ export async function updateEvent(
       );
   }
 
-  if (event.theme_accent_color) {
+  if (
+    event.theme_accent_color
+  ) {
     themeUpdates.theme_accent_color =
       normalizeHexColor(
         event.theme_accent_color,
@@ -330,70 +571,104 @@ export async function updateEvent(
       );
   }
 
-  const { data, error } =
-    await supabase
-      .from("events")
-      .update({
-        title: event.title.trim(),
-        event_type:
-          event.event_type.trim(),
+  const invitationMessage =
+    normalizeInvitationMessage(
+      event.invitation_message
+    );
 
-        bride_name:
-          event.bride_name?.trim() ||
-          null,
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("events")
+    .update({
+      title:
+        event.title.trim(),
 
-        groom_name:
-          event.groom_name?.trim() ||
-          null,
+      event_type:
+        event.event_type.trim(),
 
-        language: event.language,
+      bride_name:
+        normalizeOptionalText(
+          event.bride_name
+        ),
 
-        ceremony_title:
-          event.ceremony_title?.trim() ||
-          "Ibada ya Ndoa",
+      groom_name:
+        normalizeOptionalText(
+          event.groom_name
+        ),
 
-        ceremony_date:
-          event.ceremony_date || null,
+      language:
+        event.language,
 
-        ceremony_time:
-          event.ceremony_time || null,
+      ceremony_title:
+        normalizeOptionalText(
+          event.ceremony_title
+        ) ??
+        (
+          event.language ===
+          "en"
+            ? "Wedding Ceremony"
+            : "Ibada ya Ndoa"
+        ),
 
-        ceremony_venue:
-          event.ceremony_venue?.trim() ||
-          null,
+      ceremony_date:
+        event.ceremony_date ||
+        null,
 
-        ceremony_map_url:
-          event.ceremony_map_url?.trim() ||
-          null,
+      ceremony_time:
+        event.ceremony_time ||
+        null,
 
-        event_date:
-          event.event_date,
+      ceremony_venue:
+        normalizeOptionalText(
+          event.ceremony_venue
+        ),
 
-        event_time:
-          event.event_time,
+      ceremony_map_url:
+        normalizeOptionalText(
+          event.ceremony_map_url
+        ),
 
-        venue:
-          event.venue.trim(),
+      event_date:
+        event.event_date,
 
-        reception_map_url:
-          event.reception_map_url?.trim() ||
-          null,
+      event_time:
+        event.event_time,
 
-        dress_code:
-          event.dress_code?.trim() ||
-          null,
+      venue:
+        event.venue.trim(),
 
-        cover_image_url:
-          event.cover_image_url ?? null,
+      reception_map_url:
+        normalizeOptionalText(
+          event.reception_map_url
+        ),
 
-        ...themeUpdates,
-      })
-      .eq("id", id)
-      .select()
-      .single();
+      dress_code:
+        normalizeOptionalText(
+          event.dress_code
+        ),
+
+      cover_image_url:
+        event.cover_image_url ??
+        null,
+
+      invitation_message:
+        invitationMessage,
+
+      ...themeUpdates,
+    })
+    .eq(
+      "id",
+      id
+    )
+    .select()
+    .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
   return data as Event;
@@ -402,13 +677,25 @@ export async function updateEvent(
 export async function deleteEvent(
   id: number
 ) {
-  const { error } =
-    await supabase
-      .from("events")
-      .delete()
-      .eq("id", id);
+  if (!Number.isInteger(id)) {
+    throw new Error(
+      "Event ID si sahihi."
+    );
+  }
+
+  const {
+    error,
+  } = await supabase
+    .from("events")
+    .delete()
+    .eq(
+      "id",
+      id
+    );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 }

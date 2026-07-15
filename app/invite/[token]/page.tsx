@@ -1,7 +1,4 @@
-import type {
-  CSSProperties,
-} from "react";
-
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -43,10 +40,6 @@ type Translation = {
   openMap: string;
   dressCode: string;
   invitationDescription: string;
-};
-
-type InvitationMessageFields = {
-  invitation_message?: string | null;
 };
 
 function getTranslation(
@@ -95,16 +88,13 @@ function getInvitationContent(
   eventType: string,
   language: Language
 ): InvitationContent {
-  const normalizedEventType =
+  const event =
     eventType.trim().toLowerCase();
 
-  const isWedding =
-    normalizedEventType === "wedding" ||
-    normalizedEventType.includes(
-      "harusi"
-    );
-
-  if (isWedding) {
+  if (
+    event === "wedding" ||
+    event.includes("harusi")
+  ) {
     return {
       icon: "💍",
 
@@ -125,16 +115,11 @@ function getInvitationContent(
     };
   }
 
-  const isSendOff =
-    normalizedEventType ===
-      "send-off" ||
-    normalizedEventType ===
-      "sendoff" ||
-    normalizedEventType.includes(
-      "send"
-    );
-
-  if (isSendOff) {
+  if (
+    event === "send-off" ||
+    event === "sendoff" ||
+    event.includes("send")
+  ) {
     return {
       icon: "✨",
 
@@ -155,17 +140,11 @@ function getInvitationContent(
     };
   }
 
-  const isBirthday =
-    normalizedEventType ===
-      "birthday" ||
-    normalizedEventType.includes(
-      "birthday"
-    ) ||
-    normalizedEventType.includes(
-      "kuzaliwa"
-    );
-
-  if (isBirthday) {
+  if (
+    event === "birthday" ||
+    event.includes("birthday") ||
+    event.includes("kuzaliwa")
+  ) {
     return {
       icon: "🎂",
 
@@ -186,17 +165,11 @@ function getInvitationContent(
     };
   }
 
-  const isGraduation =
-    normalizedEventType ===
-      "graduation" ||
-    normalizedEventType.includes(
-      "graduation"
-    ) ||
-    normalizedEventType.includes(
-      "mahafali"
-    );
-
-  if (isGraduation) {
+  if (
+    event === "graduation" ||
+    event.includes("graduation") ||
+    event.includes("mahafali")
+  ) {
     return {
       icon: "🎓",
 
@@ -217,20 +190,12 @@ function getInvitationContent(
     };
   }
 
-  const isCorporateEvent =
-    normalizedEventType ===
-      "corporate" ||
-    normalizedEventType.includes(
-      "conference"
-    ) ||
-    normalizedEventType.includes(
-      "seminar"
-    ) ||
-    normalizedEventType.includes(
-      "business"
-    );
-
-  if (isCorporateEvent) {
+  if (
+    event === "corporate" ||
+    event.includes("conference") ||
+    event.includes("seminar") ||
+    event.includes("business")
+  ) {
     return {
       icon: "💼",
 
@@ -269,15 +234,6 @@ function getInvitationContent(
         ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
         : "We warmly invite you to join us for this special occasion.",
   };
-}
-
-function getCustomInvitationMessage(
-  invitation: InvitationMessageFields
-) {
-  const message =
-    invitation.invitation_message?.trim();
-
-  return message || null;
 }
 
 function formatEventDate(
@@ -499,7 +455,6 @@ function EventLocationSection({
           className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--theme-primary)] shadow-sm transition hover:bg-slate-50"
         >
           <span>📍</span>
-
           <span>
             {translation.openMap}
           </span>
@@ -543,11 +498,6 @@ export async function generateMetadata({
     const translation =
       getTranslation(language);
 
-    const customMessage =
-      getCustomInvitationMessage(
-        invitation as InvitationMessageFields
-      );
-
     const formattedDate =
       formatEventDate(
         invitation.event_date,
@@ -576,7 +526,7 @@ export async function generateMetadata({
       .join(" • ");
 
     const description =
-      customMessage ||
+      invitation.invitation_message?.trim() ||
       defaultDescription ||
       translation.invitationDescription;
 
@@ -660,13 +610,8 @@ export default async function InvitationPage({
       language
     );
 
-  const customInvitationMessage =
-    getCustomInvitationMessage(
-      invitation as InvitationMessageFields
-    );
-
   const displayedMessage =
-    customInvitationMessage ||
+    invitation.invitation_message?.trim() ||
     content.defaultMessage;
 
   const primaryColor =
@@ -771,35 +716,39 @@ export default async function InvitationPage({
         />
 
         <section className="px-4 py-5 sm:px-7 sm:py-7">
-          <div className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-4 py-5 text-center shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.23em] text-slate-500">
-              {
-                translation.specialInvitationFor
-              }
-            </p>
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="px-5 py-6 text-center sm:px-7">
+              <p className="whitespace-pre-line text-base leading-8 text-slate-700 sm:text-lg">
+                {displayedMessage}
+              </p>
+            </div>
 
-            <h2 className="mt-2 text-2xl font-bold leading-tight text-[var(--theme-primary)] sm:text-3xl">
-              {invitation.guest_name}
-            </h2>
-          </div>
+            <div className="flex items-center gap-3 px-5">
+              <div className="h-px flex-1 bg-slate-200" />
 
-          <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-slate-100 bg-white px-4 py-4 text-center shadow-sm">
-            <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
-              {displayedMessage}
-            </p>
-          </div>
+              <span className="text-lg text-[var(--theme-accent)]">
+                ✦
+              </span>
 
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-slate-200" />
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
 
-            <span className="text-xl text-[var(--theme-accent)]">
-              ✦
-            </span>
+            <div className="mt-4 bg-[var(--theme-secondary)] px-5 py-5 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.23em] text-slate-500">
+                {
+                  translation.specialInvitationFor
+                }
+              </p>
 
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
+              <h2 className="mt-2 text-2xl font-bold leading-tight text-[var(--theme-primary)] sm:text-3xl">
+                {
+                  invitation.guest_name
+                }
+              </h2>
+            </div>
+          </section>
 
-          <div className="space-y-4">
+          <div className="mt-5 space-y-4">
             {hasCeremonyDetails && (
               <EventLocationSection
                 icon="⛪"
