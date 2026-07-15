@@ -1,1340 +1,1083 @@
-"use client";
-
-import {
-  type ChangeEvent,
-  type FormEvent,
-  useEffect,
-  useState,
+import type {
+  CSSProperties,
 } from "react";
 
-import { useRouter } from "next/navigation";
-
-import Button from "@/components/Button";
-import Input from "@/components/Input";
+import type {
+  Metadata,
+} from "next";
 
 import {
-  createEvent,
-  DEFAULT_EVENT_THEME,
-  uploadEventCover,
-  type EventLanguage,
-  type NewEvent,
-} from "@/services/eventService";
+  notFound,
+} from "next/navigation";
 
-type EventFormData = {
-  title: string;
-  event_type: string;
+import {
+  getInvitationByToken,
+} from "@/services/invitationService";
 
-  bride_name: string;
-  groom_name: string;
+import Countdown from "@/components/invitation/Countdown";
+import EventPass from "@/components/invitation/EventPass";
+import InvitationHero from "@/components/invitation/InvitationHero";
+import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
+import RsvpButtons from "@/components/invitation/RsvpButtons";
 
-  language: EventLanguage;
-  invitation_message: string;
+export const dynamic =
+  "force-dynamic";
 
-  ceremony_title: string;
-  ceremony_date: string;
-  ceremony_time: string;
-  ceremony_venue: string;
-  ceremony_map_url: string;
+export const revalidate = 0;
 
-  event_date: string;
-  event_time: string;
+type Props = {
+  params: Promise<{
+    token: string;
+  }>;
+};
+
+type Language =
+  | "sw"
+  | "en";
+
+type InvitationContent = {
+  icon: string;
+  invitationLabel: string;
+  eventLabel: string;
+  defaultMessage: string;
+};
+
+type Translation = {
+  ceremony: string;
+  reception: string;
+  date: string;
+  time: string;
   venue: string;
-  reception_map_url: string;
-
-  dress_code: string;
-
-  theme_primary_color: string;
-  theme_secondary_color: string;
-  theme_accent_color: string;
+  openMap: string;
+  dressCode: string;
+  invitationDescription: string;
 };
 
-type ThemePreset = {
-  name: string;
-  primary: string;
-  secondary: string;
-  accent: string;
-};
+function getTranslation(
+  language: Language
+): Translation {
+  if (language === "sw") {
+    return {
+      ceremony: "Ibada",
 
-const MAX_INVITATION_MESSAGE_LENGTH =
-  600;
+      reception:
+        "Mapokezi / Sherehe",
 
-const initialForm: EventFormData = {
-  title: "",
-  event_type: "",
+      date: "Tarehe",
+      time: "Muda",
+      venue: "Mahali",
 
-  bride_name: "",
-  groom_name: "",
+      openMap:
+        "Fungua Ramani",
 
-  language: "sw",
-  invitation_message: "",
+      dressCode:
+        "Mavazi",
 
-  ceremony_title:
-    "Ibada ya Ndoa",
-
-  ceremony_date: "",
-  ceremony_time: "",
-  ceremony_venue: "",
-  ceremony_map_url: "",
-
-  event_date: "",
-  event_time: "",
-  venue: "",
-  reception_map_url: "",
-
-  dress_code: "",
-
-  theme_primary_color:
-    DEFAULT_EVENT_THEME.primaryColor,
-
-  theme_secondary_color:
-    DEFAULT_EVENT_THEME.secondaryColor,
-
-  theme_accent_color:
-    DEFAULT_EVENT_THEME.accentColor,
-};
-
-const themePresets: ThemePreset[] = [
-  {
-    name: "Rose & Gold",
-    primary: "#BE123C",
-    secondary: "#FFF1F2",
-    accent: "#D4AF37",
-  },
-  {
-    name: "Royal Blue & Gold",
-    primary: "#1D4ED8",
-    secondary: "#EFF6FF",
-    accent: "#D4AF37",
-  },
-  {
-    name: "Emerald & Gold",
-    primary: "#047857",
-    secondary: "#ECFDF5",
-    accent: "#D4AF37",
-  },
-  {
-    name: "Purple & Silver",
-    primary: "#7E22CE",
-    secondary: "#FAF5FF",
-    accent: "#94A3B8",
-  },
-  {
-    name: "Black & Gold",
-    primary: "#111827",
-    secondary: "#F8FAFC",
-    accent: "#D4AF37",
-  },
-  {
-    name: "Burgundy & Cream",
-    primary: "#881337",
-    secondary: "#FFF7ED",
-    accent: "#C08A3E",
-  },
-];
-
-const MAX_IMAGE_SIZE =
-  5 * 1024 * 1024;
-
-const HEX_COLOR_PATTERN =
-  /^#[0-9A-Fa-f]{6}$/;
-
-function getDefaultInvitationMessage(
-  language: EventLanguage
-) {
-  if (language === "en") {
-    return (
-      "Together with their families, " +
-      "they are delighted to invite you " +
-      "to join them in celebrating this special occasion."
-    );
-  }
-
-  return (
-    "Pamoja na familia zao, " +
-    "wanayo furaha kukualika " +
-    "kushiriki katika tukio hili maalumu."
-  );
-}
-
-function getInvitationPlaceholder(
-  language: EventLanguage
-) {
-  if (language === "en") {
-    return (
-      "Example: The family of Dr. Joanna " +
-      "of Dar es Salaam is delighted to invite you..."
-    );
-  }
-
-  return (
-    "Mfano: Familia ya Dr. Joanna wa Dar es Salaam " +
-    "inayo furaha kukualika kushiriki nasi..."
-  );
-}
-
-export default function CreateEventPage() {
-  const router = useRouter();
-
-  const [
-    formData,
-    setFormData,
-  ] = useState<EventFormData>(
-    initialForm
-  );
-
-  const [
-    coverImage,
-    setCoverImage,
-  ] = useState<File | null>(
-    null
-  );
-
-  const [
-    imagePreview,
-    setImagePreview,
-  ] = useState("");
-
-  const [
-    isSaving,
-    setIsSaving,
-  ] = useState(false);
-
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(
-          imagePreview
-        );
-      }
+      invitationDescription:
+        "Fungua mwaliko wako maalumu wa tukio.",
     };
-  }, [imagePreview]);
-
-  function handleChange(
-    event:
-      ChangeEvent<HTMLInputElement>
-  ) {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-        [name]: value,
-      })
-    );
   }
 
-  function handleMessageChange(
-    event:
-      ChangeEvent<HTMLTextAreaElement>
+  return {
+    ceremony: "Ceremony",
+    reception: "Reception",
+
+    date: "Date",
+    time: "Time",
+    venue: "Venue",
+
+    openMap: "Open Map",
+
+    dressCode:
+      "Dress Code",
+
+    invitationDescription:
+      "Open your personal event invitation.",
+  };
+}
+
+function getInvitationContent(
+  eventType: string,
+  language: Language
+): InvitationContent {
+  const event =
+    eventType
+      .trim()
+      .toLowerCase();
+
+  if (
+    event === "wedding" ||
+    event.includes("harusi")
   ) {
-    const value =
-      event.target.value.slice(
+    return {
+      icon: "💍",
+
+      invitationLabel:
+        language === "sw"
+          ? "Mwaliko Maalumu"
+          : "You Are Invited",
+
+      eventLabel:
+        language === "sw"
+          ? "Sherehe ya Harusi"
+          : "Wedding Celebration",
+
+      defaultMessage:
+        language === "sw"
+          ? "Pamoja na familia zao, wanayo furaha kukualika kushiriki katika siku yao maalumu."
+          : "Together with their families, they warmly invite you to celebrate their special day.",
+    };
+  }
+
+  if (
+    event === "send-off" ||
+    event === "sendoff" ||
+    event.includes("send")
+  ) {
+    return {
+      icon: "✨",
+
+      invitationLabel:
+        language === "sw"
+          ? "Mwaliko Maalumu"
+          : "Special Invitation",
+
+      eventLabel:
+        language === "sw"
+          ? "Sherehe ya Send-Off"
+          : "Send-Off Celebration",
+
+      defaultMessage:
+        language === "sw"
+          ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
+          : "We warmly invite you to join us for this special occasion.",
+    };
+  }
+
+  if (
+    event === "birthday" ||
+    event.includes("birthday") ||
+    event.includes("kuzaliwa")
+  ) {
+    return {
+      icon: "🎂",
+
+      invitationLabel:
+        language === "sw"
+          ? "Karibu Tusherehekee"
+          : "Come Celebrate With Us",
+
+      eventLabel:
+        language === "sw"
+          ? "Sherehe ya Kuzaliwa"
+          : "Birthday Celebration",
+
+      defaultMessage:
+        language === "sw"
+          ? "Karibu tusherehekee pamoja siku hii yenye furaha na kumbukumbu nzuri."
+          : "Join us for a joyful celebration filled with wonderful memories.",
+    };
+  }
+
+  if (
+    event === "graduation" ||
+    event.includes("graduation") ||
+    event.includes("mahafali")
+  ) {
+    return {
+      icon: "🎓",
+
+      invitationLabel:
+        language === "sw"
+          ? "Mwaliko Maalumu"
+          : "You Are Invited",
+
+      eventLabel:
+        language === "sw"
+          ? "Sherehe ya Mahafali"
+          : "Graduation Celebration",
+
+      defaultMessage:
+        language === "sw"
+          ? "Karibu tusherehekee mafanikio haya na mwanzo wa hatua mpya."
+          : "Join us as we celebrate this achievement and a new chapter.",
+    };
+  }
+
+  if (
+    event === "corporate" ||
+    event.includes(
+      "conference"
+    ) ||
+    event.includes(
+      "seminar"
+    ) ||
+    event.includes(
+      "business"
+    )
+  ) {
+    return {
+      icon: "💼",
+
+      invitationLabel:
+        language === "sw"
+          ? "Mwaliko Rasmi"
+          : "Official Invitation",
+
+      eventLabel:
+        language === "sw"
+          ? "Tukio la Kikampuni"
+          : "Corporate Event",
+
+      defaultMessage:
+        language === "sw"
+          ? "Unaalikwa rasmi kuhudhuria tukio hili muhimu."
+          : "You are formally invited to attend this important event.",
+    };
+  }
+
+  return {
+    icon: "🎉",
+
+    invitationLabel:
+      language === "sw"
+        ? "Mwaliko Maalumu"
+        : "You Are Invited",
+
+    eventLabel:
+      language === "sw"
+        ? "Tukio Maalumu"
+        : "Special Event",
+
+    defaultMessage:
+      language === "sw"
+        ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
+        : "We warmly invite you to join us for this special occasion.",
+  };
+}
+
+function formatEventDate(
+  eventDate:
+    | string
+    | null,
+
+  language: Language
+) {
+  if (!eventDate) {
+    return "";
+  }
+
+  const parsedDate =
+    new Date(
+      `${eventDate}T00:00:00`
+    );
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return eventDate;
+  }
+
+  return new Intl.DateTimeFormat(
+    language === "sw"
+      ? "sw-TZ"
+      : "en-GB",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(parsedDate);
+}
+
+function formatEventTime(
+  eventTime:
+    | string
+    | null,
+
+  language: Language
+) {
+  if (!eventTime) {
+    return "";
+  }
+
+  const [
+    hourValue,
+    minuteValue,
+  ] = eventTime
+    .slice(0, 5)
+    .split(":")
+    .map(Number);
+
+  if (
+    Number.isNaN(
+      hourValue
+    ) ||
+    Number.isNaN(
+      minuteValue
+    )
+  ) {
+    return eventTime;
+  }
+
+  if (language === "en") {
+    return new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }
+    ).format(
+      new Date(
+        2026,
         0,
-        MAX_INVITATION_MESSAGE_LENGTH
-      );
-
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-        invitation_message:
-          value,
-      })
-    );
-  }
-
-  function handleLanguageChange(
-    event:
-      ChangeEvent<HTMLSelectElement>
-  ) {
-    const language =
-      event.target
-        .value as EventLanguage;
-
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-
-        language,
-
-        ceremony_title:
-          language === "sw"
-            ? "Ibada ya Ndoa"
-            : "Wedding Ceremony",
-      })
-    );
-  }
-
-  function applyDefaultMessage() {
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-
-        invitation_message:
-          getDefaultInvitationMessage(
-            currentData.language
-          ),
-      })
-    );
-  }
-
-  function clearInvitationMessage() {
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-        invitation_message: "",
-      })
-    );
-  }
-
-  function applyThemePreset(
-    preset: ThemePreset
-  ) {
-    setFormData(
-      (currentData) => ({
-        ...currentData,
-
-        theme_primary_color:
-          preset.primary,
-
-        theme_secondary_color:
-          preset.secondary,
-
-        theme_accent_color:
-          preset.accent,
-      })
-    );
-  }
-
-  function handleImageChange(
-    event:
-      ChangeEvent<HTMLInputElement>
-  ) {
-    setErrorMessage("");
-
-    const selectedFile =
-      event.target.files?.[0];
-
-    if (!selectedFile) {
-      if (imagePreview) {
-        URL.revokeObjectURL(
-          imagePreview
-        );
-      }
-
-      setCoverImage(null);
-      setImagePreview("");
-
-      return;
-    }
-
-    if (
-      !selectedFile.type.startsWith(
-        "image/"
+        1,
+        hourValue,
+        minuteValue
       )
-    ) {
-      setErrorMessage(
-        "Tafadhali chagua file la picha pekee."
-      );
-
-      event.target.value = "";
-
-      return;
-    }
-
-    if (
-      selectedFile.size >
-      MAX_IMAGE_SIZE
-    ) {
-      setErrorMessage(
-        "Picha ni kubwa sana. Chagua picha isiyozidi 5 MB."
-      );
-
-      event.target.value = "";
-
-      return;
-    }
-
-    if (imagePreview) {
-      URL.revokeObjectURL(
-        imagePreview
-      );
-    }
-
-    const previewUrl =
-      URL.createObjectURL(
-        selectedFile
-      );
-
-    setCoverImage(
-      selectedFile
-    );
-
-    setImagePreview(
-      previewUrl
     );
   }
 
-  function removeSelectedImage() {
-    if (imagePreview) {
-      URL.revokeObjectURL(
-        imagePreview
-      );
-    }
+  const swahiliHourValue =
+    (hourValue + 6) % 12;
 
-    setCoverImage(null);
-    setImagePreview("");
-  }
+  const swahiliHour =
+    swahiliHourValue === 0
+      ? 12
+      : swahiliHourValue;
 
-  function validateThemeColors() {
-    const colors = [
-      formData
-        .theme_primary_color,
+  let period = "usiku";
 
-      formData
-        .theme_secondary_color,
-
-      formData
-        .theme_accent_color,
-    ];
-
-    return colors.every(
-      (color) =>
-        HEX_COLOR_PATTERN.test(
-          color
-        )
-    );
-  }
-
-  async function handleSubmit(
-    event:
-      FormEvent<HTMLFormElement>
+  if (
+    hourValue >= 5 &&
+    hourValue < 12
   ) {
-    event.preventDefault();
-
-    setErrorMessage("");
-
-    if (!validateThemeColors()) {
-      setErrorMessage(
-        "Theme colors lazima ziwe hex colors sahihi, mfano #BE123C."
-      );
-
-      return;
-    }
-
-    if (
-      formData
-        .invitation_message
-        .trim()
-        .length >
-      MAX_INVITATION_MESSAGE_LENGTH
-    ) {
-      setErrorMessage(
-        `Ujumbe wa mwaliko usizidi characters ${MAX_INVITATION_MESSAGE_LENGTH}.`
-      );
-
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      let coverImageUrl:
-        | string
-        | null = null;
-
-      if (coverImage) {
-        coverImageUrl =
-          await uploadEventCover(
-            coverImage
-          );
-      }
-
-      const newEvent: NewEvent = {
-        title:
-          formData.title,
-
-        event_type:
-          formData.event_type,
-
-        bride_name:
-          formData.bride_name ||
-          undefined,
-
-        groom_name:
-          formData.groom_name ||
-          undefined,
-
-        language:
-          formData.language,
-
-        invitation_message:
-          formData
-            .invitation_message ||
-          undefined,
-
-        ceremony_title:
-          formData
-            .ceremony_title ||
-          undefined,
-
-        ceremony_date:
-          formData
-            .ceremony_date ||
-          undefined,
-
-        ceremony_time:
-          formData
-            .ceremony_time ||
-          undefined,
-
-        ceremony_venue:
-          formData
-            .ceremony_venue ||
-          undefined,
-
-        ceremony_map_url:
-          formData
-            .ceremony_map_url ||
-          undefined,
-
-        event_date:
-          formData.event_date,
-
-        event_time:
-          formData.event_time,
-
-        venue:
-          formData.venue,
-
-        reception_map_url:
-          formData
-            .reception_map_url ||
-          undefined,
-
-        dress_code:
-          formData.dress_code ||
-          undefined,
-
-        cover_image_url:
-          coverImageUrl,
-
-        theme_primary_color:
-          formData
-            .theme_primary_color,
-
-        theme_secondary_color:
-          formData
-            .theme_secondary_color,
-
-        theme_accent_color:
-          formData
-            .theme_accent_color,
-      };
-
-      await createEvent(
-        newEvent
-      );
-
-      if (imagePreview) {
-        URL.revokeObjectURL(
-          imagePreview
-        );
-      }
-
-      setFormData(
-        initialForm
-      );
-
-      setCoverImage(null);
-      setImagePreview("");
-
-      router.push("/events");
-      router.refresh();
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Event haikuweza kuhifadhiwa."
-      );
-    } finally {
-      setIsSaving(false);
-    }
+    period = "asubuhi";
+  } else if (
+    hourValue >= 12 &&
+    hourValue < 16
+  ) {
+    period = "mchana";
+  } else if (
+    hourValue >= 16 &&
+    hourValue < 19
+  ) {
+    period = "jioni";
   }
 
-  const displayedPreviewMessage =
-    formData
-      .invitation_message
-      .trim() ||
-    getDefaultInvitationMessage(
-      formData.language
+  const minute =
+    String(
+      minuteValue
+    ).padStart(
+      2,
+      "0"
     );
-
-  const remainingCharacters =
-    MAX_INVITATION_MESSAGE_LENGTH -
-    formData
-      .invitation_message
-      .length;
 
   return (
-    <section>
-      <div className="rounded-xl bg-white p-5 shadow-md sm:p-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Create New Event
-        </h1>
+    `Saa ${swahiliHour}:` +
+    `${minute} ${period}`
+  );
+}
 
-        <p className="mt-2 text-gray-500">
-          Jaza taarifa za tukio,
-          ujumbe wa mwaliko na
-          muonekano wa invitation.
-        </p>
+type LocationSectionProps = {
+  icon: string;
+  title: string;
 
-        {errorMessage && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-            {errorMessage}
-          </div>
-        )}
+  date:
+    | string
+    | null;
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-10"
-        >
-          <section>
-            <SectionHeading
-              title="General Information"
-              description="Taarifa za msingi za event."
-            />
+  time:
+    | string
+    | null;
 
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Input
-                label="Event Title"
-                name="title"
-                value={
-                  formData.title
-                }
-                placeholder="Noel & Clara"
-                required
-                onChange={
-                  handleChange
-                }
-              />
+  venue:
+    | string
+    | null;
 
-              <Input
-                label="Event Type"
-                name="event_type"
-                value={
-                  formData.event_type
-                }
-                placeholder="Wedding, Send-off, Birthday"
-                required
-                onChange={
-                  handleChange
-                }
-              />
+  mapUrl:
+    | string
+    | null;
 
-              <Input
-                label="Bride / Celebrant Name"
-                name="bride_name"
-                value={
-                  formData.bride_name
-                }
-                placeholder="Bride or celebrant name"
-                onChange={
-                  handleChange
-                }
-              />
+  language: Language;
+};
 
-              <Input
-                label="Groom Name"
-                name="groom_name"
-                value={
-                  formData.groom_name
-                }
-                placeholder="Groom name"
-                onChange={
-                  handleChange
-                }
-              />
+function EventLocationSection({
+  icon,
+  title,
+  date,
+  time,
+  venue,
+  mapUrl,
+  language,
+}: LocationSectionProps) {
+  const translation =
+    getTranslation(
+      language
+    );
 
-              <div>
-                <label
-                  htmlFor="language"
-                  className="mb-2 block text-sm font-medium text-gray-700"
-                >
-                  Invitation Language
-                </label>
+  const details = [
+    date
+      ? {
+          icon: "📅",
 
-                <select
-                  id="language"
-                  value={
-                    formData.language
-                  }
-                  disabled={isSaving}
-                  onChange={
-                    handleLanguageChange
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <option value="sw">
-                    Kiswahili
-                  </option>
+          label:
+            translation.date,
 
-                  <option value="en">
-                    English
-                  </option>
-                </select>
-              </div>
+          value:
+            formatEventDate(
+              date,
+              language
+            ),
+        }
+      : null,
 
-              <Input
-                label="Dress Code"
-                name="dress_code"
-                value={
-                  formData.dress_code
-                }
-                placeholder="Pale White & Gold"
-                onChange={
-                  handleChange
-                }
-              />
-            </div>
-          </section>
+    time
+      ? {
+          icon: "🕒",
 
-          <section>
-            <SectionHeading
-              title="Invitation Message"
-              description="Andika ujumbe maalumu utakaoonekana juu ya jina la mgeni."
-            />
+          label:
+            translation.time,
 
-            <div className="mt-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <label
-                  htmlFor="invitation_message"
-                  className="block text-sm font-semibold text-slate-700"
-                >
-                  Ujumbe wa Mwaliko
-                </label>
+          value:
+            formatEventTime(
+              time,
+              language
+            ),
+        }
+      : null,
 
-                <p
-                  className={`text-xs font-semibold ${
-                    remainingCharacters <
-                    50
-                      ? "text-amber-600"
-                      : "text-slate-500"
-                  }`}
-                >
-                  {
-                    remainingCharacters
-                  }{" "}
-                  characters remaining
-                </p>
-              </div>
+    venue
+      ? {
+          icon: "📍",
 
-              <textarea
-                id="invitation_message"
-                name="invitation_message"
-                value={
-                  formData
-                    .invitation_message
-                }
-                maxLength={
-                  MAX_INVITATION_MESSAGE_LENGTH
-                }
-                rows={6}
-                disabled={isSaving}
-                placeholder={getInvitationPlaceholder(
-                  formData.language
-                )}
-                onChange={
-                  handleMessageChange
-                }
-                className="mt-2 w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-              />
+          label:
+            translation.venue,
 
-              <div className="mt-3 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={isSaving}
-                  onClick={
-                    applyDefaultMessage
-                  }
-                  className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
-                >
-                  Use Example Message
-                </button>
+          value:
+            venue,
+        }
+      : null,
+  ].filter(
+    (
+      item
+    ): item is {
+      icon: string;
+      label: string;
+      value: string;
+    } => Boolean(item)
+  );
 
-                {formData
-                  .invitation_message && (
-                  <button
-                    type="button"
-                    disabled={isSaving}
-                    onClick={
-                      clearInvitationMessage
-                    }
-                    className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60"
-                  >
-                    Clear Message
-                  </button>
-                )}
-              </div>
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+          {icon}
+        </div>
 
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Ukiacha sehemu hii
-                wazi, mfumo utatumia
-                ujumbe wa kawaida
-                kulingana na aina ya
-                event.
-              </p>
-            </div>
-
-            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="px-5 py-5 text-center">
-                <p className="whitespace-pre-line text-base leading-8 text-slate-700">
-                  {
-                    displayedPreviewMessage
-                  }
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 px-5">
-                <div className="h-px flex-1 bg-slate-200" />
-
-                <span
-                  style={{
-                    color:
-                      formData
-                        .theme_accent_color,
-                  }}
-                >
-                  ✦
-                </span>
-
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <div
-                className="mt-4 px-5 py-5 text-center"
-                style={{
-                  backgroundColor:
-                    formData
-                      .theme_secondary_color,
-                }}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.23em] text-slate-500">
-                  {formData.language ===
-                  "sw"
-                    ? "Mwaliko Maalumu Kwa"
-                    : "Special Invitation For"}
-                </p>
-
-                <p
-                  className="mt-2 text-2xl font-bold"
-                  style={{
-                    color:
-                      formData
-                        .theme_primary_color,
-                  }}
-                >
-                  Guest Name
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <SectionHeading
-              title="Invitation Theme"
-              description="Chagua rangi zinazofanana na dress code ya event."
-            />
-
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-slate-700">
-                Quick Theme Presets
-              </p>
-
-              <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
-                {themePresets.map(
-                  (preset) => (
-                    <button
-                      key={
-                        preset.name
-                      }
-                      type="button"
-                      disabled={
-                        isSaving
-                      }
-                      onClick={() =>
-                        applyThemePreset(
-                          preset
-                        )
-                      }
-                      className="rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <div className="flex gap-2">
-                        <span
-                          className="h-7 w-7 rounded-full border border-black/10"
-                          style={{
-                            backgroundColor:
-                              preset.primary,
-                          }}
-                        />
-
-                        <span
-                          className="h-7 w-7 rounded-full border border-black/10"
-                          style={{
-                            backgroundColor:
-                              preset.secondary,
-                          }}
-                        />
-
-                        <span
-                          className="h-7 w-7 rounded-full border border-black/10"
-                          style={{
-                            backgroundColor:
-                              preset.accent,
-                          }}
-                        />
-                      </div>
-
-                      <p className="mt-2 text-sm font-semibold text-slate-700">
-                        {
-                          preset.name
-                        }
-                      </p>
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            <div className="mt-7 grid gap-5 md:grid-cols-3">
-              <ColorPicker
-                label="Primary Color"
-                name="theme_primary_color"
-                value={
-                  formData
-                    .theme_primary_color
-                }
-                disabled={isSaving}
-                onChange={
-                  handleChange
-                }
-              />
-
-              <ColorPicker
-                label="Secondary Color"
-                name="theme_secondary_color"
-                value={
-                  formData
-                    .theme_secondary_color
-                }
-                disabled={isSaving}
-                onChange={
-                  handleChange
-                }
-              />
-
-              <ColorPicker
-                label="Accent Color"
-                name="theme_accent_color"
-                value={
-                  formData
-                    .theme_accent_color
-                }
-                disabled={isSaving}
-                onChange={
-                  handleChange
-                }
-              />
-            </div>
-
-            <div
-              className="mt-7 overflow-hidden rounded-3xl border border-slate-200 shadow-sm"
-              style={{
-                backgroundColor:
-                  formData
-                    .theme_secondary_color,
-              }}
-            >
-              <div
-                className="h-3"
-                style={{
-                  background:
-                    `linear-gradient(90deg, ` +
-                    `${formData.theme_primary_color}, ` +
-                    `${formData.theme_accent_color})`,
-                }}
-              />
-
-              <div className="p-6 text-center">
-                <p
-                  className="text-xs font-bold uppercase tracking-[0.25em]"
-                  style={{
-                    color:
-                      formData
-                        .theme_accent_color,
-                  }}
-                >
-                  Invitation Preview
-                </p>
-
-                <h3
-                  className="mt-3 text-3xl font-bold"
-                  style={{
-                    color:
-                      formData
-                        .theme_primary_color,
-                  }}
-                >
-                  {formData.title ||
-                    "Event Title"}
-                </h3>
-
-                <p className="mt-2 text-slate-600">
-                  {formData.language ===
-                  "sw"
-                    ? "Mwaliko maalumu kwa"
-                    : "Special invitation for"}
-                </p>
-
-                <div className="mx-auto mt-4 max-w-sm rounded-2xl bg-white/90 p-4 shadow-sm">
-                  <p
-                    className="text-xl font-bold"
-                    style={{
-                      color:
-                        formData
-                          .theme_primary_color,
-                    }}
-                  >
-                    Guest Name
-                  </p>
-
-                  <p className="mt-2 text-sm text-slate-500">
-                    Dress code:{" "}
-                    {formData
-                      .dress_code ||
-                      "Your dress code"}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="mt-5 rounded-xl px-6 py-3 font-bold text-white shadow-sm"
-                  style={{
-                    backgroundColor:
-                      formData
-                        .theme_primary_color,
-                  }}
-                >
-                  RSVP
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <SectionHeading
-              title="Wedding Ceremony / Ibada"
-              description="Hii sehemu si lazima kwa event ambazo hazina ibada."
-            />
-
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Input
-                label="Ceremony Title"
-                name="ceremony_title"
-                value={
-                  formData
-                    .ceremony_title
-                }
-                placeholder="Ibada ya Ndoa"
-                onChange={
-                  handleChange
-                }
-              />
-
-              <Input
-                label="Ceremony Venue"
-                name="ceremony_venue"
-                value={
-                  formData
-                    .ceremony_venue
-                }
-                placeholder="Kanisa la KKKT Kibangu"
-                onChange={
-                  handleChange
-                }
-              />
-
-              <Input
-                label="Ceremony Date"
-                name="ceremony_date"
-                type="date"
-                value={
-                  formData
-                    .ceremony_date
-                }
-                onChange={
-                  handleChange
-                }
-              />
-
-              <Input
-                label="Ceremony Time"
-                name="ceremony_time"
-                type="time"
-                value={
-                  formData
-                    .ceremony_time
-                }
-                onChange={
-                  handleChange
-                }
-              />
-
-              <div className="md:col-span-2">
-                <Input
-                  label="Ceremony Google Maps Link"
-                  name="ceremony_map_url"
-                  type="url"
-                  value={
-                    formData
-                      .ceremony_map_url
-                  }
-                  placeholder="https://maps.google.com/..."
-                  onChange={
-                    handleChange
-                  }
-                />
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <SectionHeading
-              title="Reception / Sherehe"
-              description="Taarifa za sehemu kuu ya sherehe au mapokezi."
-            />
-
-            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-              <Input
-                label="Reception Date"
-                name="event_date"
-                type="date"
-                value={
-                  formData.event_date
-                }
-                required
-                onChange={
-                  handleChange
-                }
-              />
-
-              <Input
-                label="Reception Time"
-                name="event_time"
-                type="time"
-                value={
-                  formData.event_time
-                }
-                required
-                onChange={
-                  handleChange
-                }
-              />
-
-              <div className="md:col-span-2">
-                <Input
-                  label="Reception Venue"
-                  name="venue"
-                  value={
-                    formData.venue
-                  }
-                  placeholder="Mlimani City Hall"
-                  required
-                  onChange={
-                    handleChange
-                  }
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Input
-                  label="Reception Google Maps Link"
-                  name="reception_map_url"
-                  type="url"
-                  value={
-                    formData
-                      .reception_map_url
-                  }
-                  placeholder="https://maps.google.com/..."
-                  onChange={
-                    handleChange
-                  }
-                />
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <SectionHeading
-              title="Event Cover Photo"
-              description="Weka picha ya wahusika au event banner."
-            />
-
-            <div className="mt-6">
-              <label
-                htmlFor="coverImage"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Select Cover Photo
-              </label>
-
-              <input
-                id="coverImage"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={isSaving}
-                onChange={
-                  handleImageChange
-                }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 hover:file:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-              />
-
-              <p className="mt-2 text-xs text-gray-500">
-                JPG, PNG au WEBP.
-                Maximum size ni 5 MB.
-              </p>
-            </div>
-
-            {imagePreview && (
-              <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-3">
-                <div className="relative">
-                  <img
-                    src={
-                      imagePreview
-                    }
-                    alt="Event cover preview"
-                    className="h-64 w-full rounded-xl object-cover"
-                  />
-
-                  <button
-                    type="button"
-                    disabled={
-                      isSaving
-                    }
-                    onClick={
-                      removeSelectedImage
-                    }
-                    className="absolute right-3 top-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:opacity-60"
-                  >
-                    Remove Photo
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <div className="border-t border-gray-200 pt-6">
-            <Button
-              text={
-                isSaving
-                  ? coverImage
-                    ? "Uploading and Saving..."
-                    : "Saving..."
-                  : "Save Event"
-              }
-              type="submit"
-              disabled={isSaving}
-            />
-          </div>
-        </form>
+        <h3 className="text-lg font-bold text-[var(--theme-primary)]">
+          {title}
+        </h3>
       </div>
+
+      <div className="mt-3 divide-y divide-slate-200 rounded-xl bg-white/90 px-4">
+        {details.map(
+          (detail) => (
+            <div
+              key={
+                detail.label
+              }
+              className="flex items-start gap-3 py-3"
+            >
+              <span className="text-lg">
+                {
+                  detail.icon
+                }
+              </span>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+                  {
+                    detail.label
+                  }
+                </p>
+
+                <p className="mt-1 break-words font-semibold leading-5 text-slate-900">
+                  {
+                    detail.value
+                  }
+                </p>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {mapUrl && (
+        <a
+          href={mapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--theme-primary)] shadow-sm transition hover:bg-slate-50"
+        >
+          <span>📍</span>
+
+          <span>
+            {
+              translation.openMap
+            }
+          </span>
+        </a>
+      )}
     </section>
   );
 }
 
-type SectionHeadingProps = {
-  title: string;
-  description: string;
-};
+export async function generateMetadata({
+  params,
+}: Props): Promise<Metadata> {
+  const {
+    token,
+  } = await params;
 
-function SectionHeading({
-  title,
-  description,
-}: SectionHeadingProps) {
-  return (
-    <div className="border-b border-gray-200 pb-3">
-      <h2 className="text-xl font-bold text-gray-800">
-        {title}
-      </h2>
+  if (!token) {
+    return {
+      title:
+        "Invitation | Smart Event Pass",
+    };
+  }
 
-      <p className="mt-1 text-sm text-gray-500">
-        {description}
-      </p>
-    </div>
-  );
+  try {
+    const invitation =
+      await getInvitationByToken(
+        token
+      );
+
+    if (!invitation) {
+      return {
+        title:
+          "Invitation Not Found | Smart Event Pass",
+
+        description:
+          "This invitation could not be found.",
+      };
+    }
+
+    const language: Language =
+      invitation.language ===
+      "en"
+        ? "en"
+        : "sw";
+
+    const translation =
+      getTranslation(
+        language
+      );
+
+    const formattedDate =
+      formatEventDate(
+        invitation.event_date,
+        language
+      );
+
+    const formattedTime =
+      formatEventTime(
+        invitation.event_time,
+        language
+      );
+
+    const title =
+      `${invitation.event_title} | Smart Event Pass`;
+
+    const defaultDescription = [
+      language === "sw"
+        ? `Mwaliko maalumu kwa ${invitation.guest_name}.`
+        : `A special invitation for ${invitation.guest_name}.`,
+
+      formattedDate,
+      formattedTime,
+      invitation.venue,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+    const description =
+      invitation
+        .invitation_message
+        ?.trim() ||
+      defaultDescription ||
+      translation
+        .invitationDescription;
+
+    const imageUrl =
+      invitation
+        .cover_image_url ??
+      undefined;
+
+    return {
+      title,
+      description,
+
+      openGraph: {
+        title,
+        description,
+        type: "website",
+
+        images: imageUrl
+          ? [
+              {
+                url:
+                  imageUrl,
+
+                width:
+                  1200,
+
+                height:
+                  630,
+
+                alt:
+                  invitation
+                    .event_title,
+              },
+            ]
+          : undefined,
+      },
+
+      twitter: {
+        card: imageUrl
+          ? "summary_large_image"
+          : "summary",
+
+        title,
+        description,
+
+        images: imageUrl
+          ? [imageUrl]
+          : undefined,
+      },
+    };
+  } catch {
+    return {
+      title:
+        "Invitation | Smart Event Pass",
+
+      description:
+        "Open your personal event invitation.",
+    };
+  }
 }
 
-type ColorPickerProps = {
-  label: string;
+export default async function InvitationPage({
+  params,
+}: Props) {
+  const {
+    token,
+  } = await params;
 
-  name:
-    | "theme_primary_color"
-    | "theme_secondary_color"
-    | "theme_accent_color";
+  if (!token) {
+    notFound();
+  }
 
-  value: string;
-  disabled?: boolean;
+  const invitation =
+    await getInvitationByToken(
+      token
+    );
 
-  onChange: (
-    event:
-      ChangeEvent<HTMLInputElement>
-  ) => void;
-};
+  if (!invitation) {
+    notFound();
+  }
 
-function ColorPicker({
-  label,
-  name,
-  value,
-  disabled = false,
-  onChange,
-}: ColorPickerProps) {
+  const language: Language =
+    invitation.language ===
+    "en"
+      ? "en"
+      : "sw";
+
+  const translation =
+    getTranslation(
+      language
+    );
+
+  const content =
+    getInvitationContent(
+      invitation.event_type,
+      language
+    );
+
+  const displayedMessage =
+    invitation
+      .invitation_message
+      ?.trim() ||
+    content.defaultMessage;
+
+  const primaryColor =
+    invitation
+      .theme_primary_color ||
+    "#BE123C";
+
+  const secondaryColor =
+    invitation
+      .theme_secondary_color ||
+    "#FFF1F2";
+
+  const accentColor =
+    invitation
+      .theme_accent_color ||
+    "#D4AF37";
+
+  const themeVariables = {
+    "--theme-primary":
+      primaryColor,
+
+    "--theme-secondary":
+      secondaryColor,
+
+    "--theme-accent":
+      accentColor,
+  } as CSSProperties;
+
+  const normalizedEventType =
+    invitation.event_type
+      .trim()
+      .toLowerCase();
+
+  const isWedding =
+    normalizedEventType ===
+      "wedding" ||
+    normalizedEventType.includes(
+      "harusi"
+    );
+
+  const isSendOff =
+    normalizedEventType ===
+      "send-off" ||
+    normalizedEventType ===
+      "sendoff" ||
+    normalizedEventType.includes(
+      "send"
+    );
+
+  const heroTitle =
+    isWedding &&
+    invitation.bride_name &&
+    invitation.groom_name
+      ? `${invitation.groom_name} & ${invitation.bride_name}`
+      : isSendOff &&
+          invitation.bride_name
+        ? invitation.bride_name
+        : invitation.event_title;
+
+  const hasCeremonyDetails =
+    Boolean(
+      invitation
+        .ceremony_date ||
+        invitation
+          .ceremony_time ||
+        invitation
+          .ceremony_venue
+    );
+
   return (
-    <div>
-      <label
-        htmlFor={name}
-        className="mb-2 block text-sm font-medium text-slate-700"
-      >
-        {label}
-      </label>
+    <main
+      style={{
+        ...themeVariables,
 
-      <div className="flex items-center gap-3">
-        <input
-          id={name}
-          name={name}
-          type="color"
-          value={value}
-          disabled={disabled}
-          onChange={onChange}
-          className="h-12 w-14 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-60"
+        background:
+          `linear-gradient(` +
+          `135deg, ` +
+          `${secondaryColor} 0%, ` +
+          `#ffffff 50%, ` +
+          `${accentColor}22 100%` +
+          `)`,
+      }}
+      className="min-h-screen px-3 py-4 sm:px-4 sm:py-8"
+    >
+      <InvitationViewedTracker
+        invitationToken={
+          invitation
+            .invitation_token
+        }
+      />
+
+      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <InvitationHero
+          icon={
+            content.icon
+          }
+          invitationLabel={
+            content
+              .invitationLabel
+          }
+          heroTitle={
+            heroTitle
+          }
+          eventLabel={
+            content.eventLabel
+          }
+          eventTitle={
+            invitation
+              .event_title
+          }
+          heroBackground="bg-[linear-gradient(135deg,var(--theme-primary),var(--theme-accent))]"
+          coverImageUrl={
+            invitation
+              .cover_image_url
+          }
         />
 
-        <input
-          name={name}
-          type="text"
-          value={value}
-          maxLength={7}
-          disabled={disabled}
-          onChange={onChange}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-3 font-mono uppercase text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-        />
+        <section className="px-4 py-5 sm:px-7 sm:py-7">
+          <section
+            className="relative overflow-hidden rounded-3xl border shadow-sm"
+            style={{
+              borderColor:
+                `${accentColor}55`,
+
+              background:
+                `linear-gradient(` +
+                `145deg, ` +
+                `#ffffff 0%, ` +
+                `${secondaryColor} 100%` +
+                `)`,
+            }}
+          >
+            <div
+              className="absolute left-0 top-0 h-1 w-full"
+              style={{
+                background:
+                  `linear-gradient(` +
+                  `90deg, ` +
+                  `${primaryColor}, ` +
+                  `${accentColor}` +
+                  `)`,
+              }}
+            />
+
+            <div className="relative px-5 pb-5 pt-8 text-center sm:px-8">
+              <div
+                className="mx-auto flex h-11 w-11 items-center justify-center rounded-full font-serif text-3xl shadow-sm"
+                style={{
+                  backgroundColor:
+                    secondaryColor,
+
+                  color:
+                    primaryColor,
+                }}
+              >
+                “
+              </div>
+
+              <p className="mt-4 whitespace-pre-line text-base font-medium leading-8 text-slate-700 sm:text-lg">
+                {
+                  displayedMessage
+                }
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 px-6">
+              <div className="h-px flex-1 bg-slate-300/70" />
+
+              <span
+                className="text-xl"
+                style={{
+                  color:
+                    accentColor,
+                }}
+              >
+                ✦
+              </span>
+
+              <div className="h-px flex-1 bg-slate-300/70" />
+            </div>
+
+            <div className="px-5 pb-7 pt-5 text-center">
+              <h2
+                className="text-2xl font-bold leading-tight sm:text-3xl"
+                style={{
+                  color:
+                    primaryColor,
+                }}
+              >
+                {
+                  invitation.guest_name
+                }
+              </h2>
+
+              <div
+                className="mx-auto mt-3 h-1 w-12 rounded-full"
+                style={{
+                  backgroundColor:
+                    accentColor,
+                }}
+              />
+            </div>
+          </section>
+
+          <div className="mt-5 space-y-4">
+            {hasCeremonyDetails && (
+              <EventLocationSection
+                icon="⛪"
+                title={
+                  invitation
+                    .ceremony_title ||
+                  translation
+                    .ceremony
+                }
+                date={
+                  invitation
+                    .ceremony_date
+                }
+                time={
+                  invitation
+                    .ceremony_time
+                }
+                venue={
+                  invitation
+                    .ceremony_venue
+                }
+                mapUrl={
+                  invitation
+                    .ceremony_map_url
+                }
+                language={
+                  language
+                }
+              />
+            )}
+
+            <EventLocationSection
+              icon="🥂"
+              title={
+                translation
+                  .reception
+              }
+              date={
+                invitation
+                  .event_date
+              }
+              time={
+                invitation
+                  .event_time
+              }
+              venue={
+                invitation.venue
+              }
+              mapUrl={
+                invitation
+                  .reception_map_url
+              }
+              language={
+                language
+              }
+            />
+          </div>
+
+          {invitation
+            .dress_code && (
+            <section className="mt-4 flex items-center gap-4 rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] p-4 shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-sm">
+                👔
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                  {
+                    translation
+                      .dressCode
+                  }
+                </p>
+
+                <p className="mt-1 break-words text-lg font-bold text-[var(--theme-primary)]">
+                  {
+                    invitation
+                      .dress_code
+                  }
+                </p>
+              </div>
+
+              <div className="ml-auto hidden shrink-0 gap-1 sm:flex">
+                <span
+                  className="h-6 w-6 rounded-full border border-black/10"
+                  style={{
+                    backgroundColor:
+                      primaryColor,
+                  }}
+                />
+
+                <span
+                  className="h-6 w-6 rounded-full border border-black/10"
+                  style={{
+                    backgroundColor:
+                      accentColor,
+                  }}
+                />
+              </div>
+            </section>
+          )}
+
+          <Countdown
+            eventDate={
+              invitation
+                .event_date
+            }
+            eventTime={
+              invitation
+                .event_time
+            }
+            language={
+              language
+            }
+            accentTextClass="text-[var(--theme-primary)]"
+            boxClassName="bg-[var(--theme-secondary)]"
+          />
+
+          <RsvpButtons
+            invitationToken={
+              invitation
+                .invitation_token
+            }
+            currentStatus={
+              invitation
+                .rsvp_status
+            }
+            language={
+              language
+            }
+            accentTextClass="text-[var(--theme-primary)]"
+          />
+
+          <EventPass
+            guestName={
+              invitation
+                .guest_name
+            }
+            qrToken={
+              invitation
+                .qr_token
+            }
+            eventPassId={
+              invitation
+                .event_pass_id
+            }
+            allowedGuests={
+              invitation
+                .allowed_guests
+            }
+            category={
+              invitation
+                .category
+            }
+            language={
+              language
+            }
+            accentTextClass="text-[var(--theme-primary)]"
+            boxClassName="bg-[var(--theme-secondary)]"
+          />
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
