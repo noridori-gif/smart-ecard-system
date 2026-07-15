@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import ShareInvitationCardButton from "@/components/invitation/ShareInvitationCardButton";
+import SendWhatsAppCloudButton from "@/components/invitation/SendWhatsAppCloudButton";
 
 import {
   getAllInvitations,
@@ -930,6 +931,16 @@ function InvitationActions({
       >
         Copy
       </button>
+
+      <SendWhatsAppCloudButton
+        invitationToken={
+          invitation.invitation_token
+        }
+        disabled={
+          !invitation.guests?.phone
+        }
+        compact={compact}
+      />
 
       <ShareInvitationCardButton
         invitationToken={
