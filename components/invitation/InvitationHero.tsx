@@ -19,38 +19,45 @@ export default function InvitationHero({
 }: InvitationHeroProps) {
   if (coverImageUrl) {
     return (
-      <section className="relative min-h-[310px] overflow-hidden text-center text-white sm:min-h-[380px]">
+      <section className="relative h-[350px] overflow-hidden bg-slate-950 text-center text-white sm:h-[430px]">
+        {/* Background inayojaza nafasi */}
+        <img
+          src={coverImageUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-lg"
+        />
+
+        {/* Picha kamili bila kukata watu */}
         <img
           src={coverImageUrl}
           alt={eventTitle}
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-contain object-center"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+        {/* Overlay ya kufanya maandishi yaonekane */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
 
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/50 to-transparent" />
-
-        <div className="relative flex min-h-[310px] flex-col items-center justify-end px-5 pb-6 pt-16 sm:min-h-[380px] sm:px-8 sm:pb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/20 text-xl shadow-lg backdrop-blur-sm">
+        <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center px-5 pb-7 sm:px-8 sm:pb-10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl shadow-lg backdrop-blur-sm">
             {icon}
           </div>
 
-          <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.28em] text-white/90 drop-shadow sm:text-xs">
+          <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-white">
             {invitationLabel}
           </p>
 
-          <h1 className="mt-2 max-w-full break-words text-3xl font-bold leading-tight drop-shadow-lg sm:text-4xl">
+          <h1 className="mt-2 max-w-lg text-3xl font-bold leading-tight text-white drop-shadow-lg sm:text-4xl">
             {heroTitle}
           </h1>
 
-          <div className="mt-2 rounded-full border border-white/25 bg-black/20 px-4 py-1.5 backdrop-blur-sm">
-            <p className="text-xs font-semibold text-white/95 sm:text-sm">
-              {eventLabel}
-            </p>
-          </div>
+          <p className="mt-2 text-sm font-semibold text-white sm:text-base">
+            {eventLabel}
+          </p>
 
-          {heroTitle !== eventTitle && (
-            <p className="mt-1.5 max-w-full truncate text-xs text-white/75 drop-shadow">
+          {heroTitle !==
+            eventTitle && (
+            <p className="mt-1 max-w-md truncate text-xs text-white/80 sm:text-sm">
               {eventTitle}
             </p>
           )}
@@ -61,33 +68,32 @@ export default function InvitationHero({
 
   return (
     <section
-      className={`relative overflow-hidden px-5 py-8 text-center text-white sm:px-8 sm:py-10 ${heroBackground}`}
+      className={`relative overflow-hidden px-5 py-10 text-center text-white sm:px-8 sm:py-12 ${heroBackground}`}
     >
-      <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full bg-white/10" />
+      <div className="absolute -left-12 -top-12 h-36 w-36 rounded-full bg-white/10" />
 
-      <div className="absolute -bottom-16 -right-12 h-40 w-40 rounded-full bg-white/10" />
+      <div className="absolute -bottom-16 -right-12 h-44 w-44 rounded-full bg-white/10" />
 
-      <div className="relative">
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/10 text-2xl">
+      <div className="relative flex flex-col items-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-2xl shadow-lg">
           {icon}
         </div>
 
-        <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.28em] text-white/90 sm:text-xs">
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.3em] text-white">
           {invitationLabel}
         </p>
 
-        <h1 className="mt-2 break-words text-3xl font-bold leading-tight sm:text-4xl">
+        <h1 className="mt-3 max-w-lg text-3xl font-bold leading-tight sm:text-4xl">
           {heroTitle}
         </h1>
 
-        <div className="mx-auto mt-3 inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1.5">
-          <p className="text-xs font-semibold text-white/95 sm:text-sm">
-            {eventLabel}
-          </p>
-        </div>
+        <p className="mt-2 text-sm font-semibold text-white/95 sm:text-base">
+          {eventLabel}
+        </p>
 
-        {heroTitle !== eventTitle && (
-          <p className="mt-2 truncate text-xs text-white/75">
+        {heroTitle !==
+          eventTitle && (
+          <p className="mt-1 max-w-md text-xs text-white/80 sm:text-sm">
             {eventTitle}
           </p>
         )}
