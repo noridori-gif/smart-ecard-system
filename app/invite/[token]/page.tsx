@@ -1,6 +1,7 @@
 import type {
   CSSProperties,
 } from "react";
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -9,10 +10,10 @@ import {
 } from "@/services/invitationService";
 
 import Countdown from "@/components/invitation/Countdown";
-import InvitationHero from "@/components/invitation/InvitationHero";
 import EventPass from "@/components/invitation/EventPass";
-import RsvpButtons from "@/components/invitation/RsvpButtons";
+import InvitationHero from "@/components/invitation/InvitationHero";
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
+import RsvpButtons from "@/components/invitation/RsvpButtons";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,7 +30,7 @@ type InvitationContent = {
   icon: string;
   invitationLabel: string;
   eventLabel: string;
-  message: string;
+  defaultMessage: string;
 };
 
 type Translation = {
@@ -41,11 +42,11 @@ type Translation = {
   venue: string;
   openMap: string;
   dressCode: string;
-  invitationAdmits: string;
-  guest: string;
-  guests: string;
-  footer: string;
   invitationDescription: string;
+};
+
+type InvitationMessageFields = {
+  invitation_message?: string | null;
 };
 
 function getTranslation(
@@ -58,20 +59,13 @@ function getTranslation(
 
       ceremony: "Ibada",
       reception: "Mapokezi / Sherehe",
+
       date: "Tarehe",
       time: "Muda",
       venue: "Mahali",
+
       openMap: "Fungua Ramani",
       dressCode: "Mavazi",
-
-      invitationAdmits:
-        "Mwaliko huu unaruhusu",
-
-      guest: "Mgeni",
-      guests: "Wageni",
-
-      footer:
-        "Mwaliko wako. Tukio lako.",
 
       invitationDescription:
         "Fungua mwaliko wako maalumu wa tukio.",
@@ -84,20 +78,13 @@ function getTranslation(
 
     ceremony: "Ceremony",
     reception: "Reception",
+
     date: "Date",
     time: "Time",
     venue: "Venue",
-    openMap: "Open Google Maps",
+
+    openMap: "Open Map",
     dressCode: "Dress Code",
-
-    invitationAdmits:
-      "This invitation admits",
-
-    guest: "Guest",
-    guests: "Guests",
-
-    footer:
-      "Your invitation. Your moment.",
 
     invitationDescription:
       "Open your personal event invitation.",
@@ -108,19 +95,22 @@ function getInvitationContent(
   eventType: string,
   language: Language
 ): InvitationContent {
-  const event =
+  const normalizedEventType =
     eventType.trim().toLowerCase();
 
-  if (
-    event === "wedding" ||
-    event.includes("harusi")
-  ) {
+  const isWedding =
+    normalizedEventType === "wedding" ||
+    normalizedEventType.includes(
+      "harusi"
+    );
+
+  if (isWedding) {
     return {
       icon: "💍",
 
       invitationLabel:
         language === "sw"
-          ? "Unaalikwa"
+          ? "Mwaliko Maalumu"
           : "You Are Invited",
 
       eventLabel:
@@ -128,18 +118,23 @@ function getInvitationContent(
           ? "Sherehe ya Harusi"
           : "Wedding Celebration",
 
-      message:
+      defaultMessage:
         language === "sw"
-          ? "Pamoja na familia zao, wanakualika kushiriki katika siku yao maalumu."
+          ? "Pamoja na familia zao, wanayo furaha kukualika kushiriki katika siku yao maalumu."
           : "Together with their families, they warmly invite you to celebrate their special day.",
     };
   }
 
-  if (
-    event === "send-off" ||
-    event === "sendoff" ||
-    event.includes("send")
-  ) {
+  const isSendOff =
+    normalizedEventType ===
+      "send-off" ||
+    normalizedEventType ===
+      "sendoff" ||
+    normalizedEventType.includes(
+      "send"
+    );
+
+  if (isSendOff) {
     return {
       icon: "✨",
 
@@ -151,19 +146,26 @@ function getInvitationContent(
       eventLabel:
         language === "sw"
           ? "Sherehe ya Send-Off"
-          : "Send-Off Ceremony",
+          : "Send-Off Celebration",
 
-      message:
+      defaultMessage:
         language === "sw"
           ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
           : "We warmly invite you to join us for this special occasion.",
     };
   }
 
-  if (
-    event === "birthday" ||
-    event.includes("birthday")
-  ) {
+  const isBirthday =
+    normalizedEventType ===
+      "birthday" ||
+    normalizedEventType.includes(
+      "birthday"
+    ) ||
+    normalizedEventType.includes(
+      "kuzaliwa"
+    );
+
+  if (isBirthday) {
     return {
       icon: "🎂",
 
@@ -177,23 +179,30 @@ function getInvitationContent(
           ? "Sherehe ya Kuzaliwa"
           : "Birthday Celebration",
 
-      message:
+      defaultMessage:
         language === "sw"
           ? "Karibu tusherehekee pamoja siku hii yenye furaha na kumbukumbu nzuri."
           : "Join us for a joyful celebration filled with wonderful memories.",
     };
   }
 
-  if (
-    event === "graduation" ||
-    event.includes("graduation")
-  ) {
+  const isGraduation =
+    normalizedEventType ===
+      "graduation" ||
+    normalizedEventType.includes(
+      "graduation"
+    ) ||
+    normalizedEventType.includes(
+      "mahafali"
+    );
+
+  if (isGraduation) {
     return {
       icon: "🎓",
 
       invitationLabel:
         language === "sw"
-          ? "Unaalikwa"
+          ? "Mwaliko Maalumu"
           : "You Are Invited",
 
       eventLabel:
@@ -201,19 +210,27 @@ function getInvitationContent(
           ? "Sherehe ya Mahafali"
           : "Graduation Celebration",
 
-      message:
+      defaultMessage:
         language === "sw"
           ? "Karibu tusherehekee mafanikio haya na mwanzo wa hatua mpya."
           : "Join us as we celebrate this achievement and a new chapter.",
     };
   }
 
-  if (
-    event === "corporate" ||
-    event.includes("conference") ||
-    event.includes("seminar") ||
-    event.includes("business")
-  ) {
+  const isCorporateEvent =
+    normalizedEventType ===
+      "corporate" ||
+    normalizedEventType.includes(
+      "conference"
+    ) ||
+    normalizedEventType.includes(
+      "seminar"
+    ) ||
+    normalizedEventType.includes(
+      "business"
+    );
+
+  if (isCorporateEvent) {
     return {
       icon: "💼",
 
@@ -227,7 +244,7 @@ function getInvitationContent(
           ? "Tukio la Kikampuni"
           : "Corporate Event",
 
-      message:
+      defaultMessage:
         language === "sw"
           ? "Unaalikwa rasmi kuhudhuria tukio hili muhimu."
           : "You are formally invited to attend this important event.",
@@ -239,7 +256,7 @@ function getInvitationContent(
 
     invitationLabel:
       language === "sw"
-        ? "Unaalikwa"
+        ? "Mwaliko Maalumu"
         : "You Are Invited",
 
     eventLabel:
@@ -247,11 +264,20 @@ function getInvitationContent(
         ? "Tukio Maalumu"
         : "Special Event",
 
-    message:
+    defaultMessage:
       language === "sw"
         ? "Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu."
         : "We warmly invite you to join us for this special occasion.",
   };
+}
+
+function getCustomInvitationMessage(
+  invitation: InvitationMessageFields
+) {
+  const message =
+    invitation.invitation_message?.trim();
+
+  return message || null;
 }
 
 function formatEventDate(
@@ -260,6 +286,18 @@ function formatEventDate(
 ) {
   if (!eventDate) {
     return "";
+  }
+
+  const parsedDate = new Date(
+    `${eventDate}T00:00:00`
+  );
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return eventDate;
   }
 
   return new Intl.DateTimeFormat(
@@ -272,11 +310,7 @@ function formatEventDate(
       month: "long",
       year: "numeric",
     }
-  ).format(
-    new Date(
-      `${eventDate}T00:00:00`
-    )
-  );
+  ).format(parsedDate);
 }
 
 function formatEventTime(
@@ -294,6 +328,13 @@ function formatEventTime(
     .slice(0, 5)
     .split(":")
     .map(Number);
+
+  if (
+    Number.isNaN(hourValue) ||
+    Number.isNaN(minuteValue)
+  ) {
+    return eventTime;
+  }
 
   if (language === "en") {
     return new Intl.DateTimeFormat(
@@ -347,7 +388,10 @@ function formatEventTime(
       "0"
     );
 
-  return `Saa ${swahiliHour}:${minute} ${period}`;
+  return (
+    `Saa ${swahiliHour}:` +
+    `${minute} ${period}`
+  );
 }
 
 type LocationSectionProps = {
@@ -415,7 +459,7 @@ function EventLocationSection({
   return (
     <section className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] p-4 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="text-2xl">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-sm">
           {icon}
         </div>
 
@@ -424,7 +468,7 @@ function EventLocationSection({
         </h3>
       </div>
 
-      <div className="mt-4 divide-y divide-slate-200 rounded-xl bg-white/90 px-4">
+      <div className="mt-3 divide-y divide-slate-200 rounded-xl bg-white/90 px-4">
         {details.map((detail) => (
           <div
             key={detail.label}
@@ -439,7 +483,7 @@ function EventLocationSection({
                 {detail.label}
               </p>
 
-              <p className="mt-1 font-semibold leading-5 text-slate-900">
+              <p className="mt-1 break-words font-semibold leading-5 text-slate-900">
                 {detail.value}
               </p>
             </div>
@@ -452,9 +496,10 @@ function EventLocationSection({
           href={mapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--theme-primary)] shadow-sm"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[var(--theme-primary)] shadow-sm transition hover:bg-slate-50"
         >
           <span>📍</span>
+
           <span>
             {translation.openMap}
           </span>
@@ -498,6 +543,11 @@ export async function generateMetadata({
     const translation =
       getTranslation(language);
 
+    const customMessage =
+      getCustomInvitationMessage(
+        invitation as InvitationMessageFields
+      );
+
     const formattedDate =
       formatEventDate(
         invitation.event_date,
@@ -513,7 +563,7 @@ export async function generateMetadata({
     const title =
       `${invitation.event_title} | Smart Event Pass`;
 
-    const description = [
+    const defaultDescription = [
       language === "sw"
         ? `Mwaliko maalumu kwa ${invitation.guest_name}.`
         : `A special invitation for ${invitation.guest_name}.`,
@@ -525,16 +575,18 @@ export async function generateMetadata({
       .filter(Boolean)
       .join(" • ");
 
+    const description =
+      customMessage ||
+      defaultDescription ||
+      translation.invitationDescription;
+
     const imageUrl =
       invitation.cover_image_url ??
       undefined;
 
     return {
       title,
-
-      description:
-        description ||
-        translation.invitationDescription,
+      description,
 
       openGraph: {
         title,
@@ -608,6 +660,15 @@ export default async function InvitationPage({
       language
     );
 
+  const customInvitationMessage =
+    getCustomInvitationMessage(
+      invitation as InvitationMessageFields
+    );
+
+  const displayedMessage =
+    customInvitationMessage ||
+    content.defaultMessage;
+
   const primaryColor =
     invitation.theme_primary_color ||
     "#BE123C";
@@ -675,9 +736,14 @@ export default async function InvitationPage({
         ...themeVariables,
 
         background:
-          `linear-gradient(135deg, ${secondaryColor} 0%, #ffffff 50%, ${accentColor}22 100%)`,
+          `linear-gradient(` +
+          `135deg, ` +
+          `${secondaryColor} 0%, ` +
+          `#ffffff 50%, ` +
+          `${accentColor}22 100%` +
+          `)`,
       }}
-      className="min-h-screen px-3 py-5 sm:px-4 sm:py-10"
+      className="min-h-screen px-3 py-4 sm:px-4 sm:py-8"
     >
       <InvitationViewedTracker
         invitationToken={
@@ -704,8 +770,8 @@ export default async function InvitationPage({
           }
         />
 
-        <section className="px-4 py-6 sm:px-8 sm:py-8">
-          <div className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-4 py-5 text-center">
+        <section className="px-4 py-5 sm:px-7 sm:py-7">
+          <div className="rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-4 py-5 text-center shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-[0.23em] text-slate-500">
               {
                 translation.specialInvitationFor
@@ -717,11 +783,13 @@ export default async function InvitationPage({
             </h2>
           </div>
 
-          <p className="mx-auto mt-5 max-w-lg text-center text-sm leading-6 text-slate-600">
-            {content.message}
-          </p>
+          <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-slate-100 bg-white px-4 py-4 text-center shadow-sm">
+            <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
+              {displayedMessage}
+            </p>
+          </div>
 
-          <div className="my-6 flex items-center gap-3">
+          <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-slate-200" />
 
             <span className="text-xl text-[var(--theme-accent)]">
@@ -782,17 +850,19 @@ export default async function InvitationPage({
                 👔
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
                   {translation.dressCode}
                 </p>
 
-                <p className="mt-1 text-lg font-bold text-[var(--theme-primary)]">
-                  {invitation.dress_code}
+                <p className="mt-1 break-words text-lg font-bold text-[var(--theme-primary)]">
+                  {
+                    invitation.dress_code
+                  }
                 </p>
               </div>
 
-              <div className="ml-auto hidden gap-1 sm:flex">
+              <div className="ml-auto hidden shrink-0 gap-1 sm:flex">
                 <span
                   className="h-6 w-6 rounded-full border border-black/10"
                   style={{
@@ -823,24 +893,6 @@ export default async function InvitationPage({
             accentTextClass="text-[var(--theme-primary)]"
             boxClassName="bg-[var(--theme-secondary)]"
           />
-
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-[var(--theme-secondary)] px-5 py-4">
-            <p className="text-sm text-slate-600">
-              {
-                translation.invitationAdmits
-              }
-            </p>
-
-            <p className="ml-3 whitespace-nowrap text-xl font-bold text-[var(--theme-primary)]">
-              {
-                invitation.allowed_guests
-              }{" "}
-              {invitation.allowed_guests ===
-              1
-                ? translation.guest
-                : translation.guests}
-            </p>
-          </div>
 
           <RsvpButtons
             invitationToken={
@@ -873,16 +925,6 @@ export default async function InvitationPage({
             accentTextClass="text-[var(--theme-primary)]"
             boxClassName="bg-[var(--theme-secondary)]"
           />
-
-          <footer className="mt-8 border-t border-slate-100 pt-6 text-center">
-            <p className="text-sm font-semibold text-[var(--theme-primary)]">
-              Smart Event Pass
-            </p>
-
-            <p className="mt-1 text-xs text-slate-400">
-              {translation.footer}
-            </p>
-          </footer>
         </section>
       </div>
     </main>

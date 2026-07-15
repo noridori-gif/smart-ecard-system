@@ -1,11 +1,19 @@
 "use client";
 
-import { QRCodeSVG } from "qrcode.react";
+import {
+  QRCodeSVG,
+} from "qrcode.react";
 
 type Language = "sw" | "en";
 
 type EventPassProps = {
-  guestName: string;
+  /*
+   * Tunaiacha optional ili code ya zamani
+   * inayotuma guestName isiwe na error.
+   * Jina halitaonyeshwa tena kwenye pass.
+   */
+  guestName?: string;
+
   qrToken: string;
   eventPassId: string | null;
   allowedGuests: number;
@@ -16,137 +24,134 @@ type EventPassProps = {
 };
 
 export default function EventPass({
-  guestName,
   qrToken,
   eventPassId,
   allowedGuests,
   category,
   language = "sw",
-  accentTextClass = "text-blue-700",
-  boxClassName = "bg-slate-50",
+  accentTextClass =
+    "text-blue-700",
+  boxClassName =
+    "bg-slate-50",
 }: EventPassProps) {
-  const t =
+  const translation =
     language === "sw"
       ? {
-          accessPass:
+          heading:
             "Digital Access Pass",
-          title: "Smart Event Pass",
-          guest: "Mgeni",
-          category: "Kundi",
-          allowed: "Idadi",
-          passId: "Event Pass ID",
+
+          passId:
+            "Event Pass ID",
+
+          allowed:
+            "Idadi",
+
+          category:
+            "Kundi",
+
+          guest:
+            "Mgeni",
+
+          guests:
+            "Wageni",
+
           scan:
             "Onyesha QR Code au Event Pass ID wakati wa kuingia.",
-          guestWord: "Mgeni",
-          guestsWord: "Wageni",
+
           unavailable:
             "Haijapatikana",
         }
       : {
-          accessPass:
+          heading:
             "Digital Access Pass",
-          title: "Smart Event Pass",
-          guest: "Guest",
-          category: "Category",
-          allowed: "Seats",
-          passId: "Event Pass ID",
+
+          passId:
+            "Event Pass ID",
+
+          allowed:
+            "Allowed",
+
+          category:
+            "Category",
+
+          guest:
+            "Guest",
+
+          guests:
+            "Guests",
+
           scan:
-            "Present this QR Code or Event Pass ID during check-in.",
-          guestWord: "Guest",
-          guestsWord: "Guests",
+            "Present the QR Code or Event Pass ID during check-in.",
+
           unavailable:
             "Not available",
         };
 
+  const allowedLabel =
+    allowedGuests === 1
+      ? translation.guest
+      : translation.guests;
+
   return (
     <section
-      className={`mt-4 overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${boxClassName}`}
+      className={`mt-5 overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${boxClassName}`}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white/70 px-4 py-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-            {t.accessPass}
-          </p>
+      <div className="px-4 pb-5 pt-4 sm:p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">
+          {translation.heading}
+        </p>
 
-          <h3
-            className={`mt-0.5 text-lg font-bold ${accentTextClass}`}
-          >
-            {t.title}
-          </h3>
-        </div>
-
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
-          🎟️
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-            {t.passId}
-          </p>
-
-          <div className="mt-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-center shadow-sm">
-            <p
-              className={`break-all font-mono text-xl font-bold tracking-[0.12em] ${accentTextClass}`}
-            >
-              {eventPassId ??
-                t.unavailable}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-xl border border-white/80 bg-white/60 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-            {t.guest}
-          </p>
-
-          <p className="mt-0.5 break-words text-base font-bold text-slate-900">
-            {guestName}
-          </p>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg bg-white px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
-                {t.category}
-              </p>
-
-              <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">
-                {category ?? "-"}
-              </p>
-            </div>
-
-            <div className="rounded-lg bg-white px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
-                {t.allowed}
-              </p>
-
-              <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                {allowedGuests}{" "}
-                {allowedGuests === 1
-                  ? t.guestWord
-                  : t.guestsWord}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-col items-center">
-          <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
+        <div className="mt-4 grid grid-cols-[128px_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-6">
+          <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3">
             <QRCodeSVG
               value={qrToken}
-              size={164}
+              size={132}
               includeMargin
               level="M"
-              bgColor="#ffffff"
-              fgColor="#000000"
+              className="h-auto w-full"
             />
           </div>
 
-          <p className="mt-2 max-w-sm text-center text-xs leading-5 text-slate-500">
-            {t.scan}
-          </p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+              {translation.passId}
+            </p>
+
+            <p
+              className={`mt-1 break-words font-mono text-xl font-bold tracking-[0.08em] sm:text-2xl ${accentTextClass}`}
+            >
+              {eventPassId ??
+                translation.unavailable}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-white/80 p-3">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  {translation.allowed}
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">
+                  {allowedGuests}{" "}
+                  {allowedLabel}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-white/80 p-3">
+                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  {translation.category}
+                </p>
+
+                <p className="mt-1 truncate text-sm font-bold text-slate-900 sm:text-base">
+                  {category ?? "-"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <p className="mt-4 text-center text-xs leading-5 text-slate-500 sm:text-sm">
+          {translation.scan}
+        </p>
       </div>
     </section>
   );
