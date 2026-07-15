@@ -3,6 +3,7 @@ import {
 } from "@supabase/supabase-js";
 
 import {
+  normalizeWhatsAppPhoneNumber,
   sendWhatsAppInvitationTemplate,
 } from "@/services/whatsappCloudService";
 
@@ -33,6 +34,7 @@ type EventRecord = {
 };
 
 type InvitationRecord = {
+  id: number;
   invitation_token: string;
 
   guests:
@@ -47,10 +49,7 @@ type InvitationRecord = {
 };
 
 function getSingleRelation<T>(
-  relation:
-    | T
-    | T[]
-    | null
+  relation: T | T[] | null
 ): T | null {
   if (!relation) {
     return null;
@@ -125,7 +124,48 @@ function formatTime(
     return "-";
   }
 
-  return timeValue.slice(0, 5);
+  const timeParts =
+    timeValue
+      .trim()
+      .match(
+        /^(\d{1,2}):(\d{2})/
+      );
+
+  if (!timeParts) {
+    return timeValue;
+  }
+
+  const hours =
+    Number(timeParts[1]);
+
+  const minutes =
+    Number(timeParts[2]);
+
+  const parsedTime =
+    new Date(
+      2000,
+      0,
+      1,
+      hours,
+      minutes
+    );
+
+  if (
+    Number.isNaN(
+      parsedTime.getTime()
+    )
+  ) {
+    return timeValue;
+  }
+
+  return new Intl.DateTimeFormat(
+    "sw-TZ",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }
+  ).format(parsedTime);
 }
 
 export async function POST(
@@ -172,11 +212,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Tunatengeneza Supabase client maalumu
-     * kwa request hii. Access token ya user
-     * ndiyo inayotumika kuthibitisha ruhusa.
-     */
     const supabase =
       createClient(
         supabaseUrl,
@@ -251,9 +286,15 @@ export async function POST(
         | ProfileRecord
         | null;
 
-    if (
-      profile?.role !== "admin"
-    ) {
+    const userRole =
+      profile?.role ?? "";
+
+    const isAdministrator =
+      userRole === "admin" ||
+      userRole ===
+        "administrator";
+
+    if (!isAdministrator) {
       return Response.json(
         {
           success: false,
@@ -310,6 +351,7 @@ export async function POST(
     } = await supabase
       .from("invitations")
       .select(`
+        id,
         invitation_token,
 
         guests!inner (
@@ -410,13 +452,16 @@ export async function POST(
       language === "en"
         ? process.env
             .WHATSAPP_TEMPLATE_NAME_EN
+            ?.trim()
         : process.env
-            .WHATSAPP_TEMPLATE_NAME_SW;
+            .WHATSAPP_TEMPLATE_NAME_SW
+            ?.trim();
 
     if (!templateName) {
       return Response.json(
         {
           success: false,
+
           message:
             language === "en"
               ? "WHATSAPP_TEMPLATE_NAME_EN haijawekwa."
@@ -432,74 +477,190 @@ export async function POST(
       (
         process.env
           .NEXT_PUBLIC_APP_URL ||
-        new URL(request.url).origin
+        new URL(
+          request.url
+        ).origin
       ).replace(/\/$/, "");
 
     const cardImageUrl =
       `${siteOrigin}/api/invitations/` +
       `${invitationToken}/card`;
 
-    const result =
-      await sendWhatsAppInvitationTemplate(
-        {
-          phoneNumber:
-            guest.phone,
-
-          templateName,
-
-          languageCode:
-            language === "en"
-              ? "en_US"
-              : "sw",
-
-          guestName:
-            guest.full_name,
-
-          eventTitle:
-            event.title,
-
-          eventDate:
-            formatDate(
-              event.event_date,
-              language
-            ),
-
-          eventTime:
-            formatTime(
-              event.event_time
-            ),
-
-          venue:
-            event.venue || "-",
-
-          eventPassId:
-            guest.event_pass_id ||
-            "-",
-
-          allowedGuests:
-            guest.allowed_guests ??
-            1,
-
-          invitationToken,
-
-          cardImageUrl,
-        }
+    const recipientPhone =
+      normalizeWhatsAppPhoneNumber(
+        guest.phone
       );
 
-    return Response.json(
-      {
-        success: true,
-        message:
-          "WhatsApp invitation imetumwa.",
-        messageId:
-          result.messageId,
-        recipient:
-          result.recipientPhone,
-      },
-      {
-        status: 200,
+    const {
+      data: logData,
+      error: logError,
+    } = await supabase
+      .from(
+        "whatsapp_message_logs"
+      )
+      .insert({
+        invitation_id:
+          invitation.id,
+
+        recipient_phone:
+          recipientPhone,
+
+        status: "queued",
+      })
+      .select("id")
+      .single();
+
+    if (
+      logError ||
+      !logData
+    ) {
+      return Response.json(
+        {
+          success: false,
+
+          message:
+            logError?.message ||
+            "WhatsApp log haikuweza kutengenezwa.",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    try {
+      const result =
+        await sendWhatsAppInvitationTemplate(
+          {
+            phoneNumber:
+              recipientPhone,
+
+            templateName,
+
+            languageCode:
+              language === "en"
+                ? "en_US"
+                : "sw",
+
+            guestName:
+              guest.full_name,
+
+            eventTitle:
+              event.title,
+
+            eventDate:
+              formatDate(
+                event.event_date,
+                language
+              ),
+
+            eventTime:
+              formatTime(
+                event.event_time
+              ),
+
+            venue:
+              event.venue || "-",
+
+            eventPassId:
+              guest.event_pass_id ||
+              "-",
+
+            allowedGuests:
+              guest.allowed_guests ??
+              1,
+
+            invitationToken,
+
+            cardImageUrl,
+          }
+        );
+
+      const sentAt =
+        new Date().toISOString();
+
+      const {
+        error: updateLogError,
+      } = await supabase
+        .from(
+          "whatsapp_message_logs"
+        )
+        .update({
+          message_id:
+            result.messageId,
+
+          status: "sent",
+          sent_at: sentAt,
+          updated_at: sentAt,
+          error_message: null,
+        })
+        .eq(
+          "id",
+          logData.id
+        );
+
+      if (updateLogError) {
+        console.error(
+          "WhatsApp sent log update error:",
+          updateLogError
+        );
       }
-    );
+
+      return Response.json(
+        {
+          success: true,
+
+          message:
+            "WhatsApp invitation imetumwa.",
+
+          messageId:
+            result.messageId,
+
+          recipient:
+            result.recipientPhone,
+        },
+        {
+          status: 200,
+        }
+      );
+    } catch (sendError) {
+      const failedAt =
+        new Date().toISOString();
+
+      const failureMessage =
+        sendError instanceof Error
+          ? sendError.message
+          : "WhatsApp invitation haikuweza kutumwa.";
+
+      const {
+        error: failedLogError,
+      } = await supabase
+        .from(
+          "whatsapp_message_logs"
+        )
+        .update({
+          status: "failed",
+
+          error_message:
+            failureMessage,
+
+          updated_at:
+            failedAt,
+        })
+        .eq(
+          "id",
+          logData.id
+        );
+
+      if (failedLogError) {
+        console.error(
+          "WhatsApp failed log update error:",
+          failedLogError
+        );
+      }
+
+      throw sendError;
+    }
   } catch (error) {
     console.error(
       "Send WhatsApp invitation error:",
