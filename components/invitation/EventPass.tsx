@@ -4,22 +4,34 @@ import {
   QRCodeSVG,
 } from "qrcode.react";
 
-type Language = "sw" | "en";
+type Language =
+  | "sw"
+  | "en";
 
 type EventPassProps = {
   /*
-   * Tunaiacha optional ili code ya zamani
-   * inayotuma guestName isiwe na error.
-   * Jina halitaonyeshwa tena kwenye pass.
+   * Imeachwa optional kwa compatibility
+   * na pages zinazotuma guestName.
+   * Jina halionyeshwi tena hapa.
    */
   guestName?: string;
 
   qrToken: string;
-  eventPassId: string | null;
+
+  eventPassId:
+    | string
+    | null;
+
   allowedGuests: number;
-  category: string | null;
+
+  category:
+    | string
+    | null;
+
   language?: Language;
+
   accentTextClass?: string;
+
   boxClassName?: string;
 };
 
@@ -37,8 +49,8 @@ export default function EventPass({
   const translation =
     language === "sw"
       ? {
-          heading:
-            "Digital Access Pass",
+          entryPass:
+            "Pass ya Kuingia",
 
           passId:
             "Event Pass ID",
@@ -62,8 +74,8 @@ export default function EventPass({
             "Haijapatikana",
         }
       : {
-          heading:
-            "Digital Access Pass",
+          entryPass:
+            "Entry Pass",
 
           passId:
             "Event Pass ID",
@@ -87,71 +99,110 @@ export default function EventPass({
             "Not available",
         };
 
+  const safeAllowedGuests =
+    Number.isFinite(
+      allowedGuests
+    ) &&
+    allowedGuests > 0
+      ? allowedGuests
+      : 1;
+
   const allowedLabel =
-    allowedGuests === 1
+    safeAllowedGuests === 1
       ? translation.guest
       : translation.guests;
 
+  const displayPassId =
+    eventPassId?.trim() ||
+    translation.unavailable;
+
+  const qrValue =
+    qrToken?.trim() ||
+    eventPassId?.trim() ||
+    "invalid-event-pass";
+
   return (
     <section
-      className={`mt-5 overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${boxClassName}`}
+      className={`mt-4 overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${boxClassName}`}
     >
-      <div className="px-4 pb-5 pt-4 sm:p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">
-          {translation.heading}
-        </p>
-
-        <div className="mt-4 grid grid-cols-[128px_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[160px_minmax(0,1fr)] sm:gap-6">
-          <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:p-3">
+      <div className="p-3 sm:p-4">
+        <div className="grid grid-cols-[116px_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-white/80 bg-white/80 p-3 shadow-sm sm:grid-cols-[138px_minmax(0,1fr)] sm:gap-5 sm:p-4">
+          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5">
             <QRCodeSVG
-              value={qrToken}
-              size={132}
+              value={qrValue}
+              size={128}
               includeMargin
               level="M"
               className="h-auto w-full"
+              aria-label="Guest QR Code"
             />
           </div>
 
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-              {translation.passId}
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              {
+                translation
+                  .entryPass
+              }
+            </p>
+
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+              {
+                translation.passId
+              }
             </p>
 
             <p
-              className={`mt-1 break-words font-mono text-xl font-bold tracking-[0.08em] sm:text-2xl ${accentTextClass}`}
+              className={`mt-1 break-all font-mono text-lg font-bold tracking-[0.06em] sm:text-2xl ${accentTextClass}`}
             >
-              {eventPassId ??
-                translation.unavailable}
+              {displayPassId}
             </p>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-white/80 p-3">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                  {translation.allowed}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                <p className="text-[8px] font-bold uppercase tracking-wide text-slate-400">
+                  {
+                    translation
+                      .allowed
+                  }
                 </p>
 
-                <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">
-                  {allowedGuests}{" "}
+                <p className="mt-0.5 text-xs font-bold text-slate-900 sm:text-sm">
+                  {
+                    safeAllowedGuests
+                  }{" "}
                   {allowedLabel}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-white/80 p-3">
-                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                  {translation.category}
+              <div className="min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                <p className="text-[8px] font-bold uppercase tracking-wide text-slate-400">
+                  {
+                    translation
+                      .category
+                  }
                 </p>
 
-                <p className="mt-1 truncate text-sm font-bold text-slate-900 sm:text-base">
-                  {category ?? "-"}
+                <p className="mt-0.5 max-w-24 truncate text-xs font-bold text-slate-900 sm:max-w-32 sm:text-sm">
+                  {category?.trim() ||
+                    "-"}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <p className="mt-4 text-center text-xs leading-5 text-slate-500 sm:text-sm">
-          {translation.scan}
-        </p>
+        <div className="mt-3 flex items-center justify-center gap-2 px-2 text-center">
+          <span
+            className={`text-sm ${accentTextClass}`}
+          >
+            ◉
+          </span>
+
+          <p className="text-[11px] leading-5 text-slate-500 sm:text-xs">
+            {translation.scan}
+          </p>
+        </div>
       </div>
     </section>
   );
