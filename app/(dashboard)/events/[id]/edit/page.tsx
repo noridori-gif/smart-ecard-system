@@ -1,18 +1,19 @@
 "use client";
 
 import {
-  ChangeEvent,
-  FormEvent,
+  type ChangeEvent,
+  type FormEvent,
   useEffect,
   useState,
 } from "react";
+
 import {
   useParams,
   useRouter,
 } from "next/navigation";
 
-import Input from "@/components/Input";
 import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 import {
   DEFAULT_EVENT_THEME,
@@ -26,15 +27,21 @@ import {
 const MAX_IMAGE_SIZE =
   5 * 1024 * 1024;
 
+const MAX_INVITATION_MESSAGE_LENGTH =
+  600;
+
 const HEX_COLOR_PATTERN =
   /^#[0-9A-Fa-f]{6}$/;
 
 type EditEventForm = {
   title: string;
   event_type: string;
+
   bride_name: string;
   groom_name: string;
+
   language: EventLanguage;
+  invitation_message: string;
 
   ceremony_title: string;
   ceremony_date: string;
@@ -64,11 +71,16 @@ type ThemePreset = {
 const initialForm: EditEventForm = {
   title: "",
   event_type: "",
+
   bride_name: "",
   groom_name: "",
-  language: "sw",
 
-  ceremony_title: "Ibada ya Ndoa",
+  language: "sw",
+  invitation_message: "",
+
+  ceremony_title:
+    "Ibada ya Ndoa",
+
   ceremony_date: "",
   ceremony_time: "",
   ceremony_venue: "",
@@ -130,26 +142,67 @@ const themePresets: ThemePreset[] = [
   },
 ];
 
+function getDefaultInvitationMessage(
+  language: EventLanguage
+) {
+  if (language === "en") {
+    return (
+      "Together with their families, " +
+      "they are delighted to invite you " +
+      "to join them in celebrating this special occasion."
+    );
+  }
+
+  return (
+    "Pamoja na familia zao, " +
+    "wanayo furaha kukualika " +
+    "kushiriki katika tukio hili maalumu."
+  );
+}
+
+function getInvitationPlaceholder(
+  language: EventLanguage
+) {
+  if (language === "en") {
+    return (
+      "Example: The family of Dr. Joanna " +
+      "of Dar es Salaam is delighted to invite you..."
+    );
+  }
+
+  return (
+    "Mfano: Familia ya Dr. Joanna wa Dar es Salaam " +
+    "inayo furaha kukualika kushiriki nasi..."
+  );
+}
+
 export default function EditEventPage() {
   const params = useParams();
   const router = useRouter();
 
-  const eventId = Number(params.id);
+  const eventId =
+    Number(params.id);
 
-  const [formData, setFormData] =
-    useState<EditEventForm>(
-      initialForm
-    );
+  const [
+    formData,
+    setFormData,
+  ] = useState<EditEventForm>(
+    initialForm
+  );
 
   const [
     currentEvent,
     setCurrentEvent,
-  ] = useState<Event | null>(null);
+  ] = useState<Event | null>(
+    null
+  );
 
   const [
     newCoverImage,
     setNewCoverImage,
-  ] = useState<File | null>(null);
+  ] = useState<File | null>(
+    null
+  );
 
   const [
     imagePreview,
@@ -188,7 +241,9 @@ export default function EditEventPage() {
         setErrorMessage("");
 
         if (
-          !Number.isInteger(eventId)
+          !Number.isInteger(
+            eventId
+          )
         ) {
           throw new Error(
             "Invalid event ID."
@@ -196,7 +251,9 @@ export default function EditEventPage() {
         }
 
         const event =
-          await getEventById(eventId);
+          await getEventById(
+            eventId
+          );
 
         if (!event) {
           throw new Error(
@@ -204,45 +261,64 @@ export default function EditEventPage() {
           );
         }
 
-        setCurrentEvent(event);
+        setCurrentEvent(
+          event
+        );
 
         setFormData({
-          title: event.title,
+          title:
+            event.title,
+
           event_type:
             event.event_type,
 
           bride_name:
-            event.bride_name ?? "",
+            event.bride_name ??
+            "",
 
           groom_name:
-            event.groom_name ?? "",
+            event.groom_name ??
+            "",
 
           language:
-            event.language ?? "sw",
+            event.language ??
+            "sw",
+
+          invitation_message:
+            event
+              .invitation_message ??
+            "",
 
           ceremony_title:
-            event.ceremony_title ??
-            (event.language === "en"
-              ? "Wedding Ceremony"
-              : "Ibada ya Ndoa"),
+            event
+              .ceremony_title ??
+            (
+              event.language ===
+              "en"
+                ? "Wedding Ceremony"
+                : "Ibada ya Ndoa"
+            ),
 
           ceremony_date:
-            event.ceremony_date ?? "",
+            event
+              .ceremony_date ??
+            "",
 
           ceremony_time:
             event.ceremony_time
-              ? event.ceremony_time.slice(
-                  0,
-                  5
-                )
+              ? event
+                  .ceremony_time
+                  .slice(0, 5)
               : "",
 
           ceremony_venue:
-            event.ceremony_venue ??
+            event
+              .ceremony_venue ??
             "",
 
           ceremony_map_url:
-            event.ceremony_map_url ??
+            event
+              .ceremony_map_url ??
             "",
 
           event_date:
@@ -250,32 +326,40 @@ export default function EditEventPage() {
 
           event_time:
             event.event_time
-              ? event.event_time.slice(
-                  0,
-                  5
-                )
+              ? event
+                  .event_time
+                  .slice(0, 5)
               : "",
 
-          venue: event.venue,
+          venue:
+            event.venue,
 
           reception_map_url:
-            event.reception_map_url ??
+            event
+              .reception_map_url ??
             "",
 
           dress_code:
-            event.dress_code ?? "",
+            event.dress_code ??
+            "",
 
           theme_primary_color:
-            event.theme_primary_color ||
-            DEFAULT_EVENT_THEME.primaryColor,
+            event
+              .theme_primary_color ||
+            DEFAULT_EVENT_THEME
+              .primaryColor,
 
           theme_secondary_color:
-            event.theme_secondary_color ||
-            DEFAULT_EVENT_THEME.secondaryColor,
+            event
+              .theme_secondary_color ||
+            DEFAULT_EVENT_THEME
+              .secondaryColor,
 
           theme_accent_color:
-            event.theme_accent_color ||
-            DEFAULT_EVENT_THEME.accentColor,
+            event
+              .theme_accent_color ||
+            DEFAULT_EVENT_THEME
+              .accentColor,
         });
       } catch (error) {
         setErrorMessage(
@@ -302,10 +386,13 @@ export default function EditEventPage() {
   }, [imagePreview]);
 
   function handleChange(
-    event: ChangeEvent<HTMLInputElement>
+    event:
+      ChangeEvent<HTMLInputElement>
   ) {
-    const { name, value } =
-      event.target;
+    const {
+      name,
+      value,
+    } = event.target;
 
     setFormData(
       (currentData) => ({
@@ -313,10 +400,35 @@ export default function EditEventPage() {
         [name]: value,
       })
     );
+
+    setSuccessMessage("");
+  }
+
+  function handleMessageChange(
+    event:
+      ChangeEvent<HTMLTextAreaElement>
+  ) {
+    const value =
+      event.target.value.slice(
+        0,
+        MAX_INVITATION_MESSAGE_LENGTH
+      );
+
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+
+        invitation_message:
+          value,
+      })
+    );
+
+    setSuccessMessage("");
   }
 
   function handleLanguageChange(
-    event: ChangeEvent<HTMLSelectElement>
+    event:
+      ChangeEvent<HTMLSelectElement>
   ) {
     const language =
       event.target
@@ -325,19 +437,53 @@ export default function EditEventPage() {
     setFormData(
       (currentData) => ({
         ...currentData,
+
         language,
 
         ceremony_title:
-          currentData.ceremony_title ===
+          currentData
+            .ceremony_title ===
             "Ibada ya Ndoa" ||
-          currentData.ceremony_title ===
+          currentData
+            .ceremony_title ===
             "Wedding Ceremony"
             ? language === "sw"
               ? "Ibada ya Ndoa"
               : "Wedding Ceremony"
-            : currentData.ceremony_title,
+            : currentData
+                .ceremony_title,
       })
     );
+
+    setSuccessMessage("");
+  }
+
+  function applyDefaultMessage() {
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+
+        invitation_message:
+          getDefaultInvitationMessage(
+            currentData.language
+          ),
+      })
+    );
+
+    setSuccessMessage("");
+  }
+
+  function clearInvitationMessage() {
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+
+        invitation_message:
+          "",
+      })
+    );
+
+    setSuccessMessage("");
   }
 
   function applyThemePreset(
@@ -362,7 +508,8 @@ export default function EditEventPage() {
   }
 
   function handleImageChange(
-    event: ChangeEvent<HTMLInputElement>
+    event:
+      ChangeEvent<HTMLInputElement>
   ) {
     setErrorMessage("");
     setSuccessMessage("");
@@ -384,6 +531,7 @@ export default function EditEventPage() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -396,6 +544,7 @@ export default function EditEventPage() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -418,7 +567,9 @@ export default function EditEventPage() {
       previewUrl
     );
 
-    setRemoveCurrentCover(false);
+    setRemoveCurrentCover(
+      false
+    );
   }
 
   function removeNewImage() {
@@ -433,8 +584,13 @@ export default function EditEventPage() {
   }
 
   function handleRemoveCurrentCover() {
-    setRemoveCurrentCover(true);
-    setNewCoverImage(null);
+    setRemoveCurrentCover(
+      true
+    );
+
+    setNewCoverImage(
+      null
+    );
 
     if (imagePreview) {
       URL.revokeObjectURL(
@@ -446,21 +602,32 @@ export default function EditEventPage() {
   }
 
   function restoreCurrentCover() {
-    setRemoveCurrentCover(false);
+    setRemoveCurrentCover(
+      false
+    );
   }
 
   function validateThemeColors() {
     return [
-      formData.theme_primary_color,
-      formData.theme_secondary_color,
-      formData.theme_accent_color,
-    ].every((color) =>
-      HEX_COLOR_PATTERN.test(color)
+      formData
+        .theme_primary_color,
+
+      formData
+        .theme_secondary_color,
+
+      formData
+        .theme_accent_color,
+    ].every(
+      (color) =>
+        HEX_COLOR_PATTERN.test(
+          color
+        )
     );
   }
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -479,15 +646,30 @@ export default function EditEventPage() {
       return;
     }
 
+    if (
+      formData
+        .invitation_message
+        .length >
+      MAX_INVITATION_MESSAGE_LENGTH
+    ) {
+      setErrorMessage(
+        `Ujumbe wa mwaliko usizidi characters ${MAX_INVITATION_MESSAGE_LENGTH}.`
+      );
+
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       let coverImageUrl =
         currentEvent
-          .cover_image_url ?? null;
+          .cover_image_url ??
+        null;
 
       if (removeCurrentCover) {
-        coverImageUrl = null;
+        coverImageUrl =
+          null;
       }
 
       if (newCoverImage) {
@@ -505,67 +687,87 @@ export default function EditEventPage() {
               formData.title,
 
             event_type:
-              formData.event_type,
+              formData
+                .event_type,
 
             bride_name:
-              formData.bride_name ||
+              formData
+                .bride_name ||
               undefined,
 
             groom_name:
-              formData.groom_name ||
+              formData
+                .groom_name ||
               undefined,
 
             language:
               formData.language,
 
+            invitation_message:
+              formData
+                .invitation_message ||
+              undefined,
+
             ceremony_title:
-              formData.ceremony_title ||
+              formData
+                .ceremony_title ||
               undefined,
 
             ceremony_date:
-              formData.ceremony_date ||
+              formData
+                .ceremony_date ||
               undefined,
 
             ceremony_time:
-              formData.ceremony_time ||
+              formData
+                .ceremony_time ||
               undefined,
 
             ceremony_venue:
-              formData.ceremony_venue ||
+              formData
+                .ceremony_venue ||
               undefined,
 
             ceremony_map_url:
-              formData.ceremony_map_url ||
+              formData
+                .ceremony_map_url ||
               undefined,
 
             event_date:
-              formData.event_date,
+              formData
+                .event_date,
 
             event_time:
-              formData.event_time,
+              formData
+                .event_time,
 
             venue:
               formData.venue,
 
             reception_map_url:
-              formData.reception_map_url ||
+              formData
+                .reception_map_url ||
               undefined,
 
             dress_code:
-              formData.dress_code ||
+              formData
+                .dress_code ||
               undefined,
 
             cover_image_url:
               coverImageUrl,
 
             theme_primary_color:
-              formData.theme_primary_color,
+              formData
+                .theme_primary_color,
 
             theme_secondary_color:
-              formData.theme_secondary_color,
+              formData
+                .theme_secondary_color,
 
             theme_accent_color:
-              formData.theme_accent_color,
+              formData
+                .theme_accent_color,
           }
         );
 
@@ -576,6 +778,11 @@ export default function EditEventPage() {
       setFormData(
         (currentData) => ({
           ...currentData,
+
+          invitation_message:
+            updatedEvent
+              .invitation_message ??
+            "",
 
           theme_primary_color:
             updatedEvent
@@ -592,11 +799,16 @@ export default function EditEventPage() {
       );
 
       setSuccessMessage(
-        "Event na invitation theme vimebadilishwa vizuri."
+        "Event, ujumbe na invitation theme vimebadilishwa vizuri."
       );
 
-      setNewCoverImage(null);
-      setRemoveCurrentCover(false);
+      setNewCoverImage(
+        null
+      );
+
+      setRemoveCurrentCover(
+        false
+      );
 
       if (imagePreview) {
         URL.revokeObjectURL(
@@ -615,6 +827,20 @@ export default function EditEventPage() {
       setIsSaving(false);
     }
   }
+
+  const displayedMessage =
+    formData
+      .invitation_message
+      .trim() ||
+    getDefaultInvitationMessage(
+      formData.language
+    );
+
+  const remainingCharacters =
+    MAX_INVITATION_MESSAGE_LENGTH -
+    formData
+      .invitation_message
+      .length;
 
   if (isLoading) {
     return (
@@ -651,15 +877,18 @@ export default function EditEventPage() {
             </h1>
 
             <p className="mt-2 text-gray-500">
-              Badilisha taarifa na
-              muonekano wa invitation.
+              Badilisha taarifa,
+              ujumbe na muonekano
+              wa invitation.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() =>
-              router.push("/events")
+              router.push(
+                "/events"
+              )
             }
             className="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
           >
@@ -668,19 +897,21 @@ export default function EditEventPage() {
         </div>
 
         {errorMessage && (
-          <div className="mt-6 rounded-lg bg-red-50 p-4 text-red-700">
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
             {errorMessage}
           </div>
         )}
 
         {successMessage && (
-          <div className="mt-6 rounded-lg bg-emerald-50 p-4 text-emerald-700">
+          <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">
             {successMessage}
           </div>
         )}
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           className="mt-8 space-y-10"
         >
           <section>
@@ -693,41 +924,54 @@ export default function EditEventPage() {
               <Input
                 label="Event Title"
                 name="title"
-                value={formData.title}
+                value={
+                  formData.title
+                }
                 placeholder="John & Mary Wedding"
                 required
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
                 label="Event Type"
                 name="event_type"
                 value={
-                  formData.event_type
+                  formData
+                    .event_type
                 }
                 placeholder="Wedding, Send-off, Birthday"
                 required
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
                 label="Bride / Celebrant Name"
                 name="bride_name"
                 value={
-                  formData.bride_name
+                  formData
+                    .bride_name
                 }
                 placeholder="Bride or celebrant name"
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
                 label="Groom Name"
                 name="groom_name"
                 value={
-                  formData.groom_name
+                  formData
+                    .groom_name
                 }
                 placeholder="Groom name"
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <div>
@@ -743,10 +987,13 @@ export default function EditEventPage() {
                   value={
                     formData.language
                   }
+                  disabled={
+                    isSaving
+                  }
                   onChange={
                     handleLanguageChange
                   }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
                 >
                   <option value="sw">
                     Kiswahili
@@ -762,12 +1009,125 @@ export default function EditEventPage() {
                 label="Dress Code"
                 name="dress_code"
                 value={
-                  formData.dress_code
+                  formData
+                    .dress_code
                 }
                 placeholder="Royal Blue and Gold"
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
             </div>
+          </section>
+
+          <section>
+            <SectionHeading
+              title="Invitation Message"
+              description="Badilisha ujumbe maalumu unaoonekana juu ya jina la mgeni."
+            />
+
+            <div className="mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <label
+                  htmlFor="invitation_message"
+                  className="text-sm font-semibold text-slate-700"
+                >
+                  Ujumbe wa Mwaliko
+                </label>
+
+                <p
+                  className={`text-xs font-semibold ${
+                    remainingCharacters <
+                    50
+                      ? "text-amber-600"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {
+                    remainingCharacters
+                  }{" "}
+                  characters remaining
+                </p>
+              </div>
+
+              <textarea
+                id="invitation_message"
+                name="invitation_message"
+                value={
+                  formData
+                    .invitation_message
+                }
+                rows={6}
+                maxLength={
+                  MAX_INVITATION_MESSAGE_LENGTH
+                }
+                disabled={
+                  isSaving
+                }
+                placeholder={getInvitationPlaceholder(
+                  formData.language
+                )}
+                onChange={
+                  handleMessageChange
+                }
+                className="mt-2 w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+              />
+
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={
+                    isSaving
+                  }
+                  onClick={
+                    applyDefaultMessage
+                  }
+                  className="rounded-lg bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                >
+                  Use Example Message
+                </button>
+
+                {formData
+                  .invitation_message && (
+                  <button
+                    type="button"
+                    disabled={
+                      isSaving
+                    }
+                    onClick={
+                      clearInvitationMessage
+                    }
+                    className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-60"
+                  >
+                    Clear Message
+                  </button>
+                )}
+              </div>
+
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                Ukiacha sehemu hii
+                wazi, mfumo utatumia
+                ujumbe wa kawaida.
+              </p>
+            </div>
+
+            <MessagePreview
+              message={
+                displayedMessage
+              }
+              primaryColor={
+                formData
+                  .theme_primary_color
+              }
+              secondaryColor={
+                formData
+                  .theme_secondary_color
+              }
+              accentColor={
+                formData
+                  .theme_accent_color
+              }
+            />
           </section>
 
           <section>
@@ -784,14 +1144,19 @@ export default function EditEventPage() {
               {themePresets.map(
                 (preset) => (
                   <button
-                    key={preset.name}
+                    key={
+                      preset.name
+                    }
                     type="button"
+                    disabled={
+                      isSaving
+                    }
                     onClick={() =>
                       applyThemePreset(
                         preset
                       )
                     }
-                    className="rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-400 hover:shadow-md"
+                    className="rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-400 hover:shadow-md disabled:opacity-60"
                   >
                     <div className="flex gap-2">
                       <ColorCircle
@@ -814,7 +1179,9 @@ export default function EditEventPage() {
                     </div>
 
                     <p className="mt-2 text-sm font-semibold text-slate-700">
-                      {preset.name}
+                      {
+                        preset.name
+                      }
                     </p>
                   </button>
                 )
@@ -826,27 +1193,45 @@ export default function EditEventPage() {
                 label="Primary Color"
                 name="theme_primary_color"
                 value={
-                  formData.theme_primary_color
+                  formData
+                    .theme_primary_color
                 }
-                onChange={handleChange}
+                disabled={
+                  isSaving
+                }
+                onChange={
+                  handleChange
+                }
               />
 
               <ColorPicker
                 label="Secondary Color"
                 name="theme_secondary_color"
                 value={
-                  formData.theme_secondary_color
+                  formData
+                    .theme_secondary_color
                 }
-                onChange={handleChange}
+                disabled={
+                  isSaving
+                }
+                onChange={
+                  handleChange
+                }
               />
 
               <ColorPicker
                 label="Accent Color"
                 name="theme_accent_color"
                 value={
-                  formData.theme_accent_color
+                  formData
+                    .theme_accent_color
                 }
-                onChange={handleChange}
+                disabled={
+                  isSaving
+                }
+                onChange={
+                  handleChange
+                }
               />
             </div>
 
@@ -855,16 +1240,20 @@ export default function EditEventPage() {
                 formData.title
               }
               dressCode={
-                formData.dress_code
+                formData
+                  .dress_code
               }
               primaryColor={
-                formData.theme_primary_color
+                formData
+                  .theme_primary_color
               }
               secondaryColor={
-                formData.theme_secondary_color
+                formData
+                  .theme_secondary_color
               }
               accentColor={
-                formData.theme_accent_color
+                formData
+                  .theme_accent_color
               }
             />
           </section>
@@ -880,20 +1269,26 @@ export default function EditEventPage() {
                 label="Ceremony Title"
                 name="ceremony_title"
                 value={
-                  formData.ceremony_title
+                  formData
+                    .ceremony_title
                 }
                 placeholder="Ibada ya Ndoa"
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
                 label="Ceremony Venue"
                 name="ceremony_venue"
                 value={
-                  formData.ceremony_venue
+                  formData
+                    .ceremony_venue
                 }
                 placeholder="Kanisa la KKKT Kibangu"
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
@@ -901,9 +1296,12 @@ export default function EditEventPage() {
                 name="ceremony_date"
                 type="date"
                 value={
-                  formData.ceremony_date
+                  formData
+                    .ceremony_date
                 }
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
@@ -911,9 +1309,12 @@ export default function EditEventPage() {
                 name="ceremony_time"
                 type="time"
                 value={
-                  formData.ceremony_time
+                  formData
+                    .ceremony_time
                 }
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <div className="md:col-span-2">
@@ -922,10 +1323,13 @@ export default function EditEventPage() {
                   name="ceremony_map_url"
                   type="url"
                   value={
-                    formData.ceremony_map_url
+                    formData
+                      .ceremony_map_url
                   }
                   placeholder="https://maps.google.com/..."
-                  onChange={handleChange}
+                  onChange={
+                    handleChange
+                  }
                 />
               </div>
             </div>
@@ -943,10 +1347,13 @@ export default function EditEventPage() {
                 name="event_date"
                 type="date"
                 value={
-                  formData.event_date
+                  formData
+                    .event_date
                 }
                 required
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <Input
@@ -954,20 +1361,27 @@ export default function EditEventPage() {
                 name="event_time"
                 type="time"
                 value={
-                  formData.event_time
+                  formData
+                    .event_time
                 }
                 required
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
               />
 
               <div className="md:col-span-2">
                 <Input
                   label="Reception Venue"
                   name="venue"
-                  value={formData.venue}
+                  value={
+                    formData.venue
+                  }
                   placeholder="Mlimani City Hall"
                   required
-                  onChange={handleChange}
+                  onChange={
+                    handleChange
+                  }
                 />
               </div>
 
@@ -977,10 +1391,13 @@ export default function EditEventPage() {
                   name="reception_map_url"
                   type="url"
                   value={
-                    formData.reception_map_url
+                    formData
+                      .reception_map_url
                   }
                   placeholder="https://maps.google.com/..."
-                  onChange={handleChange}
+                  onChange={
+                    handleChange
+                  }
                 />
               </div>
             </div>
@@ -1004,11 +1421,13 @@ export default function EditEventPage() {
                 id="coverImage"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                disabled={isSaving}
+                disabled={
+                  isSaving
+                }
                 onChange={
                   handleImageChange
                 }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 disabled:opacity-60"
               />
             </div>
 
@@ -1019,6 +1438,9 @@ export default function EditEventPage() {
                 }
                 alt="New cover preview"
                 buttonText="Remove New Photo"
+                disabled={
+                  isSaving
+                }
                 onRemove={
                   removeNewImage
                 }
@@ -1026,16 +1448,21 @@ export default function EditEventPage() {
             )}
 
             {!imagePreview &&
-              currentEvent.cover_image_url &&
+              currentEvent
+                .cover_image_url &&
               !removeCurrentCover && (
                 <CoverPreview
                   imageUrl={
-                    currentEvent.cover_image_url
+                    currentEvent
+                      .cover_image_url
                   }
                   alt={
                     currentEvent.title
                   }
                   buttonText="Remove Current Photo"
+                  disabled={
+                    isSaving
+                  }
                   onRemove={
                     handleRemoveCurrentCover
                   }
@@ -1044,7 +1471,7 @@ export default function EditEventPage() {
 
             {removeCurrentCover &&
               !imagePreview && (
-                <div className="mt-6 rounded-lg bg-amber-50 p-4 text-amber-800">
+                <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
                   <p>
                     Cover photo
                     itaondolewa baada ya
@@ -1053,10 +1480,13 @@ export default function EditEventPage() {
 
                   <button
                     type="button"
+                    disabled={
+                      isSaving
+                    }
                     onClick={
                       restoreCurrentCover
                     }
-                    className="mt-3 rounded-lg bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-900"
+                    className="mt-3 rounded-lg bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-900 disabled:opacity-60"
                   >
                     Restore Current Photo
                   </button>
@@ -1074,14 +1504,20 @@ export default function EditEventPage() {
                   : "Update Event"
               }
               type="submit"
-              disabled={isSaving}
+              disabled={
+                isSaving
+              }
             />
 
             <button
               type="button"
-              disabled={isSaving}
+              disabled={
+                isSaving
+              }
               onClick={() =>
-                router.push("/events")
+                router.push(
+                  "/events"
+                )
               }
               className="rounded-lg bg-gray-200 px-5 py-3 font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-60"
             >
@@ -1123,7 +1559,8 @@ function ColorCircle({
     <span
       className="h-7 w-7 rounded-full border border-black/10"
       style={{
-        backgroundColor: color,
+        backgroundColor:
+          color,
       }}
     />
   );
@@ -1133,16 +1570,22 @@ function ColorPicker({
   label,
   name,
   value,
+  disabled,
   onChange,
 }: {
   label: string;
+
   name:
     | "theme_primary_color"
     | "theme_secondary_color"
     | "theme_accent_color";
+
   value: string;
+  disabled: boolean;
+
   onChange: (
-    event: ChangeEvent<HTMLInputElement>
+    event:
+      ChangeEvent<HTMLInputElement>
   ) => void;
 }) {
   return (
@@ -1160,8 +1603,13 @@ function ColorPicker({
           name={name}
           type="color"
           value={value}
-          onChange={onChange}
-          className="h-12 w-14 cursor-pointer rounded-lg border border-slate-300 bg-white p-1"
+          disabled={
+            disabled
+          }
+          onChange={
+            onChange
+          }
+          className="h-12 w-14 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 disabled:opacity-60"
         />
 
         <input
@@ -1169,8 +1617,105 @@ function ColorPicker({
           type="text"
           value={value}
           maxLength={7}
-          onChange={onChange}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-3 font-mono uppercase text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          disabled={
+            disabled
+          }
+          onChange={
+            onChange
+          }
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-3 font-mono uppercase text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+        />
+      </div>
+    </div>
+  );
+}
+
+function MessagePreview({
+  message,
+  primaryColor,
+  secondaryColor,
+  accentColor,
+}: {
+  message: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div
+      className="relative mt-6 overflow-hidden rounded-3xl border shadow-sm"
+      style={{
+        borderColor:
+          `${accentColor}55`,
+
+        background:
+          `linear-gradient(` +
+          `145deg, #ffffff 0%, ` +
+          `${secondaryColor} 100%)`,
+      }}
+    >
+      <div
+        className="absolute left-0 top-0 h-1 w-full"
+        style={{
+          background:
+            `linear-gradient(` +
+            `90deg, ` +
+            `${primaryColor}, ` +
+            `${accentColor})`,
+        }}
+      />
+
+      <div className="px-5 pb-5 pt-7 text-center">
+        <div
+          className="mx-auto flex h-10 w-10 items-center justify-center rounded-full font-serif text-3xl shadow-sm"
+          style={{
+            backgroundColor:
+              secondaryColor,
+
+            color:
+              primaryColor,
+          }}
+        >
+          “
+        </div>
+
+        <p className="mt-4 whitespace-pre-line text-base font-medium leading-8 text-slate-700">
+          {message}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 px-6">
+        <div className="h-px flex-1 bg-slate-300" />
+
+        <span
+          style={{
+            color:
+              accentColor,
+          }}
+        >
+          ✦
+        </span>
+
+        <div className="h-px flex-1 bg-slate-300" />
+      </div>
+
+      <div className="px-5 pb-6 pt-4 text-center">
+        <p
+          className="text-2xl font-bold"
+          style={{
+            color:
+              primaryColor,
+          }}
+        >
+          Guest Name
+        </p>
+
+        <div
+          className="mx-auto mt-3 h-1 w-12 rounded-full"
+          style={{
+            backgroundColor:
+              accentColor,
+          }}
         />
       </div>
     </div>
@@ -1202,7 +1747,10 @@ function ThemePreview({
         className="h-3"
         style={{
           background:
-            `linear-gradient(90deg, ${primaryColor}, ${accentColor})`,
+            `linear-gradient(` +
+            `90deg, ` +
+            `${primaryColor}, ` +
+            `${accentColor})`,
         }}
       />
 
@@ -1210,7 +1758,8 @@ function ThemePreview({
         <p
           className="text-xs font-bold uppercase tracking-[0.25em]"
           style={{
-            color: accentColor,
+            color:
+              accentColor,
           }}
         >
           Invitation Preview
@@ -1219,17 +1768,20 @@ function ThemePreview({
         <h3
           className="mt-3 text-3xl font-bold"
           style={{
-            color: primaryColor,
+            color:
+              primaryColor,
           }}
         >
-          {title || "Event Title"}
+          {title ||
+            "Event Title"}
         </h3>
 
         <div className="mx-auto mt-4 max-w-sm rounded-2xl bg-white/90 p-4 shadow-sm">
           <p
             className="text-xl font-bold"
             style={{
-              color: primaryColor,
+              color:
+                primaryColor,
             }}
           >
             Guest Name
@@ -1261,11 +1813,13 @@ function CoverPreview({
   imageUrl,
   alt,
   buttonText,
+  disabled,
   onRemove,
 }: {
   imageUrl: string;
   alt: string;
   buttonText: string;
+  disabled: boolean;
   onRemove: () => void;
 }) {
   return (
@@ -1279,8 +1833,9 @@ function CoverPreview({
 
         <button
           type="button"
+          disabled={disabled}
           onClick={onRemove}
-          className="absolute right-3 top-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700"
+          className="absolute right-3 top-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-red-700 disabled:opacity-60"
         >
           {buttonText}
         </button>
