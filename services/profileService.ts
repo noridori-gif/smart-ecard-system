@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 export type UserRole =
   | "admin"
@@ -14,8 +16,25 @@ export type UserProfile = {
   updated_at: string;
 };
 
-export type CurrentUserProfile = UserProfile & {
+export type CurrentUserProfile =
+  UserProfile & {
+    email: string;
+  };
+
+export type CreateManagedUserInput = {
+  full_name: string;
   email: string;
+  password: string;
+
+  role:
+    | "organizer"
+    | "scanner";
+};
+
+type CreateManagedUserResponse = {
+  message?: string;
+  error?: string;
+  profile?: UserProfile;
 };
 
 function getSupabaseClient() {
@@ -79,10 +98,13 @@ export async function getCurrentUserProfile(): Promise<
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (userError) {
-    throw new Error(userError.message);
+    throw new Error(
+      userError.message
+    );
   }
 
   if (!user) {
@@ -119,7 +141,8 @@ export async function getCurrentUserProfile(): Promise<
 
   return {
     ...(profile as UserProfile),
-    email: user.email ?? "",
+    email:
+      user.email ?? "",
   };
 }
 
@@ -129,7 +152,10 @@ export async function getAllUserProfiles(): Promise<
   const supabase =
     getSupabaseClient();
 
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("profiles")
     .select(`
       id,
@@ -139,15 +165,22 @@ export async function getAllUserProfiles(): Promise<
       created_at,
       updated_at
     `)
-    .order("created_at", {
-      ascending: false,
-    });
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
-  return (data ?? []) as UserProfile[];
+  return (
+    data ?? []
+  ) as UserProfile[];
 }
 
 export async function updateUserRole(
@@ -157,10 +190,14 @@ export async function updateUserRole(
   const supabase =
     getSupabaseClient();
 
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("profiles")
     .update({
       role,
+
       updated_at:
         new Date().toISOString(),
     })
@@ -176,7 +213,9 @@ export async function updateUserRole(
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
   return data as UserProfile;
@@ -189,10 +228,15 @@ export async function updateUserActiveStatus(
   const supabase =
     getSupabaseClient();
 
-  const { data, error } = await supabase
+  const {
+    data,
+    error,
+  } = await supabase
     .from("profiles")
     .update({
-      is_active: isActive,
+      is_active:
+        isActive,
+
       updated_at:
         new Date().toISOString(),
     })
@@ -208,8 +252,96 @@ export async function updateUserActiveStatus(
     .single();
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+    );
   }
 
   return data as UserProfile;
+}
+
+export async function createManagedUser(
+  input: CreateManagedUserInput
+): Promise<UserProfile> {
+  const supabase =
+    getSupabaseClient();
+
+  const {
+    data: { session },
+    error: sessionError,
+  } =
+    await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw new Error(
+      sessionError.message
+    );
+  }
+
+  if (
+    !session?.access_token
+  ) {
+    throw new Error(
+      "Session haijapatikana. Tafadhali login tena."
+    );
+  }
+
+  const response =
+    await fetch(
+      "/api/admin/users",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            `Bearer ${session.access_token}`,
+        },
+
+        body:
+          JSON.stringify({
+            full_name:
+              input.full_name
+                .trim(),
+
+            email:
+              input.email
+                .trim()
+                .toLowerCase(),
+
+            password:
+              input.password,
+
+            role:
+              input.role,
+          }),
+      }
+    );
+
+  let result:
+    CreateManagedUserResponse;
+
+  try {
+    result =
+      (await response.json()) as
+        CreateManagedUserResponse;
+  } catch {
+    throw new Error(
+      "Server imerudisha response isiyo sahihi."
+    );
+  }
+
+  if (
+    !response.ok ||
+    !result.profile
+  ) {
+    throw new Error(
+      result.error ||
+        "User hakuweza kutengenezwa."
+    );
+  }
+
+  return result.profile;
 }
