@@ -8,6 +8,7 @@ import {
 import Countdown from "@/components/invitation/Countdown";
 import EventPass from "@/components/invitation/EventPass";
 import RsvpButtons from "@/components/invitation/RsvpButtons";
+import WishForm from "@/components/invitation/WishForm";
 
 import type {
   PublicInvitation,
@@ -205,7 +206,10 @@ function LocationCard({
           className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#12213f] px-5 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#1d3158]"
         >
           <span>⌖</span>
-          <span>{openMap}</span>
+
+          <span>
+            {openMap}
+          </span>
         </a>
       )}
     </section>
@@ -293,6 +297,7 @@ export default function LuxuryEnvelope({
 
         <div className="absolute inset-0 opacity-30">
           <div className="absolute -left-20 top-10 h-56 w-56 rounded-full border border-[#d6b96e]" />
+
           <div className="absolute -right-20 bottom-10 h-64 w-64 rounded-full border border-[#d6b96e]" />
         </div>
 
@@ -306,7 +311,9 @@ export default function LuxuryEnvelope({
           </h1>
 
           <p className="mt-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
-            {invitation.event_title}
+            {
+              invitation.event_title
+            }
           </p>
 
           <button
@@ -384,14 +391,18 @@ export default function LuxuryEnvelope({
           </p>
 
           <h2 className="mt-4 font-serif text-4xl leading-tight text-[#12213f]">
-            {invitation.guest_name}
+            {
+              invitation.guest_name
+            }
           </h2>
 
           <div className="mx-auto my-7 flex max-w-xs items-center gap-3">
             <span className="h-px flex-1 bg-[#d7cda9]" />
+
             <span className="text-[#b99542]">
               ✦
             </span>
+
             <span className="h-px flex-1 bg-[#d7cda9]" />
           </div>
 
@@ -515,6 +526,19 @@ export default function LuxuryEnvelope({
             </div>
           </section>
         )}
+
+        <section className="border-t border-[#ded7c3] px-5 py-10 sm:px-9">
+          <WishForm
+            invitationToken={
+              invitation
+                .invitation_token
+            }
+            guestName={
+              invitation.guest_name
+            }
+            language={language}
+          />
+        </section>
 
         <section className="px-5 py-10 sm:px-9">
           <RsvpButtons
