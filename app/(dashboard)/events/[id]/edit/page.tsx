@@ -22,6 +22,7 @@ import {
   uploadEventCover,
   type Event,
   type EventLanguage,
+  type InvitationTemplate,
 } from "@/services/eventService";
 
 const MAX_IMAGE_SIZE =
@@ -33,6 +34,42 @@ const MAX_INVITATION_MESSAGE_LENGTH =
 const HEX_COLOR_PATTERN =
   /^#[0-9A-Fa-f]{6}$/;
 
+const invitationTemplates: Array<{
+  value: InvitationTemplate;
+  name: string;
+  description: string;
+  icon: string;
+}> = [
+  {
+    value: "classic_photo",
+    name: "Classic Photo",
+    description:
+      "Picha kubwa, taarifa za event, countdown, RSVP na Event Pass.",
+    icon: "📷",
+  },
+  {
+    value: "elegant_gold",
+    name: "Elegant Gold",
+    description:
+      "Kadi ndefu yenye rangi za dhahabu na maandishi rasmi.",
+    icon: "✨",
+  },
+  {
+    value: "luxury_envelope",
+    name: "Luxury Envelope",
+    description:
+      "Bahasha inayofunguka na invitation experience yenye taarifa zote.",
+    icon: "💌",
+  },
+  {
+    value: "modern_floral",
+    name: "Modern Floral",
+    description:
+      "Design ya kisasa yenye mapambo ya maua na rangi laini.",
+    icon: "🌿",
+  },
+];
+
 type EditEventForm = {
   title: string;
   event_type: string;
@@ -41,6 +78,7 @@ type EditEventForm = {
   groom_name: string;
 
   language: EventLanguage;
+  invitation_template: InvitationTemplate;
   invitation_message: string;
 
   ceremony_title: string;
@@ -76,6 +114,7 @@ const initialForm: EditEventForm = {
   groom_name: "",
 
   language: "sw",
+  invitation_template: "classic_photo",
   invitation_message: "",
 
   ceremony_title:
@@ -283,6 +322,10 @@ export default function EditEventPage() {
           language:
             event.language ??
             "sw",
+
+          invitation_template:
+            event.invitation_template ??
+            "classic_photo",
 
           invitation_message:
             event
@@ -703,6 +746,9 @@ export default function EditEventPage() {
             language:
               formData.language,
 
+            invitation_template:
+              formData.invitation_template,
+
             invitation_message:
               formData
                 .invitation_message ||
@@ -783,6 +829,9 @@ export default function EditEventPage() {
             updatedEvent
               .invitation_message ??
             "",
+
+          invitation_template:
+            updatedEvent.invitation_template,
 
           theme_primary_color:
             updatedEvent
@@ -1017,6 +1066,70 @@ export default function EditEventPage() {
                   handleChange
                 }
               />
+            </div>
+          </section>
+
+          <section>
+            <SectionHeading
+              title="Invitation Design"
+              description="Chagua muonekano ambao wageni wataona wanapofungua link ya mwaliko."
+            />
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {invitationTemplates.map((template) => {
+                const isSelected =
+                  formData.invitation_template ===
+                  template.value;
+
+                return (
+                  <label
+                    key={template.value}
+                    className={`relative cursor-pointer rounded-2xl border-2 p-5 transition ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-50 shadow-md"
+                        : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="invitation_template"
+                      value={template.value}
+                      checked={isSelected}
+                      disabled={isSaving}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-2xl shadow-sm">
+                        {template.icon}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="font-bold text-gray-900">
+                            {template.name}
+                          </h3>
+
+                          <span
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                              isSelected
+                                ? "border-blue-600 bg-blue-600 text-white"
+                                : "border-gray-300 bg-white"
+                            }`}
+                          >
+                            {isSelected ? "✓" : ""}
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-sm leading-6 text-gray-500">
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </section>
 
