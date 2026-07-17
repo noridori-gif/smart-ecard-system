@@ -6,6 +6,15 @@ export type EventLanguage =
   | "sw"
   | "en";
 
+export type InvitationTemplate =
+  | "classic_photo"
+  | "elegant_gold"
+  | "luxury_envelope"
+  | "modern_floral";
+
+export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
+  "classic_photo";
+
 export const DEFAULT_EVENT_THEME = {
   primaryColor: "#BE123C",
   secondaryColor: "#FFF1F2",
@@ -27,6 +36,7 @@ export type Event = {
     | null;
 
   language: EventLanguage;
+  invitation_template: InvitationTemplate;
 
   ceremony_title?:
     | string
@@ -83,6 +93,7 @@ export type NewEvent = {
   groom_name?: string;
 
   language?: EventLanguage;
+  invitation_template?: InvitationTemplate;
 
   ceremony_title?: string;
   ceremony_date?: string;
@@ -117,6 +128,7 @@ export type UpdateEvent = {
   groom_name?: string;
 
   language: EventLanguage;
+  invitation_template?: InvitationTemplate;
 
   ceremony_title?: string;
   ceremony_date?: string;
@@ -148,6 +160,29 @@ const HEX_COLOR_PATTERN =
 
 const MAX_INVITATION_MESSAGE_LENGTH =
   600;
+
+const INVITATION_TEMPLATES: InvitationTemplate[] = [
+  "classic_photo",
+  "elegant_gold",
+  "luxury_envelope",
+  "modern_floral",
+];
+
+function normalizeInvitationTemplate(
+  template: InvitationTemplate | undefined
+): InvitationTemplate {
+  if (!template) {
+    return DEFAULT_INVITATION_TEMPLATE;
+  }
+
+  if (!INVITATION_TEMPLATES.includes(template)) {
+    throw new Error(
+      "Invitation template iliyochaguliwa si sahihi."
+    );
+  }
+
+  return template;
+}
 
 function normalizeHexColor(
   color: string | undefined,
@@ -416,6 +451,11 @@ export async function createEvent(
         event.language ??
         "sw",
 
+      invitation_template:
+        normalizeInvitationTemplate(
+          event.invitation_template
+        ),
+
       ceremony_title:
         normalizeOptionalText(
           event.ceremony_title
@@ -604,6 +644,17 @@ export async function updateEvent(
       event.invitation_message
     );
 
+  const templateUpdates: {
+    invitation_template?: InvitationTemplate;
+  } = {};
+
+  if (event.invitation_template) {
+    templateUpdates.invitation_template =
+      normalizeInvitationTemplate(
+        event.invitation_template
+      );
+  }
+
   const {
     data,
     error,
@@ -628,6 +679,8 @@ export async function updateEvent(
 
       language:
         event.language,
+
+      ...templateUpdates,
 
       ceremony_title:
         normalizeOptionalText(
