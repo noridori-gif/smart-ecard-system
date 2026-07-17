@@ -7,12 +7,15 @@ import {
 } from "react";
 
 import Link from "next/link";
+
 import {
   usePathname,
   useRouter,
 } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 import {
   getCurrentUserProfile,
@@ -104,16 +107,30 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    href: "/change-password",
+    label: "Change Password",
+    icon: "🔐",
+    allowedRoles: [
+      "admin",
+      "organizer",
+      "scanner",
+    ],
+  },
+  {
     href: "/users",
     label: "User Management",
     icon: "🛡️",
-    allowedRoles: ["admin"],
+    allowedRoles: [
+      "admin",
+    ],
   },
   {
     href: "/settings",
     label: "Settings",
     icon: "⚙️",
-    allowedRoles: ["admin"],
+    allowedRoles: [
+      "admin",
+    ],
   },
 ];
 
@@ -121,24 +138,42 @@ export default function Sidebar({
   isOpen,
   onClose,
 }: SidebarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname =
+    usePathname();
 
-  const supabase = useMemo(
-    () => createClient(),
-    []
-  );
+  const router =
+    useRouter();
 
-  const [currentUser, setCurrentUser] =
-    useState<SidebarUser | null>(null);
+  const supabase =
+    useMemo(
+      () => createClient(),
+      []
+    );
 
-  const [isProfileLoading, setIsProfileLoading] =
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<SidebarUser | null>(
+      null
+    );
+
+  const [
+    isProfileLoading,
+    setIsProfileLoading,
+  ] =
     useState(true);
 
-  const [isLoggingOut, setIsLoggingOut] =
+  const [
+    isLoggingOut,
+    setIsLoggingOut,
+  ] =
     useState(false);
 
-  const [errorMessage, setErrorMessage] =
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] =
     useState("");
 
   useEffect(() => {
@@ -156,7 +191,10 @@ export default function Sidebar({
         }
 
         if (!profile) {
-          router.replace("/login");
+          router.replace(
+            "/login"
+          );
+
           router.refresh();
 
           return;
@@ -167,24 +205,33 @@ export default function Sidebar({
             scope: "local",
           });
 
-          router.replace("/login");
+          router.replace(
+            "/login"
+          );
+
           router.refresh();
 
           return;
         }
 
         const fullName =
-          profile.full_name?.trim() ||
-          profile.email.split("@")[0] ||
+          profile.full_name
+            ?.trim() ||
+          profile.email
+            .split("@")[0] ||
           "User";
 
         setCurrentUser({
           fullName,
+
           initial:
             fullName
               .charAt(0)
-              .toUpperCase() || "U",
-          role: profile.role,
+              .toUpperCase() ||
+            "U",
+
+          role:
+            profile.role,
         });
       } catch (error) {
         console.error(
@@ -199,7 +246,9 @@ export default function Sidebar({
         }
       } finally {
         if (isMounted) {
-          setIsProfileLoading(false);
+          setIsProfileLoading(
+            false
+          );
         }
       }
     }
@@ -209,28 +258,41 @@ export default function Sidebar({
     return () => {
       isMounted = false;
     };
-  }, [router, supabase]);
+  }, [
+    router,
+    supabase,
+  ]);
 
-  const visibleMenuItems = useMemo(() => {
-    if (!currentUser) {
-      return [];
-    }
+  const visibleMenuItems =
+    useMemo(() => {
+      if (!currentUser) {
+        return [];
+      }
 
-    return menuItems.filter((item) =>
-      item.allowedRoles.includes(
-        currentUser.role
-      )
-    );
-  }, [currentUser]);
+      return menuItems.filter(
+        (item) =>
+          item.allowedRoles.includes(
+            currentUser.role
+          )
+      );
+    }, [currentUser]);
 
-  function isActiveRoute(href: string) {
-    if (href === "/dashboard") {
-      return pathname === href;
+  function isActiveRoute(
+    href: string
+  ) {
+    if (
+      href === "/dashboard"
+    ) {
+      return (
+        pathname === href
+      );
     }
 
     return (
       pathname === href ||
-      pathname.startsWith(`${href}/`)
+      pathname.startsWith(
+        `${href}/`
+      )
     );
   }
 
@@ -243,7 +305,9 @@ export default function Sidebar({
       setIsLoggingOut(true);
       setErrorMessage("");
 
-      const { error } =
+      const {
+        error,
+      } =
         await supabase.auth.signOut({
           scope: "local",
         });
@@ -254,7 +318,10 @@ export default function Sidebar({
 
       onClose();
 
-      router.replace("/login");
+      router.replace(
+        "/login"
+      );
+
       router.refresh();
     } catch (error) {
       console.error(
@@ -312,7 +379,13 @@ export default function Sidebar({
         <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-6">
           {isProfileLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map(
+              {[
+                1,
+                2,
+                3,
+                4,
+                5,
+              ].map(
                 (item) => (
                   <div
                     key={item}
@@ -321,37 +394,49 @@ export default function Sidebar({
                 )
               )}
             </div>
-          ) : visibleMenuItems.length === 0 ? (
+          ) : visibleMenuItems
+              .length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-white/10 p-4 text-sm text-blue-100">
-              Hakuna menu inayopatikana kwa
+              Hakuna menu
+              inayopatikana kwa
               account hii.
             </div>
           ) : (
-            visibleMenuItems.map((item) => {
-              const isActive =
-                isActiveRoute(item.href);
+            visibleMenuItems.map(
+              (item) => {
+                const isActive =
+                  isActiveRoute(
+                    item.href
+                  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    isActive
-                      ? "bg-white text-blue-900 shadow-lg"
-                      : "text-blue-50 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <span className="text-xl">
-                    {item.icon}
-                  </span>
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={
+                      onClose
+                    }
+                    className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-white text-blue-900 shadow-lg"
+                        : "text-blue-50 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-xl">
+                      {
+                        item.icon
+                      }
+                    </span>
 
-                  <span>
-                    {item.label}
-                  </span>
-                </Link>
-              );
-            })
+                    <span>
+                      {
+                        item.label
+                      }
+                    </span>
+                  </Link>
+                );
+              }
+            )
           )}
         </nav>
 
@@ -364,8 +449,12 @@ export default function Sidebar({
 
           <button
             type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
+            onClick={
+              handleLogout
+            }
+            disabled={
+              isLoggingOut
+            }
             className="flex w-full items-center gap-3 rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="text-xl">
@@ -383,14 +472,17 @@ export default function Sidebar({
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-blue-900">
               {isProfileLoading
                 ? "..."
-                : currentUser?.initial ?? "U"}
+                : currentUser
+                    ?.initial ??
+                  "U"}
             </div>
 
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
                 {isProfileLoading
                   ? "Loading..."
-                  : currentUser?.fullName ??
+                  : currentUser
+                      ?.fullName ??
                     "User"}
               </p>
 
