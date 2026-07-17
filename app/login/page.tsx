@@ -7,28 +7,45 @@ import {
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import Button from "@/components/Button";
 import Input from "@/components/Input";
-import { createClient } from "@/lib/supabase/client";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 function getSafeRedirectPath() {
-  if (typeof window === "undefined") {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     return "/dashboard";
   }
 
-  const searchParams = new URLSearchParams(
-    window.location.search
-  );
+  const searchParams =
+    new URLSearchParams(
+      window.location.search
+    );
 
   const redirectTo =
-    searchParams.get("redirectTo");
+    searchParams.get(
+      "redirectTo"
+    );
 
   if (
     !redirectTo ||
-    !redirectTo.startsWith("/") ||
-    redirectTo.startsWith("//")
+    !redirectTo.startsWith(
+      "/"
+    ) ||
+    redirectTo.startsWith(
+      "//"
+    )
   ) {
     return "/dashboard";
   }
@@ -70,46 +87,65 @@ function getLoginErrorMessage(
 }
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const supabase = useMemo(
-    () => createClient(),
-    []
-  );
+  const supabase =
+    useMemo(
+      () => createClient(),
+      []
+    );
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [
+    formData,
+    setFormData,
+  ] =
+    useState({
+      email: "",
+      password: "",
+    });
 
   const [
     showPassword,
     setShowPassword,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     isLoading,
     setIsLoading,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   function handleChange(
-    event: ChangeEvent<HTMLInputElement>
+    event:
+      ChangeEvent<HTMLInputElement>
   ) {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } =
+      event.target;
 
-    setFormData((currentData) => ({
-      ...currentData,
-      [name]: value,
-    }));
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+        [name]: value,
+      })
+    );
+
+    setErrorMessage("");
   }
 
   async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
@@ -117,13 +153,18 @@ export default function LoginPage() {
       return;
     }
 
-    const email = formData.email
-      .trim()
-      .toLowerCase();
+    const email =
+      formData.email
+        .trim()
+        .toLowerCase();
 
-    const password = formData.password;
+    const password =
+      formData.password;
 
-    if (!email || !password) {
+    if (
+      !email ||
+      !password
+    ) {
       setErrorMessage(
         "Weka email na password."
       );
@@ -135,15 +176,21 @@ export default function LoginPage() {
       setErrorMessage("");
       setIsLoading(true);
 
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const {
+        error,
+      } =
+        await supabase
+          .auth
+          .signInWithPassword({
+            email,
+            password,
+          });
 
       if (error) {
         setErrorMessage(
-          getLoginErrorMessage(error.message)
+          getLoginErrorMessage(
+            error.message
+          )
         );
 
         return;
@@ -152,7 +199,10 @@ export default function LoginPage() {
       const redirectPath =
         getSafeRedirectPath();
 
-      router.replace(redirectPath);
+      router.replace(
+        redirectPath
+      );
+
       router.refresh();
     } catch (error) {
       console.error(
@@ -186,17 +236,23 @@ export default function LoginPage() {
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           className="mt-8 space-y-5"
         >
           <Input
             label="Email"
             name="email"
             type="email"
-            value={formData.email}
+            value={
+              formData.email
+            }
             placeholder="Enter your email"
             required
-            onChange={handleChange}
+            onChange={
+              handleChange
+            }
           />
 
           <div>
@@ -208,18 +264,31 @@ export default function LoginPage() {
                   ? "text"
                   : "password"
               }
-              value={formData.password}
+              value={
+                formData.password
+              }
               placeholder="Enter your password"
               required
-              onChange={handleChange}
+              onChange={
+                handleChange
+              }
             />
 
-            <div className="mt-2 flex justify-end">
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-semibold text-blue-600 transition hover:text-blue-800"
+              >
+                Forgot Password?
+              </Link>
+
               <button
                 type="button"
                 onClick={() =>
                   setShowPassword(
-                    (currentValue) =>
+                    (
+                      currentValue
+                    ) =>
                       !currentValue
                   )
                 }
