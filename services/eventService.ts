@@ -14,6 +14,7 @@ export const DEFAULT_EVENT_THEME = {
 
 export type Event = {
   id: number;
+  organizer_id: string | null;
   title: string;
   event_type: string;
 
@@ -345,12 +346,36 @@ export async function uploadEventCover(
   return data.publicUrl;
 }
 
+async function getAuthenticatedUserId(): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw new Error(
+      `Imeshindikana kuthibitisha mtumiaji: ${error.message}`
+    );
+  }
+
+  if (!user) {
+    throw new Error(
+      "Hujaingia kwenye akaunti. Tafadhali ingia tena."
+    );
+  }
+
+  return user.id;
+}
+
 export async function createEvent(
   event: NewEvent
 ): Promise<Event> {
   validateRequiredEventFields(
     event
   );
+
+  const organizerId =
+    await getAuthenticatedUserId();
 
   const themeColors =
     getEventThemeColors(
@@ -368,6 +393,9 @@ export async function createEvent(
   } = await supabase
     .from("events")
     .insert({
+      organizer_id:
+        organizerId,
+
       title:
         event.title.trim(),
 
