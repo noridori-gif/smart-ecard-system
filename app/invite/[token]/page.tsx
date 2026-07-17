@@ -11,6 +11,7 @@ import EventPass from "@/components/invitation/EventPass";
 import InvitationHero from "@/components/invitation/InvitationHero";
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 import RsvpButtons from "@/components/invitation/RsvpButtons";
+import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -675,6 +676,10 @@ export default async function InvitationPage({
         invitation.ceremony_venue
     );
 
+  const isLuxuryEnvelope =
+    invitation.invitation_template ===
+    "luxury_envelope";
+
   return (
     <main
       style={{
@@ -696,6 +701,14 @@ export default async function InvitationPage({
         }
       />
 
+      {isLuxuryEnvelope ? (
+        <LuxuryEnvelope
+          invitation={invitation}
+          heroTitle={heroTitle}
+          displayedMessage={displayedMessage}
+          language={language}
+        />
+      ) : (
       <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
         <InvitationHero
           icon={content.icon}
@@ -876,6 +889,7 @@ export default async function InvitationPage({
           />
         </section>
       </div>
+      )}
     </main>
   );
 }
