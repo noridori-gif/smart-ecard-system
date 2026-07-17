@@ -2,6 +2,10 @@ import {
   supabase,
 } from "@/lib/supabase";
 
+import type {
+  InvitationTemplate,
+} from "@/services/eventService";
+
 export type EventLanguage =
   | "sw"
   | "en";
@@ -28,6 +32,9 @@ export type InvitationEventDetails = {
 
   language: EventLanguage;
 
+  invitation_template:
+    InvitationTemplate;
+
   ceremony_title: string | null;
   ceremony_date: string | null;
   ceremony_time: string | null;
@@ -37,10 +44,18 @@ export type InvitationEventDetails = {
   event_date: string;
   event_time: string;
   venue: string;
-  reception_map_url: string | null;
 
-  dress_code: string | null;
-  cover_image_url: string | null;
+  reception_map_url:
+    | string
+    | null;
+
+  dress_code:
+    | string
+    | null;
+
+  cover_image_url:
+    | string
+    | null;
 
   theme_primary_color:
     | string
@@ -75,12 +90,10 @@ export type InvitationGuestDetails = {
 
 export type InvitationWithDetails =
   Invitation & {
-    /*
-     * Fields hizi zinawekwa juu
-     * ili Invitations page iweze
-     * kuzitumia moja kwa moja.
-     */
     language: EventLanguage;
+
+    invitation_template:
+      InvitationTemplate;
 
     event_pass_id:
       | string
@@ -126,6 +139,9 @@ export type PublicInvitation = {
     | null;
 
   language: EventLanguage;
+
+  invitation_template:
+    InvitationTemplate;
 
   ceremony_title:
     | string
@@ -223,6 +239,23 @@ function normalizeLanguage(
     : "sw";
 }
 
+function normalizeInvitationTemplate(
+  template:
+    | string
+    | null
+    | undefined
+): InvitationTemplate {
+  if (
+    template === "elegant_gold" ||
+    template === "luxury_envelope" ||
+    template === "modern_floral"
+  ) {
+    return template;
+  }
+
+  return "classic_photo";
+}
+
 export async function createInvitation(
   eventId: number,
   guestId: number
@@ -304,6 +337,12 @@ export async function getInvitationByToken(
         invitation.language
       ),
 
+    invitation_template:
+      normalizeInvitationTemplate(
+        invitation
+          .invitation_template
+      ),
+
     allowed_guests:
       invitation.allowed_guests ??
       1,
@@ -374,6 +413,7 @@ export async function getAllInvitations(): Promise<
         groom_name,
 
         language,
+        invitation_template,
 
         ceremony_title,
         ceremony_date,
@@ -441,6 +481,12 @@ export async function getAllInvitations(): Promise<
           eventDetails?.language
         );
 
+      const invitationTemplate =
+        normalizeInvitationTemplate(
+          eventDetails
+            ?.invitation_template
+        );
+
       return {
         id:
           invitation.id,
@@ -470,6 +516,9 @@ export async function getAllInvitations(): Promise<
 
         language,
 
+        invitation_template:
+          invitationTemplate,
+
         event_pass_id:
           guestDetails
             ?.event_pass_id ??
@@ -486,6 +535,9 @@ export async function getAllInvitations(): Promise<
                 ...eventDetails,
 
                 language,
+
+                invitation_template:
+                  invitationTemplate,
 
                 invitation_message:
                   eventDetails
