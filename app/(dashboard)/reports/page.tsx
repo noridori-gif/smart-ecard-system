@@ -10,16 +10,19 @@ import {
   getReportEvents,
   getReportGuests,
   getReportInvitations,
+  getReportWishes,
   type EventReportSummary,
   type ReportEvent,
   type ReportGuest,
   type ReportInvitation,
+  type ReportWish,
 } from "@/services/reportService";
 
 type ReportTab =
   | "attendance"
   | "guests"
-  | "invitations";
+  | "invitations"
+  | "wishes";
 
 type StatusFilter =
   | "all"
@@ -170,6 +173,10 @@ export default function ReportsPage() {
     ReportInvitation[]
   >([]);
 
+  const [wishes, setWishes] = useState<ReportWish[]>(
+    []
+  );
+
   const [summary, setSummary] =
     useState<EventReportSummary>(initialSummary);
 
@@ -233,6 +240,7 @@ export default function ReportsPage() {
     if (!selectedEventId) {
       setGuests([]);
       setInvitations([]);
+      setWishes([]);
       setSummary(initialSummary);
 
       return;
@@ -245,14 +253,16 @@ export default function ReportsPage() {
 
         const eventId = Number(selectedEventId);
 
-        const [guestData, invitationData] =
+        const [guestData, invitationData, wishData] =
           await Promise.all([
             getReportGuests(eventId),
             getReportInvitations(eventId),
+            getReportWishes(eventId),
           ]);
 
         setGuests(guestData);
         setInvitations(invitationData);
+        setWishes(wishData);
 
         setSummary(
           calculateEventReportSummary(
@@ -350,8 +360,28 @@ export default function ReportsPage() {
     });
   }, [invitations, searchTerm]);
 
+  const filteredWishes = useMemo(() => {
+    const normalizedSearch = searchTerm
+      .trim()
+      .toLowerCase();
+
+    return wishes.filter((wish) => {
+      return (
+        !normalizedSearch ||
+        wish.guest_name
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        wish.message
+          .toLowerCase()
+          .includes(normalizedSearch)
+      );
+    });
+  }, [wishes, searchTerm]);
+
   const currentRows =
-    activeTab === "invitations"
+    activeTab === "wishes"
+      ? filteredWishes
+      : activeTab === "invitations"
       ? filteredInvitations
       : filteredGuests;
 
@@ -375,6 +405,11 @@ export default function ReportsPage() {
       (safeCurrentPage - 1) * ROWS_PER_PAGE,
       safeCurrentPage * ROWS_PER_PAGE
     );
+
+  const paginatedWishes = filteredWishes.slice(
+    (safeCurrentPage - 1) * ROWS_PER_PAGE,
+    safeCurrentPage * ROWS_PER_PAGE
+  );
 
   function handleExportExcel() {
     if (!selectedEvent) {
@@ -578,6 +613,34 @@ export default function ReportsPage() {
         workbook,
         invitationWorksheet,
         "Invitations RSVP"
+      );
+
+      const wishRows = wishes.map(
+        (wish, index) => ({
+          No: index + 1,
+          "Guest Name": wish.guest_name,
+          Message: wish.message,
+          "Submitted At": formatExportDateTime(
+            wish.created_at
+          ),
+          "Updated At": formatExportDateTime(
+            wish.updated_at
+          ),
+        })
+      );
+
+      const wishWorksheet =
+        XLSX.utils.json_to_sheet(wishRows);
+
+      setWorksheetColumnWidths(
+        wishWorksheet,
+        [7, 30, 70, 24, 24]
+      );
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        wishWorksheet,
+        "Guest Wishes"
       );
 
       const eventName = sanitizeFileName(
@@ -884,6 +947,20 @@ export default function ReportsPage() {
                 >
                   Invitation & RSVP
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveTab("wishes")
+                  }
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                    activeTab === "wishes"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  Guest Wishes
+                </button>
               </div>
             </div>
 
@@ -898,7 +975,8 @@ export default function ReportsPage() {
                 className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
 
-              {activeTab !== "invitations" && (
+              {activeTab !== "invitations" &&
+                activeTab !== "wishes" && (
                 <select
                   value={statusFilter}
                   onChange={(event) =>
@@ -924,7 +1002,59 @@ export default function ReportsPage() {
             </div>
 
             <div className="overflow-x-auto">
-              {activeTab === "invitations" ? (
+              {activeTab === "wishes" ? (
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                        Guest
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                        Message
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                        Submitted At
+                      </th>
+
+                      <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
+                        Last Updated
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedWishes.map((wish) => (
+                      <tr key={wish.id}>
+                        <td className="px-5 py-4 align-top">
+                          <p className="font-semibold text-slate-900">
+                            {wish.guest_name}
+                          </p>
+                        </td>
+
+                        <td className="min-w-72 px-5 py-4 align-top">
+                          <p className="whitespace-pre-line text-sm leading-6 text-slate-700">
+                            {wish.message}
+                          </p>
+                        </td>
+
+                        <td className="whitespace-nowrap px-5 py-4 align-top text-sm text-slate-600">
+                          {formatDateTime(
+                            wish.created_at
+                          )}
+                        </td>
+
+                        <td className="whitespace-nowrap px-5 py-4 align-top text-sm text-slate-600">
+                          {formatDateTime(
+                            wish.updated_at
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : activeTab === "invitations" ? (
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
