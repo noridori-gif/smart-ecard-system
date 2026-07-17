@@ -10,6 +10,10 @@ import { useParams } from "next/navigation";
 import Input from "@/components/Input";
 import Button from "@/components/Button";
 import {
+  getEventById,
+  type Event,
+} from "@/services/eventService";
+import {
   createGuest,
   deleteGuest,
   getGuestsByEvent,
@@ -31,6 +35,8 @@ export default function EventGuestsPage() {
   const eventId = Number(params.id);
 
   const [guests, setGuests] = useState<Guest[]>([]);
+  const [currentEvent, setCurrentEvent] =
+    useState<Event | null>(null);
   const [formData, setFormData] = useState(initialForm);
 
   const [editingGuestId, setEditingGuestId] =
@@ -50,6 +56,20 @@ export default function EventGuestsPage() {
       setIsLoading(true);
       setErrorMessage("");
 
+      if (!Number.isInteger(eventId)) {
+        throw new Error("Event ID si sahihi.");
+      }
+
+      const event = await getEventById(eventId);
+
+      if (!event) {
+        setCurrentEvent(null);
+        setGuests([]);
+        throw new Error("Event haikupatikana.");
+      }
+
+      setCurrentEvent(event);
+
       const data = await getGuestsByEvent(eventId);
       setGuests(data);
     } catch (error) {
@@ -64,8 +84,11 @@ export default function EventGuestsPage() {
   }
 
   useEffect(() => {
-    if (!Number.isNaN(eventId)) {
+    if (Number.isInteger(eventId)) {
       loadGuests();
+    } else {
+      setErrorMessage("Event ID si sahihi.");
+      setIsLoading(false);
     }
   }, [eventId]);
 
@@ -199,6 +222,37 @@ export default function EventGuestsPage() {
     }
   }
 
+  if (isLoading) {
+    return (
+      <section>
+        <div className="rounded-xl bg-white p-8 shadow-md">
+          <p className="text-gray-500">
+            Loading event and guests...
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!currentEvent) {
+    return (
+      <section>
+        <div className="rounded-xl bg-white p-8 shadow-md">
+          <div className="rounded-lg bg-red-50 p-4 text-red-700">
+            {errorMessage || "Event haikupatikana."}
+          </div>
+
+          <Link
+            href="/events"
+            className="mt-5 inline-block rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+          >
+            Back to Events
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section>
       <div>
@@ -207,7 +261,7 @@ export default function EventGuestsPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Add and manage guests for Event #{eventId}.
+          Add and manage guests for {currentEvent.title}.
         </p>
       </div>
 
@@ -322,19 +376,13 @@ export default function EventGuestsPage() {
           </h2>
         </div>
 
-        {isLoading && (
-          <p className="p-8 text-gray-500">
-            Loading guests...
-          </p>
-        )}
-
-        {!isLoading && guests.length === 0 && (
+        {guests.length === 0 && (
           <p className="p-8 text-gray-500">
             No guests have been added yet.
           </p>
         )}
 
-        {!isLoading && guests.length > 0 && (
+        {guests.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[950px] text-left">
               <thead className="bg-gray-50 text-sm uppercase text-gray-600">
