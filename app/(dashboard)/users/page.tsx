@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type FormEvent,
   useCallback,
   useEffect,
   useState,
@@ -9,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import {
+  createManagedUser,
   getAllUserProfiles,
   getCurrentUserProfile,
   getRoleLabel,
@@ -23,6 +25,13 @@ const availableRoles: UserRole[] = [
   "organizer",
   "scanner",
 ];
+
+const initialCreateForm = {
+  full_name: "",
+  email: "",
+  password: "",
+  role: "organizer" as "organizer" | "scanner",
+};
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -65,6 +74,12 @@ export default function UsersPage() {
 
   const [isLoading, setIsLoading] =
     useState(true);
+
+  const [createForm, setCreateForm] =
+    useState(initialCreateForm);
+
+  const [isCreating, setIsCreating] =
+    useState(false);
 
   const [
     updatingUserId,
@@ -127,6 +142,47 @@ export default function UsersPage() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  async function handleCreateUser(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    try {
+      setIsCreating(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const createdProfile =
+        await createManagedUser({
+          full_name: createForm.full_name,
+          email: createForm.email,
+          password: createForm.password,
+          role: createForm.role,
+        });
+
+      setProfiles((currentProfiles) => [
+        createdProfile,
+        ...currentProfiles.filter(
+          (profile) => profile.id !== createdProfile.id
+        ),
+      ]);
+
+      setCreateForm(initialCreateForm);
+      setSuccessMessage(
+        `${getRoleLabel(createdProfile.role)} ametengenezwa vizuri.`
+      );
+    } catch (error) {
+      console.error("User creation error:", error);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "User hakuweza kutengenezwa."
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  }
 
   async function handleRoleChange(
     userId: string,
@@ -280,6 +336,125 @@ export default function UsersPage() {
           {successMessage}
         </div>
       )}
+
+      <div className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm sm:p-6">
+        <h2 className="text-xl font-bold text-slate-900">
+          Create New User
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-600">
+          Tengeneza Event Organizer au Event Scanner mpya.
+        </p>
+
+        <form
+          onSubmit={handleCreateUser}
+          className="mt-6 grid gap-5 md:grid-cols-2"
+        >
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={createForm.full_name}
+              required
+              disabled={isCreating}
+              placeholder="User full name"
+              onChange={(event) =>
+                setCreateForm((current) => ({
+                  ...current,
+                  full_name: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={createForm.email}
+              required
+              disabled={isCreating}
+              autoComplete="off"
+              placeholder="user@example.com"
+              onChange={(event) =>
+                setCreateForm((current) => ({
+                  ...current,
+                  email: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Temporary Password
+            </label>
+            <input
+              type="password"
+              value={createForm.password}
+              required
+              minLength={8}
+              disabled={isCreating}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              onChange={(event) =>
+                setCreateForm((current) => ({
+                  ...current,
+                  password: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Password iwe na characters 8 au zaidi.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              User Role
+            </label>
+            <select
+              value={createForm.role}
+              disabled={isCreating}
+              onChange={(event) =>
+                setCreateForm((current) => ({
+                  ...current,
+                  role: event.target.value as
+                    | "organizer"
+                    | "scanner",
+                }))
+              }
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+            >
+              <option value="organizer">
+                Event Organizer
+              </option>
+              <option value="scanner">
+                Event Scanner
+              </option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2">
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isCreating
+                ? "Creating User..."
+                : "Create User"}
+            </button>
+          </div>
+        </form>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -490,20 +665,6 @@ export default function UsersPage() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-        <h2 className="font-bold text-blue-900">
-          Kuongeza user mpya
-        </h2>
-
-        <p className="mt-2 text-sm leading-6 text-blue-800">
-          Kwa sasa ongeza user kupitia Supabase
-          Dashboard, sehemu ya Authentication →
-          Users. Profile yake itatengenezwa
-          automatically akiwa na role ya Event
-          Organizer. Baada ya hapo rudi hapa
-          kubadilisha role yake.
-        </p>
-      </div>
     </section>
   );
 }
