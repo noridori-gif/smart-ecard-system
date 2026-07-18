@@ -22,6 +22,7 @@ type RsvpButtonsProps = {
   currentStatus: string;
   language?: Language;
   accentTextClass?: string;
+  variant?: "default" | "classic";
 };
 
 type RsvpResponse = {
@@ -61,6 +62,7 @@ export default function RsvpButtons({
   language = "sw",
   accentTextClass =
     "text-blue-700",
+  variant = "default",
 }: RsvpButtonsProps) {
   const [
     selectedStatus,
@@ -322,6 +324,92 @@ export default function RsvpButtons({
         option.value ===
         selectedStatus
     );
+
+  if (variant === "classic") {
+    return (
+      <section className="mt-10 border-y border-black/10 py-8">
+        <div className="text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.32em] text-[var(--theme-primary)]">
+            {translations.title}
+          </p>
+
+          <h3 className="mt-3 font-serif text-3xl text-slate-950">
+            {translations.heading}
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-500">
+            {language === "sw"
+              ? "Tafadhali chagua jibu lako"
+              : "Please select your response"}
+          </p>
+        </div>
+
+        <div className="mt-7 grid grid-cols-3 gap-2 sm:gap-3">
+          {options.map((option) => {
+            const isSelected =
+              selectedStatus === option.value;
+
+            const isThisUpdating =
+              updatingStatus === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={option.statusLabel}
+                disabled={isUpdating}
+                onClick={() =>
+                  updateRsvp(option.value)
+                }
+                className={`group min-w-0 border px-2 py-4 text-center transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 ${
+                  isSelected
+                    ? "border-[var(--theme-primary)] bg-[var(--theme-primary)] text-white shadow-[0_10px_25px_rgba(15,23,42,0.12)]"
+                    : "border-black/15 bg-transparent text-slate-800 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)]"
+                }`}
+              >
+                <span className="block font-serif text-xl leading-none sm:text-2xl">
+                  {isThisUpdating ? "…" : option.icon}
+                </span>
+
+                <span className="mt-2 block truncate text-[10px] font-black uppercase tracking-[0.14em] sm:text-xs">
+                  {isThisUpdating
+                    ? translations.saving
+                    : option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-2 text-center">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-accent)]" />
+
+          <p className="text-xs text-slate-500">
+            {translations.currentResponse}:
+            <span className="ml-1 font-bold text-slate-900">
+              {selectedOption?.statusLabel ??
+                getStatusLabel(selectedStatus)}
+            </span>
+          </p>
+        </div>
+
+        {message && (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`mt-4 text-center text-xs font-semibold ${
+              isSuccess
+                ? "text-[var(--theme-primary)]"
+                : "text-red-700"
+            }`}
+          >
+            {message}
+          </p>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="mt-4">
