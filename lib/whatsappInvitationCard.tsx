@@ -8,6 +8,7 @@ export type WhatsAppCardTemplate =
   | "elegant_gold"
   | "modern_floral"
   | "luxury_envelope"
+  | "minimal_ivory"
   | "royal_dark";
 
 export type WhatsAppCardData = {
@@ -107,6 +108,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "elegant_gold" ||
     template === "modern_floral" ||
     template === "luxury_envelope" ||
+    template === "minimal_ivory" ||
     template === "royal_dark"
   ) {
     return template;
@@ -303,6 +305,8 @@ function renderWhatsAppCard(
       return <ModernFloralCard data={data} />;
     case "luxury_envelope":
       return <LuxuryEnvelopeCard data={data} />;
+    case "minimal_ivory":
+      return <MinimalIvoryCard data={data} />;
     case "royal_dark":
       return <RoyalDarkCard data={data} />;
     default:
@@ -1077,6 +1081,27 @@ function RoyalDarkCard({ data }: { data: RenderData }) {
           />
         </div>
         <Guest data={data} color="#FFFFFF" />
+      </div>
+    </div>
+  );
+}
+
+function MinimalIvoryCard({ data }: { data: RenderData }) {
+  const hasImage = Boolean(data.coverImageDataUrl);
+
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", padding: 42, backgroundColor: "#FBF7ED", color: "#27231D" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "44px 64px 48px", border: `3px solid ${data.accent}` }}>
+        <div style={{ width: "100%", display: "flex", justifyContent: "space-between", paddingBottom: 24, borderBottom: `2px solid ${data.accent}`, color: data.primary, fontFamily: "Arial, sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 4 }}>
+          <div style={{ display: "flex" }}>SMART EVENT PASS</div><div style={{ display: "flex" }}>INVITATION</div>
+        </div>
+        <div style={{ width: hasImage ? 190 : 154, height: hasImage ? 250 : 202, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "50%", border: `3px solid ${data.accent}`, color: data.primary, fontFamily: "Georgia, serif", fontSize: 66 }}>
+          {hasImage ? <CoverImage data={data} borderRadius="50%" /> : "&"}
+        </div>
+        <div style={{ maxWidth: 850, display: "flex", color: data.primary, fontFamily: "Georgia, serif", fontSize: Math.min(82, data.titleSize + 6), lineHeight: 0.98, textAlign: "center" }}>{data.title}</div>
+        <div style={{ width: 130, height: 2, display: "flex", backgroundColor: data.accent }} />
+        <Details data={data} color="#514B43" centered />
+        <div style={{ width: "100%", display: "flex", justifyContent: "center", padding: "28px 30px", borderTop: `2px solid ${data.accent}`, borderBottom: `2px solid ${data.accent}` }}><Guest data={data} color={data.primary} centered /></div>
       </div>
     </div>
   );

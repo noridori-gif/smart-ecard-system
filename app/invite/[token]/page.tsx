@@ -14,6 +14,7 @@ import InvitationViewedTracker from "@/components/invitation/InvitationViewedTra
 import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
 import ElegantGold from "@/components/invitation/templates/ElegantGold";
 import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
+import MinimalIvory from "@/components/invitation/templates/MinimalIvory";
 import ModernFloral from "@/components/invitation/templates/ModernFloral";
 import RoyalDark from "@/components/invitation/templates/RoyalDark";
 
@@ -215,6 +216,11 @@ export default async function InvitationPage({
       {template ===
       "luxury_envelope" ? (
         <LuxuryEnvelope
+          {...templateProps}
+        />
+      ) : template ===
+        "minimal_ivory" ? (
+        <MinimalIvory
           {...templateProps}
         />
       ) : template ===

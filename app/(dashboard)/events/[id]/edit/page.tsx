@@ -72,12 +72,19 @@ const invitationTemplates: Array<{
     icon: "🌿",
   },
   {
-  value: "royal_dark",
-  name: "Royal Dark",
-  description:
-    "Dark luxury design yenye metallic accents, split photo na muonekano wa kifalme.",
-  icon: "♛",
-},
+    value: "royal_dark",
+    name: "Royal Dark",
+    description:
+      "Dark luxury design yenye metallic accents, split photo na muonekano wa kifalme.",
+    icon: "♛",
+  },
+  {
+    value: "minimal_ivory",
+    name: "Minimal Ivory",
+    description:
+      "Editorial ivory stationery yenye portrait ndogo, itinerary na typography safi.",
+    icon: "◯",
+  },
 ];
 
 type EditEventForm = {
@@ -1405,6 +1412,7 @@ export default function EditEventPage() {
             </div>
 
             <ThemePreview
+              template={formData.invitation_template}
               title={
                 formData.title
               }
@@ -1892,18 +1900,43 @@ function MessagePreview({
 }
 
 function ThemePreview({
+  template,
   title,
   dressCode,
   primaryColor,
   secondaryColor,
   accentColor,
 }: {
+  template: InvitationTemplate;
   title: string;
   dressCode: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "minimal_ivory") {
+    return (
+      <div className="relative mt-7 overflow-hidden border border-[#d8cdbb] bg-[#fbf7ed] p-3 shadow-sm">
+        <div className="border border-[#d8cdbb] px-6 py-9 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-[0.38em]" style={{ color: primaryColor }}>
+            Invitation Preview
+          </p>
+          <div className="mx-auto mt-5 h-16 w-12 rounded-[50%] border" style={{ borderColor: accentColor, backgroundColor: secondaryColor }} />
+          <h3 className="mt-5 break-words font-serif text-4xl leading-none" style={{ color: primaryColor }}>
+            {title || "Event Title"}
+          </h3>
+          <div className="mx-auto mt-6 h-px w-20" style={{ backgroundColor: accentColor }} />
+          <p className="mt-5 text-[9px] font-bold uppercase tracking-[0.3em] text-slate-500">
+            01 Ceremony · 02 Reception
+          </p>
+          <p className="mt-4 font-serif text-sm text-slate-700">
+            {dressCode || "Your dress code"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="mt-7 overflow-hidden rounded-3xl border border-slate-200 shadow-sm"

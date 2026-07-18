@@ -56,6 +56,20 @@ const invitationTemplates: Array<{
       "Design nyepesi ya kisasa yenye mapambo ya maua na rangi laini.",
     icon: "🌿",
   },
+  {
+    value: "royal_dark",
+    name: "Royal Dark",
+    description:
+      "Dark luxury design yenye metallic accents, split photo na muonekano wa kifalme.",
+    icon: "♛",
+  },
+  {
+    value: "minimal_ivory",
+    name: "Minimal Ivory",
+    description:
+      "Editorial ivory stationery yenye portrait ndogo, itinerary na typography safi.",
+    icon: "◯",
+  },
 ];
 
 type CreateEventForm = {
