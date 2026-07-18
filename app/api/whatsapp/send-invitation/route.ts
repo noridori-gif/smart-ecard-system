@@ -168,6 +168,80 @@ function formatTime(
   ).format(parsedTime);
 }
 
+async function assertPublicCardImage(
+  cardImageUrl: string
+) {
+  const response = await fetch(
+    cardImageUrl,
+    {
+      headers: {
+        Accept: "image/png",
+      },
+      cache: "no-store",
+      signal:
+        AbortSignal.timeout(
+          20_000
+        ),
+    }
+  );
+
+  const contentType =
+    response.headers
+      .get("content-type")
+      ?.split(";", 1)[0]
+      .trim()
+      .toLowerCase();
+
+  if (
+    !response.ok ||
+    contentType !==
+      "image/png"
+  ) {
+    throw new Error(
+      "WhatsApp card image haipatikani kama PNG halali. Jaribu tena."
+    );
+  }
+
+  const imageBuffer =
+    await response.arrayBuffer();
+
+  const signature =
+    new Uint8Array(
+      imageBuffer,
+      0,
+      Math.min(
+        imageBuffer.byteLength,
+        8
+      )
+    );
+
+  const isPng =
+    imageBuffer.byteLength >=
+      1_000 &&
+    imageBuffer.byteLength <=
+      5 * 1024 * 1024 &&
+    [
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+    ].every(
+      (byte, index) =>
+        signature[index] ===
+        byte
+    );
+
+  if (!isPng) {
+    throw new Error(
+      "WhatsApp card image si PNG halali au ukubwa wake haukubaliki."
+    );
+  }
+}
+
 export async function POST(
   request: Request
 ) {
@@ -484,7 +558,33 @@ export async function POST(
 
     const cardImageUrl =
       `${siteOrigin}/api/invitations/` +
-      `${invitationToken}/card`;
+      `${encodeURIComponent(
+        invitationToken
+      )}/card?v=${Date.now()}`;
+
+    try {
+      await assertPublicCardImage(
+        cardImageUrl
+      );
+    } catch (cardError) {
+      console.error(
+        "WhatsApp card preflight error:",
+        cardError
+      );
+
+      return Response.json(
+        {
+          success: false,
+          message:
+            cardError instanceof Error
+              ? cardError.message
+              : "WhatsApp card image haikuweza kutengenezwa.",
+        },
+        {
+          status: 502,
+        }
+      );
+    }
 
     const recipientPhone =
       normalizeWhatsAppPhoneNumber(
@@ -576,7 +676,7 @@ export async function POST(
           }
         );
 
-      const sentAt =
+      const acceptedAt =
         new Date().toISOString();
 
       const {
@@ -589,9 +689,9 @@ export async function POST(
           message_id:
             result.messageId,
 
-          status: "sent",
-          sent_at: sentAt,
-          updated_at: sentAt,
+          status: "queued",
+          updated_at:
+            acceptedAt,
           error_message: null,
         })
         .eq(
@@ -611,10 +711,15 @@ export async function POST(
           success: true,
 
           message:
-            "WhatsApp invitation imetumwa.",
+            language === "en"
+              ? "Meta accepted the WhatsApp request. Follow its delivery status in WhatsApp Logs."
+              : "Meta imepokea ombi la WhatsApp. Fuatilia hali ya delivery kwenye WhatsApp Logs.",
 
           messageId:
             result.messageId,
+
+          acceptanceStatus:
+            result.acceptanceStatus,
 
           recipient:
             result.recipientPhone,

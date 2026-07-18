@@ -442,6 +442,24 @@ export async function POST(
           getFailureMessage(
             statusRecord.errors
           );
+
+        console.error(
+          "WhatsApp delivery failed:",
+          {
+            messageId,
+            recipientId:
+              statusRecord.recipient_id,
+            reason:
+              updateData.error_message,
+            errorCodes:
+              statusRecord.errors
+                ?.map(
+                  (statusError) =>
+                    statusError.code
+                )
+                .filter(Boolean),
+          }
+        );
       }
 
       const {

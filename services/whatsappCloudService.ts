@@ -21,6 +21,7 @@ type SendInvitationTemplateInput = {
 
 type WhatsAppApiMessage = {
   id: string;
+  message_status?: string;
 };
 
 type WhatsAppApiResponse = {
@@ -294,6 +295,11 @@ export async function sendWhatsAppInvitationTemplate({
     responseData.messages?.[0]
       ?.id;
 
+  const acceptanceStatus =
+    responseData.messages?.[0]
+      ?.message_status ||
+    "accepted";
+
   if (!messageId) {
     throw new Error(
       "WhatsApp Cloud API haikurudisha message ID."
@@ -304,5 +310,6 @@ export async function sendWhatsAppInvitationTemplate({
     success: true,
     messageId,
     recipientPhone,
+    acceptanceStatus,
   };
 }

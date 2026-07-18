@@ -19,6 +19,7 @@ type SendWhatsAppResponse = {
   message: string;
   messageId?: string;
   recipient?: string;
+  acceptanceStatus?: string;
 };
 
 export default function SendWhatsAppCloudButton({
@@ -120,7 +121,7 @@ export default function SendWhatsAppCloudButton({
 
       setSuccessMessage(
         responseData.message ||
-          "WhatsApp invitation imetumwa."
+          "Meta imepokea ombi la WhatsApp. Fuatilia hali ya delivery kwenye WhatsApp Logs."
       );
     } catch (error) {
       console.error(
