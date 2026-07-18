@@ -8,7 +8,12 @@ import {
 
 import { useRouter } from "next/navigation";
 
+import ThemePalettePicker, {
+  type EventThemePalette,
+} from "@/components/events/ThemePalettePicker";
+
 import {
+  DEFAULT_EVENT_THEME,
   createEvent,
   uploadEventCover,
   type EventLanguage,
@@ -73,6 +78,9 @@ type CreateEventForm = {
   reception_map_url: string;
 
   dress_code: string;
+  theme_primary_color: string;
+  theme_secondary_color: string;
+  theme_accent_color: string;
 };
 
 const initialForm: CreateEventForm = {
@@ -95,6 +103,12 @@ const initialForm: CreateEventForm = {
   reception_map_url: "",
 
   dress_code: "",
+  theme_primary_color:
+    DEFAULT_EVENT_THEME.primaryColor,
+  theme_secondary_color:
+    DEFAULT_EVENT_THEME.secondaryColor,
+  theme_accent_color:
+    DEFAULT_EVENT_THEME.accentColor,
 };
 
 export default function CreateEventPage() {
@@ -143,6 +157,23 @@ export default function CreateEventPage() {
         language === "en"
           ? "Wedding Ceremony"
           : "Ibada ya Ndoa",
+    }));
+
+    setErrorMessage("");
+  }
+
+  function applyDressCodePalette(
+    palette: EventThemePalette
+  ) {
+    setFormData((currentData) => ({
+      ...currentData,
+      dress_code: palette.dressCode,
+      theme_primary_color:
+        palette.primaryColor,
+      theme_secondary_color:
+        palette.secondaryColor,
+      theme_accent_color:
+        palette.accentColor,
     }));
 
     setErrorMessage("");
@@ -255,6 +286,15 @@ export default function CreateEventPage() {
 
         dress_code:
           formData.dress_code || undefined,
+
+        theme_primary_color:
+          formData.theme_primary_color,
+
+        theme_secondary_color:
+          formData.theme_secondary_color,
+
+        theme_accent_color:
+          formData.theme_accent_color,
 
         cover_image_url: coverImageUrl,
       });
@@ -378,6 +418,27 @@ export default function CreateEventPage() {
                 onChange={handleChange}
               />
             </div>
+          </FormSection>
+
+          <FormSection
+            title="Dress Code & Card Colours"
+            description="Chagua palette ili dress code na rangi za invitation card zibadilike pamoja."
+          >
+            <ThemePalettePicker
+              primaryColor={
+                formData.theme_primary_color
+              }
+              secondaryColor={
+                formData.theme_secondary_color
+              }
+              accentColor={
+                formData.theme_accent_color
+              }
+              disabled={isSaving}
+              onSelect={
+                applyDressCodePalette
+              }
+            />
           </FormSection>
 
           <FormSection
