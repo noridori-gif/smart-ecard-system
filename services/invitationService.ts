@@ -248,7 +248,8 @@ function normalizeInvitationTemplate(
   if (
     template === "elegant_gold" ||
     template === "luxury_envelope" ||
-    template === "modern_floral"
+    template === "modern_floral" ||
+    template === "royal_dark"
   ) {
     return template;
   }

@@ -10,7 +10,8 @@ export type InvitationTemplate =
   | "classic_photo"
   | "elegant_gold"
   | "luxury_envelope"
-  | "modern_floral";
+  | "modern_floral"
+  | "royal_dark";
 
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
   "classic_photo";
@@ -166,6 +167,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "elegant_gold",
   "luxury_envelope",
   "modern_floral",
+  "royal_dark",
 ];
 
 function normalizeInvitationTemplate(
