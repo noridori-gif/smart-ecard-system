@@ -1,6 +1,7 @@
 import {
   Document,
   Page,
+  StyleSheet,
   Text,
   View,
 } from "@react-pdf/renderer";
@@ -10,6 +11,7 @@ import type {
   ReportEvent,
   ReportGuest,
   ReportInvitation,
+  ReportWish,
 } from "@/services/reportService";
 
 import AttendanceTable from "./AttendanceTable";
@@ -23,7 +25,95 @@ type EventReportPDFProps = {
   summary: EventReportSummary;
   guests: ReportGuest[];
   invitations: ReportInvitation[];
+  wishes: ReportWish[];
 };
+
+const wishStyles = StyleSheet.create({
+  section: { marginTop: 18 },
+  title: {
+    color: "#0f172a",
+    fontSize: 18,
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  subtitle: {
+    color: "#64748b",
+    fontSize: 9,
+    marginBottom: 14,
+  },
+  summary: {
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  summaryLabel: {
+    color: "#1e3a8a",
+    fontSize: 9,
+    fontWeight: 700,
+  },
+  summaryValue: {
+    color: "#2563eb",
+    fontSize: 16,
+    fontWeight: 700,
+  },
+  list: { gap: 9 },
+  card: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderRadius: 7,
+    borderWidth: 1,
+    padding: 12,
+  },
+  cardHeader: {
+    alignItems: "center",
+    borderBottomColor: "#e2e8f0",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    paddingBottom: 7,
+  },
+  guestName: {
+    color: "#0f172a",
+    fontSize: 11,
+    fontWeight: 700,
+  },
+  date: {
+    color: "#64748b",
+    fontSize: 8,
+  },
+  message: {
+    color: "#334155",
+    fontSize: 10,
+    lineHeight: 1.55,
+  },
+  emptyState: {
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    borderStyle: "dashed",
+    borderWidth: 1,
+    padding: 28,
+  },
+  emptyTitle: {
+    color: "#334155",
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  emptyText: {
+    color: "#64748b",
+    fontSize: 9,
+    marginTop: 5,
+  },
+});
 
 function formatEventDate(value: string) {
   if (!value) {
@@ -74,6 +164,20 @@ function formatGeneratedDate() {
   }).format(new Date());
 }
 
+function formatWishDate(value: string) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function PageHeader({
   eventTitle,
 }: {
@@ -114,12 +218,13 @@ export default function EventReportPDF({
   summary,
   guests,
   invitations,
+  wishes,
 }: EventReportPDFProps) {
   return (
     <Document
       title={`${event.title} Event Report`}
       author="Smart Event Pass"
-      subject="Event attendance, guest and RSVP report"
+      subject="Event attendance, guest, RSVP and guest wishes report"
       creator="Smart Event Pass"
     >
       {/* COVER PAGE */}
@@ -137,7 +242,7 @@ export default function EventReportPDF({
           </Text>
 
           <Text style={pdfStyles.reportLabel}>
-            Attendance, Guests and RSVP
+            Attendance, Guests, RSVP and Wishes
           </Text>
         </View>
 
@@ -298,6 +403,16 @@ export default function EventReportPDF({
                 {summary.declined}
               </Text>
             </View>
+
+            <View style={pdfStyles.summaryCard}>
+              <Text style={pdfStyles.summaryCardLabel}>
+                Guest Wishes
+              </Text>
+
+              <Text style={pdfStyles.summaryCardValue}>
+                {wishes.length}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -428,6 +543,73 @@ export default function EventReportPDF({
         <InvitationTable
           invitations={invitations}
         />
+
+        <PageFooter />
+      </Page>
+
+      {/* GUEST WISHES */}
+      <Page
+        size="A4"
+        style={pdfStyles.page}
+        wrap
+      >
+        <PageHeader eventTitle={event.title} />
+
+        <View style={wishStyles.section}>
+          <Text style={wishStyles.title}>
+            Guest Wishes
+          </Text>
+
+          <Text style={wishStyles.subtitle}>
+            Messages and well wishes submitted by invited guests.
+          </Text>
+
+          <View style={wishStyles.summary}>
+            <Text style={wishStyles.summaryLabel}>
+              Total wishes received
+            </Text>
+
+            <Text style={wishStyles.summaryValue}>
+              {wishes.length}
+            </Text>
+          </View>
+
+          {wishes.length > 0 ? (
+            <View style={wishStyles.list}>
+              {wishes.map((wish) => (
+                <View
+                  key={wish.id}
+                  style={wishStyles.card}
+                  minPresenceAhead={40}
+                >
+                  <View style={wishStyles.cardHeader}>
+                    <Text style={wishStyles.guestName}>
+                      {wish.guest_name || "Guest"}
+                    </Text>
+
+                    <Text style={wishStyles.date}>
+                      {formatWishDate(wish.updated_at)}
+                    </Text>
+                  </View>
+
+                  <Text style={wishStyles.message}>
+                    {wish.message}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={wishStyles.emptyState}>
+              <Text style={wishStyles.emptyTitle}>
+                No guest wishes received
+              </Text>
+
+              <Text style={wishStyles.emptyText}>
+                Guest messages will appear here once submitted.
+              </Text>
+            </View>
+          )}
+        </View>
 
         <PageFooter />
       </Page>

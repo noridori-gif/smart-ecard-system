@@ -742,6 +742,7 @@ export default function ReportsPage() {
             summary={summary}
             guests={guests}
             invitations={invitations}
+            wishes={wishes}
             disabled={loadingReport}
           />
         </div>

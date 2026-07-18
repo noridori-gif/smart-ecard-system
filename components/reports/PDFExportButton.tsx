@@ -8,6 +8,7 @@ import type {
   ReportEvent,
   ReportGuest,
   ReportInvitation,
+  ReportWish,
 } from "@/services/reportService";
 
 import EventReportPDF from "./EventReportPDF";
@@ -17,6 +18,7 @@ type PDFExportButtonProps = {
   summary: EventReportSummary;
   guests: ReportGuest[];
   invitations: ReportInvitation[];
+  wishes: ReportWish[];
   disabled?: boolean;
 };
 
@@ -32,6 +34,7 @@ export default function PDFExportButton({
   summary,
   guests,
   invitations,
+  wishes,
   disabled = false,
 }: PDFExportButtonProps) {
   const [isGenerating, setIsGenerating] =
@@ -59,10 +62,12 @@ export default function PDFExportButton({
           summary={summary}
           guests={guests}
           invitations={invitations}
+          wishes={wishes}
         />
       );
 
-      const blob = await pdf(pdfDocument).toBlob();
+      const blob =
+        await pdf(pdfDocument).toBlob();
 
       const downloadUrl =
         URL.createObjectURL(blob);
@@ -77,16 +82,21 @@ export default function PDFExportButton({
         event.event_date || "report";
 
       downloadLink.href = downloadUrl;
+
       downloadLink.download =
         `${eventName}_${eventDate}_Report.pdf`;
 
-      document.body.appendChild(downloadLink);
+      document.body.appendChild(
+        downloadLink
+      );
 
       downloadLink.click();
       downloadLink.remove();
 
       window.setTimeout(() => {
-        URL.revokeObjectURL(downloadUrl);
+        URL.revokeObjectURL(
+          downloadUrl
+        );
       }, 1000);
     } catch (error) {
       console.error(
@@ -116,7 +126,9 @@ export default function PDFExportButton({
         }
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
-        <span>📄</span>
+        <span aria-hidden="true">
+          📄
+        </span>
 
         <span>
           {isGenerating
@@ -126,7 +138,10 @@ export default function PDFExportButton({
       </button>
 
       {errorMessage && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {errorMessage}
         </div>
       )}
