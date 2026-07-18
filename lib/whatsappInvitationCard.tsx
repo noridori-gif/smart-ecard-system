@@ -10,6 +10,7 @@ export type WhatsAppCardTemplate =
   | "modern_floral"
   | "luxury_envelope"
   | "minimal_ivory"
+  | "midnight_luxe"
   | "royal_dark";
 
 export type WhatsAppCardData = {
@@ -111,6 +112,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "modern_floral" ||
     template === "luxury_envelope" ||
     template === "minimal_ivory" ||
+    template === "midnight_luxe" ||
     template === "royal_dark"
   ) {
     return template;
@@ -311,6 +313,8 @@ function renderWhatsAppCard(
       return <LuxuryEnvelopeCard data={data} />;
     case "minimal_ivory":
       return <MinimalIvoryCard data={data} />;
+    case "midnight_luxe":
+      return <MidnightLuxeCard data={data} />;
     case "royal_dark":
       return <RoyalDarkCard data={data} />;
     default:
@@ -490,6 +494,26 @@ function AfricanRoyalCard({ data }: { data: RenderData }) {
         <div style={{ position: "absolute", left: 58, bottom: 64, width: 480, display: "flex", flexDirection: "column", padding: "28px 30px", borderLeft: `8px solid ${data.accent}`, backgroundColor: hasImage ? "rgba(0,0,0,0.66)" : data.primary, color: "#FFFFFF" }}>
           <Details data={data} color="#FFFFFF" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MidnightLuxeCard({ data }: { data: RenderData }) {
+  const hasImage = Boolean(data.coverImageDataUrl);
+
+  return (
+    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", overflow: "hidden", background: `linear-gradient(150deg, ${data.primary}, #05070D)`, color: "#FFFFFF" }}>
+      {hasImage ? <CoverImage data={data} /> : null}
+      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", background: hasImage ? "linear-gradient(180deg, rgba(2,6,23,.12), rgba(2,6,23,.16) 40%, rgba(2,6,23,.95))" : `radial-gradient(circle at 75% 18%, ${data.accent}, transparent 28%)`, opacity: hasImage ? 1 : 0.9 }} />
+      <div style={{ position: "absolute", right: -70, top: 80, width: 410, height: 410, display: "flex", borderRadius: 205, border: `2px solid ${data.accent}`, boxShadow: `0 0 90px ${data.accent}`, opacity: 0.48 }} />
+      <div style={{ position: "absolute", right: 30, top: 180, width: 210, height: 210, display: "flex", borderRadius: 105, border: `2px solid ${data.accent}`, opacity: 0.42 }} />
+      {!hasImage ? <div style={{ position: "absolute", right: 155, top: 230, display: "flex", color: "#FFFFFF", fontFamily: "Georgia, serif", fontSize: 120, opacity: 0.78 }}>ML</div> : null}
+      <div style={{ position: "absolute", left: 70, top: 66, width: 940, display: "flex", justifyContent: "space-between" }}><Brand color="#FFFFFF" /><div style={{ display: "flex", color: data.accent, fontFamily: "Arial, sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: 5 }}>MIDNIGHT LUXE</div></div>
+      <div style={{ position: "absolute", left: 92, right: 120, bottom: 82, display: "flex", flexDirection: "column", padding: "44px 52px", borderLeft: `8px solid ${data.accent}`, backgroundColor: data.secondary, color: data.secondaryText, boxShadow: "0 25px 75px rgba(0,0,0,.42)" }}>
+        <div style={{ display: "flex", color: data.primary, fontFamily: "Arial, sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: 4 }}>{data.date}</div>
+        <div style={{ display: "flex", maxWidth: 780, marginTop: 22, color: data.primary, fontFamily: "Georgia, serif", fontSize: Math.min(82, data.titleSize + 5), lineHeight: 0.98 }}>{data.title}</div>
+        <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 32, paddingTop: 28, borderTop: `2px solid ${data.accent}` }}><Guest data={data} color={data.primary} /><div style={{ display: "flex", maxWidth: 330 }}><Details data={data} color={data.secondaryText} /></div></div>
       </div>
     </div>
   );

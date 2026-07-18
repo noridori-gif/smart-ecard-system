@@ -92,6 +92,13 @@ const invitationTemplates: Array<{
       "Premium African editorial yenye geometric patterns, asymmetrical photo na royal details.",
     icon: "◆",
   },
+  {
+    value: "midnight_luxe",
+    name: "Midnight Luxe",
+    description:
+      "Cinematic evening-gala layout yenye layered hero, floating title panel na fine-line glow.",
+    icon: "☾",
+  },
 ];
 
 type EditEventForm = {
@@ -1921,6 +1928,20 @@ function ThemePreview({
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "midnight_luxe") {
+    return (
+      <div className="relative mt-7 min-h-80 overflow-hidden border border-white/20 bg-slate-950 shadow-xl">
+        <div className="absolute inset-0 opacity-75" style={{ background: `radial-gradient(circle at 78% 18%, ${accentColor}88, transparent 34%), linear-gradient(145deg, ${primaryColor}, #080b13 70%)` }} />
+        <svg viewBox="0 0 500 300" className="absolute inset-0 h-full w-full opacity-40" aria-hidden="true"><path d="M15 275C110 95 265 45 485 22M100 300C185 145 315 95 500 80" fill="none" stroke={accentColor} strokeWidth="1" /></svg>
+        <div className="absolute bottom-6 left-6 right-20 border-l-4 p-6 backdrop-blur-sm" style={{ borderColor: accentColor, backgroundColor: `${secondaryColor}E8` }}>
+          <p className="text-[8px] font-bold uppercase tracking-[0.38em]" style={{ color: primaryColor }}>Midnight Luxe · Invitation Preview</p>
+          <h3 className="mt-3 break-words font-serif text-4xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+          <p className="mt-4 text-xs text-slate-600">{dressCode || "Your dress code"}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (template === "african_royal") {
     return (
       <div className="mt-7 overflow-hidden border-4 border-white shadow-lg" style={{ backgroundColor: primaryColor }}>

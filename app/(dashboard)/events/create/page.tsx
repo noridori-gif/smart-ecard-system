@@ -77,6 +77,13 @@ const invitationTemplates: Array<{
       "Premium African editorial yenye geometric patterns, asymmetrical photo na royal details.",
     icon: "◆",
   },
+  {
+    value: "midnight_luxe",
+    name: "Midnight Luxe",
+    description:
+      "Cinematic evening-gala layout yenye layered hero, floating title panel na fine-line glow.",
+    icon: "☾",
+  },
 ];
 
 type CreateEventForm = {
@@ -447,6 +454,14 @@ export default function CreateEventPage() {
                 accentColor={formData.theme_accent_color}
               />
             )}
+            {formData.invitation_template === "midnight_luxe" && (
+              <MidnightLuxePreview
+                title={formData.title}
+                primaryColor={formData.theme_primary_color}
+                secondaryColor={formData.theme_secondary_color}
+                accentColor={formData.theme_accent_color}
+              />
+            )}
           </FormSection>
 
           <FormSection
@@ -721,6 +736,24 @@ function AfricanRoyalPreview({
           </svg>
           <div className="absolute bottom-4 right-4 h-20 w-14 border-4 border-white/80" style={{ backgroundColor: primaryColor }} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MidnightLuxePreview({ title, primaryColor, secondaryColor, accentColor }: {
+  title: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="relative mt-6 min-h-72 overflow-hidden border border-white/20 bg-slate-950 shadow-xl">
+      <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 75% 20%, ${accentColor}88, transparent 34%), linear-gradient(145deg, ${primaryColor}, #080b13 70%)` }} />
+      <svg viewBox="0 0 400 240" className="absolute inset-0 h-full w-full opacity-40" aria-hidden="true"><path d="M20 210C95 80 205 35 380 25M85 240C150 115 245 75 400 72" fill="none" stroke={accentColor} strokeWidth="1" /></svg>
+      <div className="absolute bottom-5 left-5 right-16 border-l-4 p-5 text-white backdrop-blur-sm" style={{ borderColor: accentColor, backgroundColor: `${secondaryColor}DD` }}>
+        <p className="text-[8px] font-bold uppercase tracking-[0.35em]" style={{ color: primaryColor }}>Midnight Luxe</p>
+        <h3 className="mt-3 break-words font-serif text-3xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
       </div>
     </div>
   );
