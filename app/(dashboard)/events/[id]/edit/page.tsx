@@ -14,6 +14,9 @@ import {
 
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import ThemePalettePicker, {
+  type EventThemePalette,
+} from "@/components/events/ThemePalettePicker";
 
 import {
   DEFAULT_EVENT_THEME,
@@ -548,6 +551,31 @@ export default function EditEventPage() {
     );
 
     setSuccessMessage("");
+  }
+
+  function applyDressCodePalette(
+    palette: EventThemePalette
+  ) {
+    setFormData(
+      (currentData) => ({
+        ...currentData,
+
+        dress_code:
+          palette.dressCode,
+
+        theme_primary_color:
+          palette.primaryColor,
+
+        theme_secondary_color:
+          palette.secondaryColor,
+
+        theme_accent_color:
+          palette.accentColor,
+      })
+    );
+
+    setSuccessMessage("");
+    setErrorMessage("");
   }
 
   function handleImageChange(
@@ -1248,6 +1276,27 @@ export default function EditEventPage() {
               title="Invitation Theme"
               description="Badilisha rangi za invitation ili zifanane na dress code."
             />
+
+            <div className="mt-6">
+              <ThemePalettePicker
+                primaryColor={
+                  formData
+                    .theme_primary_color
+                }
+                secondaryColor={
+                  formData
+                    .theme_secondary_color
+                }
+                accentColor={
+                  formData
+                    .theme_accent_color
+                }
+                disabled={isSaving}
+                onSelect={
+                  applyDressCodePalette
+                }
+              />
+            </div>
 
             <p className="mt-6 text-sm font-semibold text-slate-700">
               Quick Theme Presets
