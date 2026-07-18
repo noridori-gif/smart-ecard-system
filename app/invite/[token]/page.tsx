@@ -11,6 +11,7 @@ import {
 } from "next/navigation";
 
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
+import AfricanRoyal from "@/components/invitation/templates/AfricanRoyal";
 import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
 import ElegantGold from "@/components/invitation/templates/ElegantGold";
 import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
@@ -214,6 +215,11 @@ export default async function InvitationPage({
       />
 
       {template ===
+      "african_royal" ? (
+        <AfricanRoyal
+          {...templateProps}
+        />
+      ) : template ===
       "luxury_envelope" ? (
         <LuxuryEnvelope
           {...templateProps}

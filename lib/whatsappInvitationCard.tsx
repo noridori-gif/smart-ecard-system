@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import type { PublicInvitation } from "@/services/invitationService";
 
 export type WhatsAppCardTemplate =
+  | "african_royal"
   | "classic_photo"
   | "elegant_gold"
   | "modern_floral"
@@ -105,6 +106,7 @@ export function normalizeWhatsAppCardTemplate(
   template: string | null | undefined
 ): WhatsAppCardTemplate {
   if (
+    template === "african_royal" ||
     template === "elegant_gold" ||
     template === "modern_floral" ||
     template === "luxury_envelope" ||
@@ -299,6 +301,8 @@ function renderWhatsAppCard(
   data: RenderData
 ): ReactElement {
   switch (template) {
+    case "african_royal":
+      return <AfricanRoyalCard data={data} />;
     case "elegant_gold":
       return <ElegantGoldCard data={data} />;
     case "modern_floral":
@@ -453,6 +457,39 @@ function Details({
         }}
       >
         {data.venue}
+      </div>
+    </div>
+  );
+}
+
+function AfricanRoyalCard({ data }: { data: RenderData }) {
+  const hasImage = Boolean(data.coverImageDataUrl);
+
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden", backgroundColor: data.primary, color: "#FFFFFF" }}>
+      <div style={{ width: 440, height: "100%", position: "relative", display: "flex", flexDirection: "column", justifyContent: "space-between", overflow: "hidden", padding: "72px 54px 64px", background: `linear-gradient(160deg, ${data.primary}, #111827)` }}>
+        <div style={{ position: "absolute", left: -100, top: 190, width: 330, height: 330, display: "flex", transform: "rotate(45deg)", border: `28px solid ${data.accent}`, opacity: 0.2 }} />
+        <Brand color={data.accent} />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", color: data.accent, fontFamily: "Arial, sans-serif", fontSize: 20, fontWeight: 700, letterSpacing: 4 }}>AFRICAN ROYAL</div>
+          <div style={{ display: "flex", maxWidth: 340, marginTop: 28, fontFamily: "Georgia, serif", fontSize: Math.min(67, data.titleSize), lineHeight: 0.98 }}>{data.title}</div>
+          <div style={{ width: 92, height: 7, display: "flex", marginTop: 34, backgroundColor: data.accent }} />
+        </div>
+        <Guest data={data} color="#FFFFFF" />
+      </div>
+      <div style={{ flex: 1, height: "100%", position: "relative", display: "flex", overflow: "hidden", background: hasImage ? data.secondary : `linear-gradient(145deg, ${data.secondary}, ${data.accent})` }}>
+        {hasImage ? <CoverImage data={data} /> : null}
+        {!hasImage ? (
+          <>
+            <div style={{ position: "absolute", left: 115, top: 180, width: 390, height: 390, display: "flex", border: `22px solid ${data.primary}`, transform: "rotate(45deg)", opacity: 0.5 }} />
+            <div style={{ position: "absolute", left: 205, top: 315, display: "flex", color: data.primary, fontFamily: "Georgia, serif", fontSize: 120 }}>AR</div>
+          </>
+        ) : null}
+        <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex", background: hasImage ? "linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.72))" : "transparent" }} />
+        <div style={{ position: "absolute", right: 48, top: 48, width: 145, height: 145, display: "flex", border: `12px solid ${data.accent}` }} />
+        <div style={{ position: "absolute", left: 58, bottom: 64, width: 480, display: "flex", flexDirection: "column", padding: "28px 30px", borderLeft: `8px solid ${data.accent}`, backgroundColor: hasImage ? "rgba(0,0,0,0.66)" : data.primary, color: "#FFFFFF" }}>
+          <Details data={data} color="#FFFFFF" />
+        </div>
       </div>
     </div>
   );

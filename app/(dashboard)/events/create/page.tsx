@@ -70,6 +70,13 @@ const invitationTemplates: Array<{
       "Editorial ivory stationery yenye portrait ndogo, itinerary na typography safi.",
     icon: "◯",
   },
+  {
+    value: "african_royal",
+    name: "African Royal",
+    description:
+      "Premium African editorial yenye geometric patterns, asymmetrical photo na royal details.",
+    icon: "◆",
+  },
 ];
 
 type CreateEventForm = {
@@ -432,6 +439,14 @@ export default function CreateEventPage() {
                 onChange={handleChange}
               />
             </div>
+            {formData.invitation_template === "african_royal" && (
+              <AfricanRoyalPreview
+                title={formData.title}
+                primaryColor={formData.theme_primary_color}
+                secondaryColor={formData.theme_secondary_color}
+                accentColor={formData.theme_accent_color}
+              />
+            )}
           </FormSection>
 
           <FormSection
@@ -679,6 +694,37 @@ type FieldProps = {
     event: ChangeEvent<HTMLInputElement>
   ) => void;
 };
+
+function AfricanRoyalPreview({
+  title,
+  primaryColor,
+  secondaryColor,
+  accentColor,
+}: {
+  title: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="mt-6 overflow-hidden border-4 border-white shadow-lg" style={{ backgroundColor: primaryColor }}>
+      <div className="grid min-h-64 grid-cols-[1.05fr_0.95fr]">
+        <div className="relative flex flex-col justify-between overflow-hidden p-6 text-white">
+          <div className="absolute -left-10 top-7 h-32 w-32 rotate-45 border-8 opacity-25" style={{ borderColor: accentColor }} />
+          <p className="relative text-[8px] font-bold uppercase tracking-[0.32em]">African Royal</p>
+          <h3 className="relative break-words font-serif text-3xl leading-none">{title || "Event Title"}</h3>
+          <div className="relative h-1 w-16" style={{ backgroundColor: accentColor }} />
+        </div>
+        <div className="relative m-3 ml-0 overflow-hidden" style={{ backgroundColor: secondaryColor }}>
+          <svg viewBox="0 0 120 180" className="absolute inset-0 h-full w-full opacity-55" aria-hidden="true">
+            <path d="M0 30h30V0h30v30h30V0h30v60H90v30h30v30H90v60H60v-30H30v30H0v-60h30V90H0z" fill="none" stroke={accentColor} strokeWidth="5" />
+          </svg>
+          <div className="absolute bottom-4 right-4 h-20 w-14 border-4 border-white/80" style={{ backgroundColor: primaryColor }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Field({
   label,

@@ -85,6 +85,13 @@ const invitationTemplates: Array<{
       "Editorial ivory stationery yenye portrait ndogo, itinerary na typography safi.",
     icon: "◯",
   },
+  {
+    value: "african_royal",
+    name: "African Royal",
+    description:
+      "Premium African editorial yenye geometric patterns, asymmetrical photo na royal details.",
+    icon: "◆",
+  },
 ];
 
 type EditEventForm = {
@@ -1914,6 +1921,27 @@ function ThemePreview({
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "african_royal") {
+    return (
+      <div className="mt-7 overflow-hidden border-4 border-white shadow-lg" style={{ backgroundColor: primaryColor }}>
+        <div className="grid min-h-72 grid-cols-[1.1fr_0.9fr]">
+          <div className="relative flex flex-col justify-between overflow-hidden p-7 text-white">
+            <div className="absolute -left-12 top-8 h-36 w-36 rotate-45 border-[10px] opacity-25" style={{ borderColor: accentColor }} />
+            <p className="relative text-[8px] font-bold uppercase tracking-[0.35em]">African Royal · Invitation Preview</p>
+            <h3 className="relative break-words font-serif text-4xl leading-none">{title || "Event Title"}</h3>
+            <p className="relative text-xs">{dressCode || "Your dress code"}</p>
+          </div>
+          <div className="relative m-3 ml-0 overflow-hidden" style={{ backgroundColor: secondaryColor }}>
+            <svg viewBox="0 0 120 180" className="absolute inset-0 h-full w-full opacity-55" aria-hidden="true">
+              <path d="M0 30h30V0h30v30h30V0h30v60H90v30h30v30H90v60H60v-30H30v30H0v-60h30V90H0z" fill="none" stroke={accentColor} strokeWidth="5" />
+            </svg>
+            <div className="absolute bottom-5 right-5 h-24 w-16 border-4 border-white/80" style={{ backgroundColor: primaryColor }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (template === "minimal_ivory") {
     return (
       <div className="relative mt-7 overflow-hidden border border-[#d8cdbb] bg-[#fbf7ed] p-3 shadow-sm">

@@ -7,6 +7,7 @@ export type EventLanguage =
   | "en";
 
 export type InvitationTemplate =
+  | "african_royal"
   | "classic_photo"
   | "elegant_gold"
   | "luxury_envelope"
@@ -164,6 +165,7 @@ const MAX_INVITATION_MESSAGE_LENGTH =
   600;
 
 const INVITATION_TEMPLATES: InvitationTemplate[] = [
+  "african_royal",
   "classic_photo",
   "elegant_gold",
   "luxury_envelope",
