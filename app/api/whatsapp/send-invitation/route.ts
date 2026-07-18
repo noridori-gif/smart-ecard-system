@@ -240,6 +240,8 @@ async function assertPublicCardImage(
       "WhatsApp card image si PNG halali au ukubwa wake haukubaliki."
     );
   }
+
+  return imageBuffer.byteLength;
 }
 
 export async function POST(
@@ -563,8 +565,22 @@ export async function POST(
       )}/card?v=${Date.now()}`;
 
     try {
-      await assertPublicCardImage(
-        cardImageUrl
+      const imageBytes =
+        await assertPublicCardImage(
+          cardImageUrl
+        );
+
+      console.info(
+        "WhatsApp card preflight passed:",
+        {
+          path:
+            "/api/invitations/:token/card",
+          status: 200,
+          contentType:
+            "image/png",
+          bytes:
+            imageBytes,
+        }
       );
     } catch (cardError) {
       console.error(
@@ -701,7 +717,7 @@ export async function POST(
 
       if (updateLogError) {
         console.error(
-          "WhatsApp sent log update error:",
+          "WhatsApp accepted log update error:",
           updateLogError
         );
       }

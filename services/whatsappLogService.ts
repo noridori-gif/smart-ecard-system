@@ -16,6 +16,7 @@ export type WhatsAppMessageLog = {
   message_id: string | null;
   status: WhatsAppMessageStatus;
   error_message: string | null;
+  error_code: string | null;
   sent_at: string | null;
   delivered_at: string | null;
   read_at: string | null;
@@ -120,7 +121,8 @@ export async function getWhatsAppMessageLogs(): Promise<
       {
         ascending: false,
       }
-    );
+    )
+    .limit(200);
 
   if (error) {
     throw new Error(
@@ -168,6 +170,12 @@ export async function getWhatsAppMessageLogs(): Promise<
 
         error_message:
           log.error_message,
+
+        error_code:
+          log.error_message
+            ?.match(
+              /(?:Meta error|Error code)\s+(\d+)/i
+            )?.[1] ?? null,
 
         sent_at:
           log.sent_at,

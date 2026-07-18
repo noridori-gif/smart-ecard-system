@@ -11,11 +11,13 @@ import {
 } from "next/navigation";
 
 import {
+  getWhatsAppConfigurationStatus,
   getUserSettingsProfile,
   logoutCurrentUser,
   updateAccountPassword,
   updateProfileName,
   type UserSettingsProfile,
+  type WhatsAppConfigurationStatus,
 } from "@/services/settingsService";
 
 type MessageState = {
@@ -135,6 +137,16 @@ export default function SettingsPage() {
     setPageError,
   ] = useState("");
 
+  const [
+    whatsappStatus,
+    setWhatsAppStatus,
+  ] = useState<WhatsAppConfigurationStatus | null>(null);
+
+  const [
+    whatsappStatusError,
+    setWhatsAppStatusError,
+  ] = useState("");
+
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
@@ -148,6 +160,26 @@ export default function SettingsPage() {
         setFullName(
           userProfile.fullName
         );
+
+        try {
+          const integrationStatus =
+            await getWhatsAppConfigurationStatus();
+
+          setWhatsAppStatus(
+            integrationStatus
+          );
+        } catch (statusError) {
+          console.error(
+            "Load WhatsApp configuration status error:",
+            statusError
+          );
+
+          setWhatsAppStatusError(
+            statusError instanceof Error
+              ? statusError.message
+              : "WhatsApp configuration status haikuweza kuthibitishwa."
+          );
+        }
       } catch (error) {
         console.error(
           "Load settings error:",
@@ -629,48 +661,102 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-              Pending Meta
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                whatsappStatus
+                  ?.sendConfigurationDetected
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {whatsappStatus
+                ?.sendConfigurationDetected
+                ? "Configuration detected"
+                : "Not verified"}
             </span>
           </div>
 
           <div className="mt-5 space-y-4">
             <IntegrationStatus
               label="Send API Route"
-              complete
+              status="available"
             />
 
             <IntegrationStatus
               label="Webhook Route"
-              complete
+              status="available"
             />
 
             <IntegrationStatus
               label="Message Logs"
-              complete
+              status="available"
             />
 
             <IntegrationStatus
               label="Meta Verification"
-              complete={false}
+              status="not_verified"
             />
 
             <IntegrationStatus
               label="Approved Templates"
-              complete={false}
+              status={
+                !whatsappStatus
+                  ? "not_verified"
+                  : whatsappStatus
+                        .templateNamesConfigured
+                    ? "not_verified"
+                    : "not_configured"
+              }
             />
 
             <IntegrationStatus
               label="Production Access Token"
-              complete={false}
+              status={
+                !whatsappStatus
+                  ? "not_verified"
+                  : whatsappStatus
+                        .accessTokenConfigured
+                    ? "configured"
+                    : "not_configured"
+              }
+            />
+
+            <IntegrationStatus
+              label="Phone Number ID"
+              status={
+                !whatsappStatus
+                  ? "not_verified"
+                  : whatsappStatus
+                        .phoneNumberConfigured
+                    ? "configured"
+                    : "not_configured"
+              }
+            />
+
+            <IntegrationStatus
+              label="Webhook Environment"
+              status={
+                !whatsappStatus
+                  ? "not_verified"
+                  : whatsappStatus
+                        .webhookEnvironmentConfigured
+                    ? "configured"
+                    : "not_configured"
+              }
             />
           </div>
 
-          <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-            Manual WhatsApp na SMS zinaendelea kufanya kazi.
-            Send via API itaanza baada ya Meta verification na
-            templates kukamilika.
+          <p className="mt-5 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-blue-800">
+            Configured inaonyesha environment variable ipo bila
+            kuonyesha thamani yake. Template approval na webhook
+            verification lazima zithibitishwe kwenye Meta dashboard.
           </p>
+
+          {whatsappStatusError && (
+            <p className="mt-3 rounded-xl bg-slate-100 p-3 text-xs font-medium text-slate-600">
+              {whatsappStatusError}
+            </p>
+          )}
         </div>
       </section>
 
@@ -742,11 +828,35 @@ function SettingDetail({
 
 function IntegrationStatus({
   label,
-  complete,
+  status,
 }: {
   label: string;
-  complete: boolean;
+  status:
+    | "available"
+    | "configured"
+    | "not_configured"
+    | "not_verified";
 }) {
+  const statusStyles = {
+    available:
+      "bg-emerald-100 text-emerald-700",
+    configured:
+      "bg-blue-100 text-blue-700",
+    not_configured:
+      "bg-red-100 text-red-700",
+    not_verified:
+      "bg-slate-100 text-slate-600",
+  };
+
+  const statusLabels = {
+    available: "Available",
+    configured: "Configured",
+    not_configured:
+      "Not configured",
+    not_verified:
+      "Not verified",
+  };
+
   return (
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm font-semibold text-slate-700">
@@ -754,15 +864,9 @@ function IntegrationStatus({
       </p>
 
       <span
-        className={`rounded-full px-3 py-1 text-xs font-bold ${
-          complete
-            ? "bg-emerald-100 text-emerald-700"
-            : "bg-slate-100 text-slate-500"
-        }`}
+        className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyles[status]}`}
       >
-        {complete
-          ? "Ready"
-          : "Pending"}
+        {statusLabels[status]}
       </span>
     </div>
   );

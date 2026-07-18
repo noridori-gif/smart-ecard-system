@@ -125,6 +125,14 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    href: "/whatsapp-logs",
+    label: "WhatsApp Logs",
+    icon: "💬",
+    allowedRoles: [
+      "admin",
+    ],
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: "⚙️",

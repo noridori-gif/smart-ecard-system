@@ -43,6 +43,39 @@ type WhatsAppApiResponse = {
   };
 };
 
+function getMetaApiError(
+  responseData: WhatsAppApiResponse
+) {
+  const error =
+    responseData.error;
+
+  if (!error) {
+    return "WhatsApp message haikuweza kutumwa.";
+  }
+
+  const metadata = [
+    error.code
+      ? `code ${error.code}`
+      : "",
+    error.error_subcode
+      ? `subcode ${error.error_subcode}`
+      : "",
+    error.fbtrace_id
+      ? `trace ${error.fbtrace_id}`
+      : "",
+  ].filter(Boolean);
+
+  return [
+    error.message ||
+      "WhatsApp message haikuweza kutumwa.",
+    metadata.length > 0
+      ? `(${metadata.join(", ")})`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 type TemplateTextParameter = {
   type: "text";
   text: string;
@@ -282,9 +315,9 @@ export async function sendWhatsAppInvitationTemplate({
     responseData.error
   ) {
     const apiMessage =
-      responseData.error
-        ?.message ||
-      "WhatsApp message haikuweza kutumwa.";
+      getMetaApiError(
+        responseData
+      );
 
     throw new Error(
       `WhatsApp Cloud API: ${apiMessage}`
@@ -305,6 +338,19 @@ export async function sendWhatsAppInvitationTemplate({
       "WhatsApp Cloud API haikurudisha message ID."
     );
   }
+
+  console.info(
+    "WhatsApp Cloud API accepted message:",
+    {
+      messageId,
+      acceptanceStatus,
+      hasMatchedContact:
+        Boolean(
+          responseData.contacts?.[0]
+            ?.wa_id
+        ),
+    }
+  );
 
   return {
     success: true,

@@ -145,17 +145,23 @@ function getFailureMessage(
 
   return errors
     .map((error) => {
-      return (
-        error.error_data
-          ?.details ||
-        error.message ||
+      const code =
+        error.code
+          ? `Meta error ${error.code}`
+          : "Meta error";
+
+      const title =
         error.title ||
-        (
-          error.code
-            ? `Error code ${error.code}`
-            : "Unknown error"
-        )
-      );
+        error.message ||
+        "Message failed";
+
+      const details =
+        error.error_data
+          ?.details;
+
+      return details
+        ? `${code}: ${title} - ${details}`
+        : `${code}: ${title}`;
     })
     .join(" | ");
 }
@@ -463,6 +469,7 @@ export async function POST(
       }
 
       const {
+        data: updatedLog,
         error: updateError,
       } = await supabase
         .from(
@@ -472,7 +479,9 @@ export async function POST(
         .eq(
           "message_id",
           messageId
-        );
+        )
+        .select("id")
+        .maybeSingle();
 
       if (updateError) {
         console.error(
@@ -482,6 +491,14 @@ export async function POST(
             status,
             error:
               updateError.message,
+          }
+        );
+      } else if (!updatedLog) {
+        console.error(
+          "WhatsApp status has no matching log:",
+          {
+            messageId,
+            status,
           }
         );
       }

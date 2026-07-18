@@ -25,11 +25,13 @@ const protectedRoutes = [
   "/import-history",
   "/users",
   "/settings",
+  "/whatsapp-logs",
 ];
 
 const adminOnlyRoutes = [
   "/users",
   "/settings",
+  "/whatsapp-logs",
 ];
 
 const organizerRoutes = [

@@ -160,7 +160,37 @@ export default function WhatsAppLogsPage() {
   }
 
   useEffect(() => {
-    loadLogs();
+    let isMounted = true;
+
+    getWhatsAppMessageLogs()
+      .then((messageLogs) => {
+        if (isMounted) {
+          setLogs(messageLogs);
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Load WhatsApp logs error:",
+          error
+        );
+
+        if (isMounted) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "WhatsApp history haikuweza kupatikana."
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const stats =
@@ -395,12 +425,15 @@ export default function WhatsAppLogsPage() {
         0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <p className="text-lg font-bold text-slate-800">
-            Hakuna WhatsApp logs
+            {logs.length === 0
+              ? "Hakuna WhatsApp logs"
+              : "Hakuna logs zinazolingana"}
           </p>
 
           <p className="mt-2 text-sm text-slate-500">
-            History itaonekana baada ya kutumia
-            Send via API.
+            {logs.length === 0
+              ? "History itaonekana mara tu Send via API inapoanza request."
+              : "Badilisha search au status filter kuona records nyingine."}
           </p>
         </div>
       ) : (
@@ -411,15 +444,15 @@ export default function WhatsAppLogsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <TableHeading>
-                      Guest
+                      Guest / Event
                     </TableHeading>
 
                     <TableHeading>
-                      Event
+                      Recipient
                     </TableHeading>
 
                     <TableHeading>
-                      Phone
+                      Meta Message ID
                     </TableHeading>
 
                     <TableHeading>
@@ -427,11 +460,11 @@ export default function WhatsAppLogsPage() {
                     </TableHeading>
 
                     <TableHeading>
-                      Sent
+                      Timeline
                     </TableHeading>
 
                     <TableHeading>
-                      Updated
+                      Meta Failure
                     </TableHeading>
                   </tr>
                 </thead>
@@ -448,19 +481,19 @@ export default function WhatsAppLogsPage() {
                             {log.guest_name}
                           </p>
 
-                          {log.error_message && (
-                            <p className="mt-1 max-w-xs text-xs text-red-600">
-                              {log.error_message}
-                            </p>
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4 text-sm text-slate-700">
-                          {log.event_title}
+                          <p className="mt-1 text-xs text-slate-500">
+                            {log.event_title}
+                          </p>
                         </td>
 
                         <td className="px-5 py-4 text-sm text-slate-700">
                           {log.recipient_phone}
+                        </td>
+
+                        <td className="max-w-[15rem] px-5 py-4 font-mono text-xs text-slate-600">
+                          <span className="break-all">
+                            {log.message_id || "Awaiting Meta ID"}
+                          </span>
                         </td>
 
                         <td className="px-5 py-4">
@@ -471,15 +504,28 @@ export default function WhatsAppLogsPage() {
                           />
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-slate-600">
-                          {formatDateTime(
-                            log.sent_at
-                          )}
+                        <td className="min-w-56 px-5 py-4 text-xs text-slate-600">
+                          <TimelineItem label="Queued" value={log.created_at} />
+                          <TimelineItem label="Sent" value={log.sent_at} />
+                          <TimelineItem label="Delivered" value={log.delivered_at} />
+                          <TimelineItem label="Read" value={log.read_at} />
+                          <TimelineItem label="Updated" value={log.updated_at} />
                         </td>
 
-                        <td className="px-5 py-4 text-sm text-slate-600">
-                          {formatDateTime(
-                            log.updated_at
+                        <td className="max-w-xs px-5 py-4 text-xs">
+                          {log.error_message ? (
+                            <div className="rounded-lg bg-red-50 p-3 text-red-700">
+                              {log.error_code && (
+                                <p className="font-bold">
+                                  Code {log.error_code}
+                                </p>
+                              )}
+                              <p className="mt-1 break-words">
+                                {log.error_message}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
                           )}
                         </td>
                       </tr>
@@ -524,6 +570,21 @@ export default function WhatsAppLogsPage() {
                     />
 
                     <LogDetail
+                      label="Meta Message ID"
+                      value={
+                        log.message_id ||
+                        "Awaiting Meta ID"
+                      }
+                    />
+
+                    <LogDetail
+                      label="Queued"
+                      value={formatDateTime(
+                        log.created_at
+                      )}
+                    />
+
+                    <LogDetail
                       label="Sent"
                       value={formatDateTime(
                         log.sent_at
@@ -543,12 +604,26 @@ export default function WhatsAppLogsPage() {
                         log.read_at
                       )}
                     />
+
+                    <LogDetail
+                      label="Updated"
+                      value={formatDateTime(
+                        log.updated_at
+                      )}
+                    />
                   </div>
 
                   {log.error_message && (
-                    <p className="mt-4 rounded-xl bg-red-50 p-3 text-xs font-medium text-red-700">
-                      {log.error_message}
-                    </p>
+                    <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">
+                      {log.error_code && (
+                        <p className="font-bold">
+                          Meta error code {log.error_code}
+                        </p>
+                      )}
+                      <p className="mt-1 font-medium">
+                        {log.error_message}
+                      </p>
+                    </div>
                   )}
                 </article>
               )
@@ -629,5 +704,22 @@ function LogDetail({
         {value}
       </p>
     </div>
+  );
+}
+
+function TimelineItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <p className="mb-1 last:mb-0">
+      <span className="font-semibold text-slate-500">
+        {label}:
+      </span>{" "}
+      {formatDateTime(value)}
+    </p>
   );
 }

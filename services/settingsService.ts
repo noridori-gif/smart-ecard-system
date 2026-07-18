@@ -12,6 +12,16 @@ export type UserSettingsProfile = {
   updatedAt: string;
 };
 
+export type WhatsAppConfigurationStatus = {
+  sendConfigurationDetected: boolean;
+  accessTokenConfigured: boolean;
+  phoneNumberConfigured: boolean;
+  templateNamesConfigured: boolean;
+  webhookEnvironmentConfigured: boolean;
+  metaVerification: "not_verified";
+  templateApproval: "not_verified";
+};
+
 type ProfileRecord = {
   id: string;
   full_name: string | null;
@@ -215,4 +225,44 @@ export async function logoutCurrentUser() {
       error.message
     );
   }
+}
+
+export async function getWhatsAppConfigurationStatus(): Promise<
+  WhatsAppConfigurationStatus
+> {
+  const {
+    data: sessionData,
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw new Error(sessionError.message);
+  }
+
+  const accessToken = sessionData.session?.access_token;
+
+  if (!accessToken) {
+    throw new Error("Session yako imeisha. Ingia tena.");
+  }
+
+  const response = await fetch("/api/whatsapp/configuration-status", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: "no-store",
+  });
+
+  const responseData = (await response.json()) as
+    | WhatsAppConfigurationStatus
+    | { message?: string };
+
+  if (!response.ok) {
+    throw new Error(
+      "message" in responseData && responseData.message
+        ? responseData.message
+        : "WhatsApp configuration status haikuweza kupatikana."
+    );
+  }
+
+  return responseData as WhatsAppConfigurationStatus;
 }
