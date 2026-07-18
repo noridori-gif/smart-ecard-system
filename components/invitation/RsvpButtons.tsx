@@ -12,7 +12,7 @@ type RsvpButtonsProps = {
   currentStatus: string;
   language?: Language;
   accentTextClass?: string;
-  variant?: "default" | "classic" | "dark";
+  variant?: "default" | "classic" | "dark" | "envelope";
 };
 
 type RsvpResponse = {
@@ -202,6 +202,80 @@ export default function RsvpButtons({
   const selectedOption = options.find(
     (option) => option.value === selectedStatus
   );
+
+  if (variant === "envelope") {
+    return (
+      <section className="border-y border-[var(--theme-accent)]/40 bg-[var(--theme-secondary)] px-3 py-6 sm:px-6 sm:py-7">
+        <div className="text-center">
+          <h3 className="font-serif text-3xl text-[var(--theme-primary)]">
+            {translations.title}
+          </h3>
+
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--theme-accent)]">
+            {translations.heading}
+          </p>
+
+          <p className="mt-3 text-sm text-[var(--theme-primary)]/70">
+            {translations.instruction}
+          </p>
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+          {options.map((option) => {
+            const isSelected = selectedStatus === option.value;
+            const isThisUpdating = updatingStatus === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={option.statusLabel}
+                disabled={isUpdating}
+                onClick={() => updateRsvp(option.value)}
+                className={`min-w-0 border px-1.5 py-3 text-center transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--theme-secondary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:py-4 ${
+                  isSelected
+                    ? "border-[var(--theme-primary)] bg-[var(--theme-primary)] text-white shadow-sm"
+                    : "border-[var(--theme-primary)]/45 bg-transparent text-[var(--theme-primary)] hover:border-[var(--theme-accent)] hover:bg-[var(--theme-primary)]/5"
+                }`}
+              >
+                <span className="block font-serif text-xl leading-none sm:text-2xl">
+                  {isThisUpdating ? "…" : option.icon}
+                </span>
+
+                <span className="mt-2 block truncate text-[10px] font-bold uppercase tracking-[0.08em] sm:text-xs sm:tracking-[0.14em]">
+                  {isThisUpdating ? translations.saving : option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-2 text-center">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--theme-accent)]" />
+
+          <p className="text-xs text-[var(--theme-primary)]/70">
+            {translations.currentResponse}:
+            <span className="ml-1 font-bold text-[var(--theme-primary)]">
+              {selectedOption?.statusLabel ?? getStatusLabel(selectedStatus)}
+            </span>
+          </p>
+        </div>
+
+        {message && (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`mt-4 text-center text-xs font-semibold ${
+              isSuccess ? "text-[var(--theme-primary)]" : "text-red-700"
+            }`}
+          >
+            {message}
+          </p>
+        )}
+      </section>
+    );
+  }
 
   /*
    * CLASSIC PHOTO NA ROYAL DARK

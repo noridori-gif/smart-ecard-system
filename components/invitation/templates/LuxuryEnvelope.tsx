@@ -540,7 +540,7 @@ export default function LuxuryEnvelope({
           />
         </section>
 
-        <section className="px-5 py-10 sm:px-9">
+        <section className="px-5 pb-6 pt-2 sm:px-9 sm:pb-8">
           <RsvpButtons
             invitationToken={
               invitation
@@ -551,6 +551,7 @@ export default function LuxuryEnvelope({
             }
             language={language}
             accentTextClass="text-[#12213f]"
+            variant="envelope"
           />
 
           <EventPass
