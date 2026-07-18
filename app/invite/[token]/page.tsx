@@ -11,6 +11,7 @@ import EventPass from "@/components/invitation/EventPass";
 import InvitationHero from "@/components/invitation/InvitationHero";
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 import RsvpButtons from "@/components/invitation/RsvpButtons";
+import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
 import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
 
 export const dynamic = "force-dynamic";
@@ -680,6 +681,11 @@ export default async function InvitationPage({
     invitation.invitation_template ===
     "luxury_envelope";
 
+  const isClassicPhoto =
+    !invitation.invitation_template ||
+    invitation.invitation_template ===
+      "classic_photo";
+
   return (
     <main
       style={{
@@ -703,6 +709,13 @@ export default async function InvitationPage({
 
       {isLuxuryEnvelope ? (
         <LuxuryEnvelope
+          invitation={invitation}
+          heroTitle={heroTitle}
+          displayedMessage={displayedMessage}
+          language={language}
+        />
+      ) : isClassicPhoto ? (
+        <ClassicPhoto
           invitation={invitation}
           heroTitle={heroTitle}
           displayedMessage={displayedMessage}
