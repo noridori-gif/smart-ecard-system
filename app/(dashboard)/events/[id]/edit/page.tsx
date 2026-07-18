@@ -71,6 +71,13 @@ const invitationTemplates: Array<{
       "Design ya kisasa yenye mapambo ya maua na rangi laini.",
     icon: "🌿",
   },
+  {
+  value: "royal_dark",
+  name: "Royal Dark",
+  description:
+    "Dark luxury design yenye metallic accents, split photo na muonekano wa kifalme.",
+  icon: "♛",
+},
 ];
 
 type EditEventForm = {
