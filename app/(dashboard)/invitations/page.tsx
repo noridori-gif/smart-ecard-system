@@ -789,23 +789,49 @@ function MobileInvitationsList({
   invitations:
     InvitationWithDetails[];
 }) {
+  const [
+    openInvitationId,
+    setOpenInvitationId,
+  ] = useState<number | null>(
+    null
+  );
+
   return (
-    <div className="space-y-3 md:hidden">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:hidden">
       {invitations.map(
-        (invitation) => (
+        (invitation) => {
+          const isMoreOpen =
+            openInvitationId ===
+            invitation.id;
+
+          const morePanelId =
+            `invitation-more-${invitation.id}`;
+
+          const guestName =
+            invitation.guests
+              ?.full_name ??
+            "Guest";
+
+          const closeMore = () =>
+            setOpenInvitationId(
+              null
+            );
+
+          return (
           <article
             key={invitation.id}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            className="border-b border-slate-200 px-3 py-3 last:border-b-0"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-slate-900">
-                  {invitation.guests
-                    ?.full_name ??
-                    "Guest"}
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h2
+                  className="truncate text-sm font-semibold text-slate-900"
+                  title={guestName}
+                >
+                  {guestName}
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-0.5 truncate text-xs text-slate-500">
                   {invitation.guests
                     ?.phone ??
                     "No phone"}
@@ -819,13 +845,20 @@ function MobileInvitationsList({
               />
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs uppercase text-slate-400">
+            <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,0.85fr)] gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                   Event
                 </p>
 
-                <p className="mt-1 font-medium text-slate-800">
+                <p
+                  className="truncate text-xs font-medium text-slate-800"
+                  title={
+                    invitation.events
+                      ?.title ??
+                    "Unknown event"
+                  }
+                >
                   {invitation.events
                     ?.title ??
                     "Unknown event"}
@@ -833,40 +866,148 @@ function MobileInvitationsList({
               </div>
 
               <div>
-                <p className="text-xs uppercase text-slate-400">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                   Allowed
                 </p>
 
-                <p className="mt-1 font-semibold text-slate-800">
+                <p className="text-xs font-semibold text-slate-800">
                   {invitation.allowed_guests ??
                     1}
                 </p>
               </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Pass ID
+                </p>
+
+                <p
+                  className="truncate font-mono text-xs font-semibold text-slate-800"
+                  title={
+                    invitation.event_pass_id ??
+                    "Not available"
+                  }
+                >
+                  {invitation.event_pass_id ??
+                    "-"}
+                </p>
+              </div>
             </div>
 
-            <div className="mt-3 rounded-xl bg-slate-900 px-4 py-3 text-white">
-              <p className="text-xs uppercase text-slate-300">
-                Event Pass ID
-              </p>
+            <div className="mt-2 grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.25fr)_44px] gap-2">
+              <Link
+                href={`/invite/${invitation.invitation_token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-11 min-w-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+              >
+                View
+              </Link>
 
-              <p className="mt-1 font-mono font-bold">
-                {invitation.event_pass_id ??
-                  "-"}
-              </p>
+              <SendWhatsAppCloudButton
+                invitationToken={
+                  invitation.invitation_token
+                }
+                disabled={
+                  !invitation.guests
+                    ?.phone
+                }
+                mobile
+              />
+
+              <button
+                type="button"
+                aria-label={`More actions for ${guestName}`}
+                aria-expanded={
+                  isMoreOpen
+                }
+                aria-controls={
+                  morePanelId
+                }
+                onClick={() =>
+                  setOpenInvitationId(
+                    isMoreOpen
+                      ? null
+                      : invitation.id
+                  )
+                }
+                className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-100"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="currentColor"
+                >
+                  <circle cx="5" cy="12" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="19" cy="12" r="2" />
+                </svg>
+              </button>
             </div>
 
-            <InvitationActions
-              invitation={
-                invitation
-              }
-              onWhatsApp={
-                onWhatsApp
-              }
-              onSMS={onSMS}
-              onCopy={onCopy}
-            />
+            {isMoreOpen && (
+              <div
+                id={morePanelId}
+                aria-label={`More actions for ${guestName}`}
+                className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    onWhatsApp(
+                      invitation
+                    );
+                    closeMore();
+                  }}
+                  className="min-h-11 rounded-lg bg-emerald-600 px-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  WhatsApp
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSMS(invitation);
+                    closeMore();
+                  }}
+                  className="min-h-11 rounded-lg bg-blue-600 px-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                >
+                  SMS
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void onCopy(
+                      invitation
+                    );
+                    closeMore();
+                  }}
+                  className="min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Copy
+                </button>
+
+                <ShareInvitationCardButton
+                  invitationToken={
+                    invitation.invitation_token
+                  }
+                  guestName={guestName}
+                  eventPassId={
+                    invitation.event_pass_id
+                  }
+                  compact
+                  mobile
+                  onActionComplete={
+                    closeMore
+                  }
+                />
+              </div>
+            )}
           </article>
-        )
+          );
+        }
       )}
     </div>
   );

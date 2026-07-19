@@ -12,6 +12,7 @@ type SendWhatsAppCloudButtonProps = {
   invitationToken: string;
   disabled?: boolean;
   compact?: boolean;
+  mobile?: boolean;
 };
 
 type SendWhatsAppResponse = {
@@ -26,6 +27,7 @@ export default function SendWhatsAppCloudButton({
   invitationToken,
   disabled = false,
   compact = false,
+  mobile = false,
 }: SendWhatsAppCloudButtonProps) {
   const [
     isSending,
@@ -147,7 +149,9 @@ export default function SendWhatsAppCloudButton({
   return (
     <div
       className={
-        compact
+        mobile
+          ? "contents"
+          : compact
           ? "relative"
           : "col-span-2"
       }
@@ -159,13 +163,19 @@ export default function SendWhatsAppCloudButton({
           isSending
         }
         onClick={handleSend}
-        className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`w-full rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${
+          mobile
+            ? "min-h-11"
+            : "py-2"
+        }`}
       >
         {buttonText}
       </button>
 
       {disabled && (
-        <p className="mt-2 text-xs font-medium text-amber-700">
+        <p
+          className={`${mobile ? "col-span-3" : ""} mt-2 text-xs font-medium text-amber-700`}
+        >
           Mgeni hana namba ya simu.
         </p>
       )}
@@ -173,7 +183,7 @@ export default function SendWhatsAppCloudButton({
       {successMessage && (
         <div
           role="status"
-          className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+          className={`${mobile ? "col-span-3" : ""} mt-2 min-w-0 break-words rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700`}
         >
           {successMessage}
         </div>
@@ -182,7 +192,7 @@ export default function SendWhatsAppCloudButton({
       {errorMessage && (
         <div
           role="alert"
-          className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+          className={`${mobile ? "col-span-3" : ""} mt-2 min-w-0 break-words rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700`}
         >
           {errorMessage}
         </div>
