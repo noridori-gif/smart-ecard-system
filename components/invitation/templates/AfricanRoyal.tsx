@@ -77,10 +77,11 @@ function Schedule({ number, title, date, time, venue, mapUrl, language }: {
 export default function AfricanRoyal({ invitation, heroTitle, displayedMessage, language }: Props) {
   const hasCeremony = Boolean(invitation.ceremony_date || invitation.ceremony_time || invitation.ceremony_venue);
   const t = language === "en" ? {
-    invitation: "Royal Invitation", prepared: "Prepared in honour of", letter: "A personal invitation", programme: "Order of Celebration", ceremony: "Ceremony", reception: "Reception", attire: "Celebration Attire", countdown: "Until we gather", pass: "Your royal entry", wishes: "Words for the hosts", closing: "Come with joy. Leave with memories.", welcome: "Together with their families, the hosts request the pleasure of your company.",
+    invitation: "Royal Invitation", invitationHeading: "YOUR INVITATION", programme: "Order of Celebration", ceremony: "Ceremony", reception: "Reception", attire: "Celebration Attire", countdown: "Until we gather", pass: "Your royal entry", wishes: "Words for the hosts", closing: "Come with joy. Leave with memories.",
   } : {
-    invitation: "Mwaliko wa Kifalme", prepared: "Imeandaliwa kwa heshima ya", letter: "Mwaliko wako binafsi", programme: "Ratiba ya Sherehe", ceremony: "Ibada", reception: "Mapokezi / Sherehe", attire: "Mavazi ya Sherehe", countdown: "Hadi tutakapokusanyika", pass: "Pass yako ya kifalme", wishes: "Maneno kwa wenye event", closing: "Njoo kwa furaha. Ondoka na kumbukumbu.", welcome: "Pamoja na familia zao, wenye event wanaomba heshima ya uwepo wako.",
+    invitation: "Mwaliko wa Kifalme", invitationHeading: "MWALIKO WAKO", programme: "Ratiba ya Sherehe", ceremony: "Ibada", reception: "Mapokezi / Sherehe", attire: "Mavazi ya Sherehe", countdown: "Hadi tutakapokusanyika", pass: "Pass yako ya kifalme", wishes: "Maneno kwa wenye event", closing: "Njoo kwa furaha. Ondoka na kumbukumbu.",
   };
+  const showEventTitle = invitation.event_title.trim().toLocaleLowerCase() !== heroTitle.trim().toLocaleLowerCase();
 
   return (
     <div className="mx-auto w-full max-w-5xl overflow-hidden bg-[color-mix(in_srgb,var(--theme-secondary)_82%,white)] shadow-[0_30px_100px_rgba(15,23,42,0.28)]">
@@ -89,7 +90,7 @@ export default function AfricanRoyal({ invitation, heroTitle, displayedMessage, 
           <Pattern className="absolute -left-20 top-14 h-72 w-72 rotate-12 text-[var(--theme-accent)] opacity-20" />
           <div className="relative flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.36em] text-[var(--theme-accent)]"><span className="h-2 w-2 rotate-45 bg-[var(--theme-accent)]" />{t.invitation}</div>
           <div className="relative my-12">
-            <p className="text-[10px] font-bold uppercase tracking-[0.34em] text-white/65">{invitation.event_title}</p>
+            {showEventTitle && <p className="text-[10px] font-bold uppercase tracking-[0.34em] text-white/65">{invitation.event_title}</p>}
             <h1 className="mt-5 break-words font-serif text-5xl leading-[0.92] sm:text-7xl lg:text-6xl xl:text-7xl">{heroTitle}</h1>
             <div className="mt-8 flex items-center gap-5"><span className="h-1 w-20 bg-[var(--theme-accent)]" /><span className="text-xs font-bold uppercase tracking-[0.24em]">{formatDate(invitation.event_date, language)}</span></div>
           </div>
@@ -104,10 +105,9 @@ export default function AfricanRoyal({ invitation, heroTitle, displayedMessage, 
         </div>
       </header>
 
-      <section className="relative px-5 py-12 sm:px-12 sm:py-16 lg:grid lg:grid-cols-[0.8fr_1.6fr] lg:gap-16 lg:px-16">
+      <section className="relative px-5 py-9 sm:px-12 sm:py-14 lg:px-16">
         <Pattern className="absolute -right-16 bottom-2 h-52 w-52 text-[var(--theme-accent)] opacity-[0.08]" />
-        <div><p className="text-[9px] font-black uppercase tracking-[0.36em] text-[var(--theme-primary)]">{t.prepared}</p><h2 className="mt-4 break-words font-serif text-4xl leading-tight text-[var(--theme-primary)] sm:text-5xl">{invitation.guest_name}</h2></div>
-        <div className="relative mt-10 border-l-4 border-[var(--theme-accent)] pl-6 lg:mt-0 lg:pl-9"><p className="text-[9px] font-black uppercase tracking-[0.36em] text-[var(--theme-primary)]">{t.letter}</p><p className="mt-5 whitespace-pre-line text-base leading-8 text-slate-700 sm:text-lg">{displayedMessage || t.welcome}</p></div>
+        <div className="relative max-w-2xl border-l-4 border-[var(--theme-accent)] pl-5 sm:pl-8"><p className="text-[9px] font-black uppercase tracking-[0.36em] text-[var(--theme-primary)]">{t.invitationHeading}</p><p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-700 sm:mt-4 sm:text-lg">{displayedMessage}</p><div className="my-4 flex items-center gap-4 sm:my-5"><span className="h-2 w-2 rotate-45 bg-[var(--theme-accent)]" /><span className="h-px w-20 bg-[var(--theme-accent)]/60" /></div><h2 className="break-words font-serif text-4xl leading-tight text-[var(--theme-primary)] sm:text-5xl">{invitation.guest_name}</h2></div>
       </section>
 
       <section className="border-y-4 border-[var(--theme-primary)] bg-white/80 px-5 py-12 sm:px-12 sm:py-16 lg:px-16">

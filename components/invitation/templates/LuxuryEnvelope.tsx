@@ -237,10 +237,13 @@ export default function LuxuryEnvelope({
       ? "Fungua Mwaliko"
       : "Open Invitation";
 
-  const specialInvitation =
+  const invitationHeading =
     language === "sw"
-      ? "Mwaliko Maalumu Kwa"
-      : "Special Invitation For";
+      ? "MWALIKO WAKO"
+      : "YOUR INVITATION";
+  const showEventTitle =
+    invitation.event_title.trim().toLocaleLowerCase() !==
+    heroTitle.trim().toLocaleLowerCase();
 
   function handleOpenInvitation() {
     if (isOpened) {
@@ -310,11 +313,11 @@ export default function LuxuryEnvelope({
             {heroTitle}
           </h1>
 
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
-            {
-              invitation.event_title
-            }
-          </p>
+          {showEventTitle && (
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
+              {invitation.event_title}
+            </p>
+          )}
 
           <button
             type="button"
@@ -385,18 +388,14 @@ export default function LuxuryEnvelope({
             : "pointer-events-none max-h-0 -translate-y-8 overflow-hidden opacity-0"
         }`}
       >
-        <section className="px-5 py-12 text-center sm:px-9">
+        <section className="px-5 py-9 text-center sm:px-9 sm:py-12">
           <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#9a8250]">
-            {specialInvitation}
+            {invitationHeading}
           </p>
-
-          <h2 className="mt-4 font-serif text-4xl leading-tight text-[#12213f]">
-            {
-              invitation.guest_name
-            }
-          </h2>
-
-          <div className="mx-auto my-7 flex max-w-xs items-center gap-3">
+          <p className="mt-3 whitespace-pre-line font-serif text-lg leading-8 text-slate-600 sm:mt-4">
+            {displayedMessage}
+          </p>
+          <div className="mx-auto my-4 flex max-w-xs items-center gap-3 sm:my-5">
             <span className="h-px flex-1 bg-[#d7cda9]" />
 
             <span className="text-[#b99542]">
@@ -405,10 +404,9 @@ export default function LuxuryEnvelope({
 
             <span className="h-px flex-1 bg-[#d7cda9]" />
           </div>
-
-          <p className="whitespace-pre-line font-serif text-lg leading-8 text-slate-600">
-            {displayedMessage}
-          </p>
+          <h2 className="font-serif text-4xl leading-tight text-[#12213f]">
+            {invitation.guest_name}
+          </h2>
         </section>
 
         <section className="border-y border-[#ded7c3] bg-white/55 px-5 py-10 sm:px-9">

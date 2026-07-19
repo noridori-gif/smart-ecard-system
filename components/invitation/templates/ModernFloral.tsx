@@ -187,8 +187,7 @@ export default function ModernFloral({
   const t =
     language === "sw"
       ? {
-          invite: "Tunayo furaha kukualika",
-          guest: "Mwaliko Maalumu Kwa",
+          invitationHeading: "MWALIKO WAKO",
           story: "Sherehe Yetu",
           ceremony: "Ibada",
           reception: "Mapokezi / Sherehe",
@@ -196,8 +195,7 @@ export default function ModernFloral({
           close: "Karibu tusherehekee pamoja",
         }
       : {
-          invite: "We joyfully invite you",
-          guest: "A Special Invitation For",
+          invitationHeading: "YOUR INVITATION",
           story: "Our Celebration",
           ceremony: "Ceremony",
           reception: "Reception",
@@ -217,10 +215,7 @@ export default function ModernFloral({
       <header className="relative px-5 pb-14 pt-14 sm:px-10 sm:pb-20 sm:pt-20 lg:px-16">
         <div className="relative z-10 grid items-center gap-10 md:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] md:gap-12">
           <div className="min-w-0 pt-8 md:pt-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--theme-accent)] sm:tracking-[0.42em]">
-              {t.invite}
-            </p>
-            <h1 className="mt-5 break-words font-serif text-5xl leading-[0.96] text-[var(--theme-primary)] sm:text-6xl lg:text-7xl">
+            <h1 className="break-words font-serif text-5xl leading-[0.96] text-[var(--theme-primary)] sm:text-6xl lg:text-7xl">
               {heroTitle}
             </h1>
             <div className="mt-8 max-w-52">
@@ -251,16 +246,19 @@ export default function ModernFloral({
       </header>
 
       <div className="relative z-10 px-5 pb-16 sm:px-10 sm:pb-20 lg:px-16">
-        <section className="relative ml-auto max-w-2xl border-l border-[var(--theme-accent)] bg-white/80 px-6 py-10 shadow-[0_20px_55px_rgba(15,23,42,0.06)] sm:px-10 sm:py-12">
+        <section className="relative ml-auto max-w-2xl border-l border-[var(--theme-accent)] bg-white/80 px-6 py-8 shadow-[0_20px_55px_rgba(15,23,42,0.06)] sm:px-10 sm:py-12">
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--theme-accent)]">
-            {t.guest}
+            {t.invitationHeading}
           </p>
-          <h2 className="mt-3 break-words font-serif text-3xl leading-tight text-[var(--theme-primary)] sm:text-5xl">
-            {invitation.guest_name}
-          </h2>
-          <p className="mt-6 max-w-xl whitespace-pre-line font-serif text-lg leading-8 text-slate-600 sm:text-xl sm:leading-9">
+          <p className="mt-3 max-w-xl whitespace-pre-line font-serif text-lg leading-8 text-slate-600 sm:mt-4 sm:text-xl sm:leading-9">
             {displayedMessage}
           </p>
+          <div className="my-4 max-w-52 sm:my-5">
+            <SectionMarker />
+          </div>
+          <h2 className="break-words font-serif text-3xl leading-tight text-[var(--theme-primary)] sm:text-5xl">
+            {invitation.guest_name}
+          </h2>
         </section>
 
         <section className="mt-16 sm:mt-20">

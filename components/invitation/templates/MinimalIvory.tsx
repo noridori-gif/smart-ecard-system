@@ -72,8 +72,9 @@ function Itinerary({
 export default function MinimalIvory({ invitation, heroTitle, displayedMessage, language }: MinimalIvoryProps) {
   const hasCeremony = Boolean(invitation.ceremony_date || invitation.ceremony_time || invitation.ceremony_venue);
   const t = language === "sw"
-    ? { invitation: "Mwaliko wa Heshima", for: "Imeandaliwa kwa", letter: "Barua ya Mwaliko", itinerary: "Ratiba ya Siku", ceremony: "Ibada", reception: "Mapokezi / Sherehe", dress: "Mavazi", countdown: "Tukio linaanza baada ya", wishes: "Salamu na Baraka", closing: "Kwa furaha tunatarajia kusherehekea pamoja nawe" }
-    : { invitation: "A Formal Invitation", for: "Prepared for", letter: "Invitation Letter", itinerary: "Order of the Day", ceremony: "Ceremony", reception: "Reception", dress: "Dress Code", countdown: "The event begins in", wishes: "Wishes & Blessings", closing: "With joy, we look forward to celebrating with you" };
+    ? { invitation: "Mwaliko wa Heshima", invitationHeading: "MWALIKO WAKO", itinerary: "Ratiba ya Siku", ceremony: "Ibada", reception: "Mapokezi / Sherehe", dress: "Mavazi", countdown: "Tukio linaanza baada ya", wishes: "Salamu na Baraka", closing: "Kwa furaha tunatarajia kusherehekea pamoja nawe" }
+    : { invitation: "A Formal Invitation", invitationHeading: "YOUR INVITATION", itinerary: "Order of the Day", ceremony: "Ceremony", reception: "Reception", dress: "Dress Code", countdown: "The event begins in", wishes: "Wishes & Blessings", closing: "With joy, we look forward to celebrating with you" };
+  const showEventTitle = invitation.event_title.trim().toLocaleLowerCase() !== heroTitle.trim().toLocaleLowerCase();
 
   return (
     <div className="mx-auto w-full max-w-3xl overflow-hidden border border-[#d8cdbb] bg-[#fbf7ed] text-[#27231d] shadow-[0_25px_80px_rgba(62,52,38,0.18)]">
@@ -82,7 +83,7 @@ export default function MinimalIvory({ invitation, heroTitle, displayedMessage, 
           <div className="flex items-center justify-between gap-4 border-b border-[#d8cdbb] pb-4 text-[8px] font-bold uppercase tracking-[0.3em] text-[var(--theme-primary)] sm:text-[9px]">
             <span>Smart Event Pass</span><span>{t.invitation}</span>
           </div>
-          <p className="mt-10 text-[9px] font-bold uppercase tracking-[0.4em] text-[var(--theme-primary)]">{invitation.event_title}</p>
+          {showEventTitle && <p className="mt-10 text-[9px] font-bold uppercase tracking-[0.4em] text-[var(--theme-primary)]">{invitation.event_title}</p>}
           {invitation.cover_image_url ? (
             <div className="mx-auto mt-7 h-32 w-24 overflow-hidden rounded-[50%] border border-[var(--theme-accent)] p-1 sm:h-40 sm:w-28">
               <img src={invitation.cover_image_url} alt={heroTitle} className="h-full w-full rounded-[50%] object-cover" />
@@ -94,13 +95,11 @@ export default function MinimalIvory({ invitation, heroTitle, displayedMessage, 
           <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.3em] text-[#6f675d]">{formatDate(invitation.event_date, language)}</p>
         </header>
 
-        <section className="border-t border-[#d8cdbb] px-5 py-10 sm:px-12 sm:py-14">
-          <p className="text-center text-[9px] font-bold uppercase tracking-[0.38em] text-[var(--theme-primary)]">{t.for}</p>
-          <h2 className="mx-auto mt-4 max-w-xl break-words text-center font-serif text-3xl leading-tight sm:text-5xl">{invitation.guest_name}</h2>
-          <div className="mx-auto mt-9 max-w-xl border-y border-[#d8cdbb] px-1 py-8 sm:px-8">
-            <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-[var(--theme-accent)]">{t.letter}</p>
-            <p className="mt-5 whitespace-pre-line font-serif text-lg leading-8 text-[#514b43] sm:text-xl sm:leading-9">{displayedMessage}</p>
-          </div>
+        <section className="border-t border-[#d8cdbb] px-5 py-8 text-center sm:px-12 sm:py-12">
+          <p className="text-[9px] font-bold uppercase tracking-[0.38em] text-[var(--theme-primary)]">{t.invitationHeading}</p>
+          <p className="mx-auto mt-3 max-w-xl whitespace-pre-line font-serif text-lg leading-8 text-[#514b43] sm:mt-4 sm:text-xl sm:leading-9">{displayedMessage}</p>
+          <div className="mx-auto my-4 flex max-w-xs items-center gap-3 sm:my-5"><span className="h-px flex-1 bg-[#d8cdbb]" /><span className="text-[var(--theme-accent)]">◇</span><span className="h-px flex-1 bg-[#d8cdbb]" /></div>
+          <h2 className="mx-auto max-w-xl break-words font-serif text-3xl leading-tight sm:text-5xl">{invitation.guest_name}</h2>
         </section>
 
         <section className="border-t border-[#d8cdbb] px-5 py-10 sm:px-12 sm:py-14">

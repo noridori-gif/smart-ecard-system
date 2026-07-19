@@ -176,8 +176,7 @@ export default function ElegantGold({
     language === "sw"
       ? {
           invitation: "Mwaliko wa Heshima",
-          together: "Pamoja na familia zao",
-          guest: "Mgeni wetu wa heshima",
+          invitationHeading: "MWALIKO WAKO",
           celebration: "Ratiba ya Sherehe",
           ceremony: "Ibada",
           reception: "Mapokezi / Sherehe",
@@ -186,8 +185,7 @@ export default function ElegantGold({
         }
       : {
           invitation: "An Invitation of Honour",
-          together: "Together with their families",
-          guest: "Our honoured guest",
+          invitationHeading: "YOUR INVITATION",
           celebration: "Celebration Details",
           ceremony: "Ceremony",
           reception: "Reception",
@@ -207,11 +205,7 @@ export default function ElegantGold({
           <p className="text-[9px] font-black uppercase tracking-[0.35em] text-[var(--theme-accent)] sm:text-[10px] sm:tracking-[0.45em]">
             {t.invitation}
           </p>
-          <p className="mt-5 font-serif text-sm italic tracking-wide text-slate-500 sm:text-base">
-            {t.together}
-          </p>
-
-          <h1 className="mx-auto mt-4 max-w-3xl break-words font-serif text-4xl leading-[1.05] text-[var(--theme-primary)] sm:text-6xl lg:text-7xl">
+          <h1 className="mx-auto mt-5 max-w-3xl break-words font-serif text-4xl leading-[1.05] text-[var(--theme-primary)] sm:text-6xl lg:text-7xl">
             {heroTitle}
           </h1>
 
@@ -243,14 +237,17 @@ export default function ElegantGold({
       <div className="relative px-5 pb-14 sm:px-12 sm:pb-20 lg:px-20">
         <section className="mx-auto max-w-2xl text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[var(--theme-accent)] sm:tracking-[0.4em]">
-            {t.guest}
+            {t.invitationHeading}
           </p>
-          <h2 className="mt-3 break-words font-serif text-3xl text-[var(--theme-primary)] sm:text-5xl">
-            {invitation.guest_name}
-          </h2>
-          <p className="mx-auto mt-6 whitespace-pre-line font-serif text-lg leading-8 text-slate-600 sm:text-xl sm:leading-9">
+          <p className="mx-auto mt-3 whitespace-pre-line font-serif text-lg leading-8 text-slate-600 sm:mt-4 sm:text-xl sm:leading-9">
             {displayedMessage}
           </p>
+          <div className="my-4 sm:my-5">
+            <OrnamentalDivider compact />
+          </div>
+          <h2 className="break-words font-serif text-3xl text-[var(--theme-primary)] sm:text-5xl">
+            {invitation.guest_name}
+          </h2>
         </section>
 
         <div className="my-11 sm:my-14">

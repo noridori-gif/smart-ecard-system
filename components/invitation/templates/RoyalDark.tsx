@@ -122,7 +122,7 @@ export default function RoyalDark({
     language === "sw"
       ? {
           invite: "Mwaliko wa Kifalme",
-          guest: "Mgeni wetu wa heshima",
+          invitationHeading: "MWALIKO WAKO",
           ceremony: "Ibada ya Ndoa",
           reception: "Mapokezi / Sherehe",
           dress: "Rangi za Mavazi",
@@ -130,7 +130,7 @@ export default function RoyalDark({
         }
       : {
           invite: "A Royal Invitation",
-          guest: "Our Honoured Guest",
+          invitationHeading: "YOUR INVITATION",
           ceremony: "Ceremony",
           reception: "Reception",
           dress: "Dress Code",
@@ -189,16 +189,19 @@ export default function RoyalDark({
       <main className="px-6 py-12 sm:px-12">
         <section className="text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.35em] text-[var(--theme-accent)]">
-            {translations.guest}
+            {translations.invitationHeading}
           </p>
-
-          <h2 className="mt-4 font-serif text-3xl text-white sm:text-4xl">
-            {invitation.guest_name}
-          </h2>
-
-          <p className="mx-auto mt-5 max-w-xl whitespace-pre-line leading-8 text-white/65">
+          <p className="mx-auto mt-3 max-w-xl whitespace-pre-line leading-8 text-white/65 sm:mt-4">
             {displayedMessage}
           </p>
+          <div className="mx-auto my-4 flex max-w-xs items-center gap-3 sm:my-5">
+            <span className="h-px flex-1 bg-[var(--theme-accent)]/35" />
+            <span className="text-[var(--theme-accent)]">♛</span>
+            <span className="h-px flex-1 bg-[var(--theme-accent)]/35" />
+          </div>
+          <h2 className="font-serif text-3xl text-white sm:text-4xl">
+            {invitation.guest_name}
+          </h2>
         </section>
 
         <section

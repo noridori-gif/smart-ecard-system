@@ -120,12 +120,15 @@ export default function ClassicPhoto({
       invitation.ceremony_time ||
       invitation.ceremony_venue
   );
+  const showEventTitle =
+    invitation.event_title.trim().toLocaleLowerCase() !==
+    heroTitle.trim().toLocaleLowerCase();
 
   const t =
     language === "sw"
       ? {
           invitation: "Mwaliko Maalumu",
-          for: "Kwa heshima tunamwalika",
+          invitationHeading: "MWALIKO WAKO",
           details: "Ratiba ya Tukio",
           ceremony: "Ibada",
           reception: "Mapokezi / Sherehe",
@@ -134,7 +137,7 @@ export default function ClassicPhoto({
         }
       : {
           invitation: "A Special Invitation",
-          for: "With pleasure, we invite",
+          invitationHeading: "YOUR INVITATION",
           details: "Event Schedule",
           ceremony: "Ceremony",
           reception: "Reception",
@@ -163,9 +166,11 @@ export default function ClassicPhoto({
 
         <div className="absolute inset-x-0 bottom-0 px-5 pb-9 text-white sm:px-10 sm:pb-12">
           <div className="mb-5 h-1 w-14 bg-[var(--theme-accent)]" />
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/75">
-            {invitation.event_title}
-          </p>
+          {showEventTitle && (
+            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/75">
+              {invitation.event_title}
+            </p>
+          )}
           <h1 className="mt-3 max-w-xl font-serif text-5xl leading-[0.95] tracking-tight sm:text-7xl">
             {heroTitle}
           </h1>
@@ -176,19 +181,20 @@ export default function ClassicPhoto({
       </header>
 
       <section className="px-5 py-9 sm:px-10 sm:py-12">
-        <div className="grid gap-8 sm:grid-cols-[0.85fr_1.5fr] sm:gap-10">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--theme-primary)]">
-              {t.for}
-            </p>
-            <h2 className="mt-3 font-serif text-3xl leading-tight text-slate-950 sm:text-4xl">
-              {invitation.guest_name}
-            </h2>
-          </div>
-
-          <p className="whitespace-pre-line border-l-2 border-[var(--theme-accent)] pl-5 text-base leading-8 text-slate-600 sm:text-lg">
+        <div className="max-w-xl">
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--theme-primary)]">
+            {t.invitationHeading}
+          </p>
+          <p className="mt-3 whitespace-pre-line text-base leading-7 text-slate-600 sm:mt-4 sm:text-lg sm:leading-8">
             {displayedMessage}
           </p>
+          <div className="my-4 flex items-center gap-3 sm:my-5">
+            <span className="h-px w-12 bg-black/10" />
+            <span className="h-1 w-8 bg-[var(--theme-accent)]" />
+          </div>
+          <h2 className="font-serif text-3xl leading-tight text-slate-950 sm:text-4xl">
+            {invitation.guest_name}
+          </h2>
         </div>
 
         <div className="my-10 flex items-center gap-4">
