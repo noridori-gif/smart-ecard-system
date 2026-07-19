@@ -69,7 +69,7 @@ function LiveGuestJourney() {
           <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-cyan-300">Live Guest Journey</p>
-              <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">Amina Joseph</h2>
+              <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">Newton Ludovick</h2>
               <p className="mt-1 text-xs text-slate-400">Invitation opened · 10:42</p>
             </div>
             <div className="flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300">
