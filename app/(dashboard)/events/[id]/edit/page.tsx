@@ -99,6 +99,13 @@ const invitationTemplates: Array<{
       "Cinematic evening-gala layout yenye layered hero, floating title panel na fine-line glow.",
     icon: "☾",
   },
+  {
+    value: "heritage_monogram",
+    name: "Heritage Monogram",
+    description:
+      "Formal heritage stationery yenye monogram crest, cameo portrait na double-frame details.",
+    icon: "HM",
+  },
 ];
 
 type EditEventForm = {
@@ -1928,6 +1935,21 @@ function ThemePreview({
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "heritage_monogram") {
+    return (
+      <div className="relative mt-7 overflow-hidden border-4 border-double p-3 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>
+        <div className="relative min-h-80 border px-6 py-8 text-center" style={{ borderColor: `${accentColor}99` }}>
+          <div className="mx-auto flex h-24 w-20 items-center justify-center rounded-[50%] border-4 border-double font-serif text-2xl" style={{ borderColor: primaryColor, color: primaryColor }}>HM</div>
+          <p className="mt-5 text-[8px] font-bold uppercase tracking-[0.4em]" style={{ color: accentColor }}>Heritage Monogram · Invitation Preview</p>
+          <h3 className="mt-3 break-words font-serif text-4xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+          <div className="mx-auto my-5 flex max-w-52 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="h-3 w-3 rotate-45 border" style={{ borderColor: accentColor }} /><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
+          <p className="font-serif text-sm text-slate-700">I · Ceremony &nbsp; II · Reception</p>
+          <p className="mt-4 text-xs text-slate-600">{dressCode || "Your dress code"}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (template === "midnight_luxe") {
     return (
       <div className="relative mt-7 min-h-80 overflow-hidden border border-white/20 bg-slate-950 shadow-xl">

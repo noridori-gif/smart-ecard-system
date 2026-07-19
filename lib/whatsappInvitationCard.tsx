@@ -7,6 +7,7 @@ export type WhatsAppCardTemplate =
   | "african_royal"
   | "classic_photo"
   | "elegant_gold"
+  | "heritage_monogram"
   | "modern_floral"
   | "luxury_envelope"
   | "minimal_ivory"
@@ -109,6 +110,7 @@ export function normalizeWhatsAppCardTemplate(
   if (
     template === "african_royal" ||
     template === "elegant_gold" ||
+    template === "heritage_monogram" ||
     template === "modern_floral" ||
     template === "luxury_envelope" ||
     template === "minimal_ivory" ||
@@ -307,6 +309,8 @@ function renderWhatsAppCard(
       return <AfricanRoyalCard data={data} />;
     case "elegant_gold":
       return <ElegantGoldCard data={data} />;
+    case "heritage_monogram":
+      return <HeritageMonogramCard data={data} />;
     case "modern_floral":
       return <ModernFloralCard data={data} />;
     case "luxury_envelope":
@@ -461,6 +465,28 @@ function Details({
         }}
       >
         {data.venue}
+      </div>
+    </div>
+  );
+}
+
+function HeritageMonogramCard({ data }: { data: RenderData }) {
+  const hasImage = Boolean(data.coverImageDataUrl);
+
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", padding: 42, backgroundColor: data.secondary, color: data.secondaryText }}>
+      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "42px 56px", border: `8px double ${data.primary}`, boxShadow: `inset 0 0 0 10px ${data.secondary}, inset 0 0 0 12px ${data.accent}` }}>
+        <Brand color={data.primary} />
+        <div style={{ width: 330, height: 410, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 180, border: `9px double ${data.primary}`, boxShadow: `0 0 0 3px ${data.accent}`, color: data.primary }}>
+          {hasImage ? <CoverImage data={data} borderRadius={180} /> : <><div style={{ position: "absolute", width: 240, height: 290, display: "flex", borderRadius: 130, border: `3px solid ${data.accent}` }} /><div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 92 }}>HM</div></>}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div style={{ display: "flex", color: data.accent, fontFamily: "Arial, sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 6 }}>HERITAGE MONOGRAM</div>
+          <div style={{ display: "flex", maxWidth: 850, marginTop: 24, color: data.primary, fontFamily: "Georgia, serif", fontSize: Math.min(72, data.titleSize), lineHeight: 1, textAlign: "center" }}>{data.title}</div>
+          <div style={{ width: 360, display: "flex", alignItems: "center", marginTop: 28 }}><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /><div style={{ width: 18, height: 18, display: "flex", margin: "0 18px", border: `2px solid ${data.accent}`, transform: "rotate(45deg)" }} /><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /></div>
+        </div>
+        <Details data={data} color={data.secondaryText} centered />
+        <div style={{ display: "flex", color: data.primary, fontFamily: "Georgia, serif", fontSize: 42, fontWeight: 700, textAlign: "center" }}>{data.guestName}</div>
       </div>
     </div>
   );

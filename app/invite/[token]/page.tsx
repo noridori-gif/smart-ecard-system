@@ -14,6 +14,7 @@ import InvitationViewedTracker from "@/components/invitation/InvitationViewedTra
 import AfricanRoyal from "@/components/invitation/templates/AfricanRoyal";
 import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
 import ElegantGold from "@/components/invitation/templates/ElegantGold";
+import HeritageMonogram from "@/components/invitation/templates/HeritageMonogram";
 import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
 import MinimalIvory from "@/components/invitation/templates/MinimalIvory";
 import MidnightLuxe from "@/components/invitation/templates/MidnightLuxe";
@@ -218,6 +219,11 @@ export default async function InvitationPage({
       {template ===
       "african_royal" ? (
         <AfricanRoyal
+          {...templateProps}
+        />
+      ) : template ===
+        "heritage_monogram" ? (
+        <HeritageMonogram
           {...templateProps}
         />
       ) : template ===

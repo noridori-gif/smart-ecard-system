@@ -10,6 +10,7 @@ export type InvitationTemplate =
   | "african_royal"
   | "classic_photo"
   | "elegant_gold"
+  | "heritage_monogram"
   | "luxury_envelope"
   | "minimal_ivory"
   | "midnight_luxe"
@@ -169,6 +170,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "african_royal",
   "classic_photo",
   "elegant_gold",
+  "heritage_monogram",
   "luxury_envelope",
   "minimal_ivory",
   "midnight_luxe",

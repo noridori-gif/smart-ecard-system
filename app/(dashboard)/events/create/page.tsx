@@ -84,6 +84,13 @@ const invitationTemplates: Array<{
       "Cinematic evening-gala layout yenye layered hero, floating title panel na fine-line glow.",
     icon: "☾",
   },
+  {
+    value: "heritage_monogram",
+    name: "Heritage Monogram",
+    description:
+      "Formal heritage stationery yenye monogram crest, cameo portrait na double-frame details.",
+    icon: "HM",
+  },
 ];
 
 type CreateEventForm = {
@@ -462,6 +469,14 @@ export default function CreateEventPage() {
                 accentColor={formData.theme_accent_color}
               />
             )}
+            {formData.invitation_template === "heritage_monogram" && (
+              <HeritageMonogramPreview
+                title={formData.title}
+                primaryColor={formData.theme_primary_color}
+                secondaryColor={formData.theme_secondary_color}
+                accentColor={formData.theme_accent_color}
+              />
+            )}
           </FormSection>
 
           <FormSection
@@ -754,6 +769,25 @@ function MidnightLuxePreview({ title, primaryColor, secondaryColor, accentColor 
       <div className="absolute bottom-5 left-5 right-16 border-l-4 p-5 text-white backdrop-blur-sm" style={{ borderColor: accentColor, backgroundColor: `${secondaryColor}DD` }}>
         <p className="text-[8px] font-bold uppercase tracking-[0.35em]" style={{ color: primaryColor }}>Midnight Luxe</p>
         <h3 className="mt-3 break-words font-serif text-3xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+      </div>
+    </div>
+  );
+}
+
+function HeritageMonogramPreview({ title, primaryColor, secondaryColor, accentColor }: {
+  title: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="relative mt-6 overflow-hidden border-4 border-double p-3 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>
+      <div className="relative min-h-72 border px-6 py-7 text-center" style={{ borderColor: `${accentColor}99` }}>
+        <div className="mx-auto flex h-20 w-16 items-center justify-center rounded-[50%] border-4 border-double font-serif text-xl" style={{ borderColor: primaryColor, color: primaryColor }}>HM</div>
+        <p className="mt-5 text-[8px] font-bold uppercase tracking-[0.4em]" style={{ color: accentColor }}>Heritage Monogram</p>
+        <h3 className="mt-3 break-words font-serif text-3xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+        <div className="mx-auto my-5 flex max-w-48 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="h-3 w-3 rotate-45 border" style={{ borderColor: accentColor }} /><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
+        <p className="font-serif text-xs text-slate-700">I · Ceremony &nbsp; II · Reception</p>
       </div>
     </div>
   );
