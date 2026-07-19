@@ -5,6 +5,7 @@ import type { PublicInvitation } from "@/services/invitationService";
 
 export type WhatsAppCardTemplate =
   | "african_royal"
+  | "chateau_letterpress"
   | "classic_photo"
   | "elegant_gold"
   | "heritage_monogram"
@@ -109,6 +110,7 @@ export function normalizeWhatsAppCardTemplate(
 ): WhatsAppCardTemplate {
   if (
     template === "african_royal" ||
+    template === "chateau_letterpress" ||
     template === "elegant_gold" ||
     template === "heritage_monogram" ||
     template === "modern_floral" ||
@@ -307,6 +309,8 @@ function renderWhatsAppCard(
   switch (template) {
     case "african_royal":
       return <AfricanRoyalCard data={data} />;
+    case "chateau_letterpress":
+      return <ChateauLetterpressCard data={data} />;
     case "elegant_gold":
       return <ElegantGoldCard data={data} />;
     case "heritage_monogram":
@@ -486,6 +490,30 @@ function HeritageMonogramCard({ data }: { data: RenderData }) {
           <div style={{ width: 360, display: "flex", alignItems: "center", marginTop: 28 }}><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /><div style={{ width: 18, height: 18, display: "flex", margin: "0 18px", border: `2px solid ${data.accent}`, transform: "rotate(45deg)" }} /><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /></div>
         </div>
         <Details data={data} color={data.secondaryText} centered />
+        <div style={{ display: "flex", color: data.primary, fontFamily: "Georgia, serif", fontSize: 42, fontWeight: 700, textAlign: "center" }}>{data.guestName}</div>
+      </div>
+    </div>
+  );
+}
+
+function ChateauLetterpressCard({ data }: { data: RenderData }) {
+  const hasImage = Boolean(data.coverImageDataUrl);
+
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", padding: 42, backgroundColor: data.secondary, color: data.secondaryText }}>
+      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "44px 58px", border: `3px solid ${data.primary}`, boxShadow: `inset 0 0 0 10px ${data.secondary}, inset 0 0 0 12px ${data.primary}` }}>
+        <Brand color={data.primary} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <div style={{ display: "flex", color: data.accent, fontFamily: "Arial, sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: 6 }}>CHÂTEAU LETTERPRESS</div>
+          <div style={{ display: "flex", maxWidth: 850, marginTop: 22, color: data.primary, fontFamily: "Georgia, serif", fontSize: Math.min(70, data.titleSize), lineHeight: 1, textAlign: "center" }}>{data.title}</div>
+        </div>
+        <div style={{ width: 820, height: 455, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", padding: 12, border: `3px solid ${data.primary}`, backgroundColor: data.secondary, boxShadow: "0 18px 36px rgba(15,23,42,.14)" }}>
+          <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `2px solid ${data.accent}`, color: data.primary }}>
+            {hasImage ? <CoverImage data={data} /> : <><div style={{ width: 240, height: 170, position: "absolute", display: "flex", borderRadius: "50%", border: `3px solid ${data.accent}` }} /><div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 100, fontStyle: "italic", letterSpacing: -28 }}>CL</div></>}
+          </div>
+        </div>
+        <Details data={data} color={data.secondaryText} centered />
+        <div style={{ width: 430, display: "flex", alignItems: "center" }}><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /><div style={{ display: "flex", margin: "0 18px", color: data.primary, fontFamily: "Georgia, serif", fontSize: 20 }}>CL</div><div style={{ height: 2, flex: 1, display: "flex", backgroundColor: data.accent }} /></div>
         <div style={{ display: "flex", color: data.primary, fontFamily: "Georgia, serif", fontSize: 42, fontWeight: 700, textAlign: "center" }}>{data.guestName}</div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
 
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 import AfricanRoyal from "@/components/invitation/templates/AfricanRoyal";
+import ChateauLetterpress from "@/components/invitation/templates/ChateauLetterpress";
 import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
 import ElegantGold from "@/components/invitation/templates/ElegantGold";
 import HeritageMonogram from "@/components/invitation/templates/HeritageMonogram";
@@ -219,6 +220,11 @@ export default async function InvitationPage({
       {template ===
       "african_royal" ? (
         <AfricanRoyal
+          {...templateProps}
+        />
+      ) : template ===
+        "chateau_letterpress" ? (
+        <ChateauLetterpress
           {...templateProps}
         />
       ) : template ===

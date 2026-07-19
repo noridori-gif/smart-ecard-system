@@ -12,7 +12,7 @@ type RsvpButtonsProps = {
   currentStatus: string;
   language?: Language;
   accentTextClass?: string;
-  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage";
+  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage" | "letterpress";
 };
 
 type RsvpResponse = {
@@ -202,6 +202,32 @@ export default function RsvpButtons({
   const selectedOption = options.find(
     (option) => option.value === selectedStatus
   );
+
+  if (variant === "letterpress") {
+    return (
+      <section className="relative mt-12 border-y-4 border-double border-[var(--theme-primary)] py-10">
+        <div className="text-center">
+          <p className="text-[9px] font-bold uppercase tracking-[0.42em] text-[var(--theme-accent)]">{translations.title}</p>
+          <h3 className="mt-3 font-serif text-3xl text-[var(--theme-primary)] sm:text-4xl">{translations.heading}</h3>
+          <p className="mt-3 text-sm text-[var(--letterpress-ink)]">{translations.instruction}</p>
+        </div>
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {options.map((option) => {
+            const isSelected = selectedStatus === option.value;
+            const isThisUpdating = updatingStatus === option.value;
+            return (
+              <button key={option.value} type="button" aria-pressed={isSelected} aria-label={option.statusLabel} disabled={isUpdating} onClick={() => updateRsvp(option.value)} className={`min-h-24 border-2 bg-transparent px-4 py-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] disabled:opacity-60 ${isSelected ? "border-[var(--theme-accent)] bg-[var(--theme-primary)] text-[var(--letterpress-primary-contrast)] shadow-[inset_0_0_0_3px_var(--theme-primary),inset_0_0_0_4px_var(--theme-accent)]" : "border-[var(--theme-primary)] text-[var(--theme-primary)] hover:border-[var(--theme-accent)]"}`}>
+                <span className="block font-serif text-2xl">{isThisUpdating ? "…" : option.icon}</span>
+                <span className="mt-2 block text-[10px] font-bold uppercase tracking-[0.24em]">{isThisUpdating ? translations.saving : option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-6 text-center text-xs text-[var(--letterpress-ink)]">{translations.currentResponse}: <span className="font-bold text-[var(--theme-primary)]">{selectedOption?.statusLabel ?? getStatusLabel(selectedStatus)}</span></p>
+        {message && <p role="status" aria-live="polite" className={`mt-4 text-center text-xs font-semibold ${isSuccess ? "text-[var(--theme-primary)]" : "text-red-700"}`}>{message}</p>}
+      </section>
+    );
+  }
 
   if (variant === "heritage") {
     return (

@@ -106,6 +106,13 @@ const invitationTemplates: Array<{
       "Formal heritage stationery yenye monogram crest, cameo portrait na double-frame details.",
     icon: "HM",
   },
+  {
+    value: "chateau_letterpress",
+    name: "Château Letterpress",
+    description:
+      "European letterpress stationery yenye landscape print, fine frames na initials seal.",
+    icon: "CL",
+  },
 ];
 
 type EditEventForm = {
@@ -1935,6 +1942,21 @@ function ThemePreview({
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "chateau_letterpress") {
+    return (
+      <div className="relative mt-7 overflow-hidden border p-3 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>
+        <div className="border px-7 py-8 text-center" style={{ borderColor: primaryColor }}>
+          <p className="text-[8px] font-bold uppercase tracking-[0.44em]" style={{ color: accentColor }}>Château Letterpress · Invitation Preview</p>
+          <h3 className="mt-4 break-words font-serif text-4xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+          <div className="mx-auto mt-6 flex aspect-[16/7] max-w-md items-center justify-center border p-2" style={{ borderColor: primaryColor }}><div className="flex h-full w-full items-center justify-center border font-serif text-5xl italic" style={{ borderColor: accentColor, color: primaryColor }}>CL</div></div>
+          <div className="mx-auto my-6 flex max-w-56 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="font-serif text-sm" style={{ color: primaryColor }}>CL</span><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
+          <p className="font-serif text-sm text-slate-700">I · Ceremony &nbsp; II · Reception</p>
+          <p className="mt-4 text-xs text-slate-600">{dressCode || "Your dress code"}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (template === "heritage_monogram") {
     return (
       <div className="relative mt-7 overflow-hidden border-4 border-double p-3 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>

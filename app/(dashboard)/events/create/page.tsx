@@ -91,6 +91,13 @@ const invitationTemplates: Array<{
       "Formal heritage stationery yenye monogram crest, cameo portrait na double-frame details.",
     icon: "HM",
   },
+  {
+    value: "chateau_letterpress",
+    name: "Château Letterpress",
+    description:
+      "European letterpress stationery yenye landscape print, fine frames na initials seal.",
+    icon: "CL",
+  },
 ];
 
 type CreateEventForm = {
@@ -477,6 +484,14 @@ export default function CreateEventPage() {
                 accentColor={formData.theme_accent_color}
               />
             )}
+            {formData.invitation_template === "chateau_letterpress" && (
+              <ChateauLetterpressPreview
+                title={formData.title}
+                primaryColor={formData.theme_primary_color}
+                secondaryColor={formData.theme_secondary_color}
+                accentColor={formData.theme_accent_color}
+              />
+            )}
           </FormSection>
 
           <FormSection
@@ -788,6 +803,25 @@ function HeritageMonogramPreview({ title, primaryColor, secondaryColor, accentCo
         <h3 className="mt-3 break-words font-serif text-3xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
         <div className="mx-auto my-5 flex max-w-48 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="h-3 w-3 rotate-45 border" style={{ borderColor: accentColor }} /><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
         <p className="font-serif text-xs text-slate-700">I · Ceremony &nbsp; II · Reception</p>
+      </div>
+    </div>
+  );
+}
+
+function ChateauLetterpressPreview({ title, primaryColor, secondaryColor, accentColor }: {
+  title: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="relative mt-6 overflow-hidden border p-2 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>
+      <div className="border px-6 py-7 text-center" style={{ borderColor: primaryColor }}>
+        <p className="text-[8px] font-bold uppercase tracking-[0.42em]" style={{ color: accentColor }}>Château Letterpress</p>
+        <h3 className="mt-3 break-words font-serif text-3xl leading-none" style={{ color: primaryColor }}>{title || "Event Title"}</h3>
+        <div className="mx-auto mt-5 flex aspect-[16/7] max-w-sm items-center justify-center border p-2" style={{ borderColor: primaryColor }}><div className="flex h-full w-full items-center justify-center border font-serif text-3xl italic" style={{ borderColor: accentColor, color: primaryColor }}>CL</div></div>
+        <div className="mx-auto my-5 flex max-w-48 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="font-serif text-xs" style={{ color: primaryColor }}>CL</span><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
+        <p className="font-serif text-xs text-slate-700">Formal letterpress preview</p>
       </div>
     </div>
   );
