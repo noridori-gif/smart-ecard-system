@@ -113,6 +113,13 @@ const invitationTemplates: Array<{
       "European letterpress stationery yenye landscape print, fine frames na initials seal.",
     icon: "CL",
   },
+  {
+    value: "emerald_botanical_halo",
+    name: "Emerald Botanical Halo",
+    description:
+      "Botanical luxury yenye emerald background, oval photo halo na fine metallic-gold leaves.",
+    icon: "EH",
+  },
 ];
 
 type EditEventForm = {
@@ -1942,6 +1949,19 @@ function ThemePreview({
   secondaryColor: string;
   accentColor: string;
 }) {
+  if (template === "emerald_botanical_halo") {
+    return (
+      <div className="relative mt-7 min-h-96 overflow-hidden p-8 text-center text-white shadow-xl" style={{ background: `linear-gradient(155deg, ${primaryColor}, #020806)` }}>
+        <svg viewBox="0 0 130 240" className="absolute -left-4 top-8 h-64 opacity-30" fill="none" stroke={secondaryColor} aria-hidden="true"><path d="M8 230C34 172 45 92 116 10M33 174C8 160 8 132 12 113c24 9 34 31 21 61Zm30-55c25-6 43-25 50-49-27 1-45 17-50 49Z" /></svg>
+        <p className="relative text-[8px] font-bold uppercase tracking-[0.44em]" style={{ color: accentColor }}>Emerald Botanical Halo · Invitation Preview</p>
+        <div className="relative mx-auto mt-7 flex h-40 w-32 items-center justify-center rounded-[50%] border-4 font-serif text-4xl" style={{ borderColor: accentColor, boxShadow: `0 0 0 8px ${primaryColor}, 0 0 0 9px ${accentColor}` }}>EH</div>
+        <h3 className="relative mt-9 break-words font-serif text-4xl leading-none">{title || "Event Title"}</h3>
+        <div className="mx-auto mt-5 h-px w-44" style={{ backgroundColor: accentColor }} />
+        <p className="mt-5 text-xs text-white/70">{dressCode || "Your dress code"}</p>
+      </div>
+    );
+  }
+
   if (template === "chateau_letterpress") {
     return (
       <div className="relative mt-7 overflow-hidden border p-3 shadow-lg" style={{ borderColor: primaryColor, backgroundColor: secondaryColor }}>

@@ -8,6 +8,7 @@ export type WhatsAppCardTemplate =
   | "chateau_letterpress"
   | "classic_photo"
   | "elegant_gold"
+  | "emerald_botanical_halo"
   | "heritage_monogram"
   | "modern_floral"
   | "luxury_envelope"
@@ -112,6 +113,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "african_royal" ||
     template === "chateau_letterpress" ||
     template === "elegant_gold" ||
+    template === "emerald_botanical_halo" ||
     template === "heritage_monogram" ||
     template === "modern_floral" ||
     template === "luxury_envelope" ||
@@ -313,6 +315,8 @@ function renderWhatsAppCard(
       return <ChateauLetterpressCard data={data} />;
     case "elegant_gold":
       return <ElegantGoldCard data={data} />;
+    case "emerald_botanical_halo":
+      return <EmeraldBotanicalHaloCard data={data} />;
     case "heritage_monogram":
       return <HeritageMonogramCard data={data} />;
     case "modern_floral":
@@ -470,6 +474,28 @@ function Details({
       >
         {data.venue}
       </div>
+    </div>
+  );
+}
+
+function EmeraldBotanicalHaloCard({ data }: { data: RenderData }) {
+  const initials = data.title.replace(/&/g, " ").split(/\s+/).filter(Boolean).map((part) => part[0]).filter(Boolean);
+  const mark = `${initials[0] ?? "E"}${initials.at(-1) ?? "H"}`.toUpperCase();
+
+  return (
+    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", padding: "54px 64px", background: `linear-gradient(155deg, ${data.primary}, #020806)`, color: "#FFFFFF" }}>
+      <div style={{ position: "absolute", left: -100, top: 150, width: 360, height: 360, display: "flex", borderRadius: 180, border: `2px solid ${data.accent}`, opacity: 0.18 }} />
+      <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center" }}><Brand color={data.accent} /><div style={{ display: "flex", color: data.accent, fontFamily: "Arial, sans-serif", fontSize: 17, fontWeight: 700, letterSpacing: 5 }}>BOTANICAL HALO</div></div>
+      <div style={{ width: 480, height: 570, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 52, borderRadius: 250, border: `2px solid ${data.accent}`, boxShadow: `0 0 0 12px ${data.primary}, 0 0 0 14px ${data.accent}` }}>
+        <div style={{ width: 430, height: 520, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: 220, border: `7px solid ${data.accent}`, background: `radial-gradient(circle, ${data.secondary}, ${data.primary})` }}>
+          {data.coverImageDataUrl ? <CoverImage data={data} borderRadius={220} /> : <div style={{ display: "flex", color: data.accent, fontFamily: "Georgia, serif", fontSize: 116, letterSpacing: 9 }}>{mark}</div>}
+        </div>
+        <div style={{ position: "absolute", left: -54, bottom: 46, width: 138, height: 138, display: "flex", borderRadius: "100% 0 100% 0", border: `4px solid ${data.accent}`, transform: "rotate(-28deg)" }} />
+        <div style={{ position: "absolute", right: -38, top: 50, width: 100, height: 148, display: "flex", borderRadius: "100% 0 100% 0", border: `4px solid ${data.accent}`, transform: "rotate(34deg)" }} />
+      </div>
+      <div style={{ maxWidth: 900, display: "flex", marginTop: 54, color: "#FFFFFF", fontFamily: "Georgia, serif", fontSize: Math.min(76, data.titleSize + 3), lineHeight: 1, textAlign: "center" }}>{data.title}</div>
+      <div style={{ width: 500, height: 2, display: "flex", marginTop: 30, backgroundColor: data.accent, opacity: 0.65 }} />
+      <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 30 }}><Details data={data} color="#FFFFFF" /><Guest data={data} color={data.accent} /></div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ export type InvitationTemplate =
   | "chateau_letterpress"
   | "classic_photo"
   | "elegant_gold"
+  | "emerald_botanical_halo"
   | "heritage_monogram"
   | "luxury_envelope"
   | "minimal_ivory"
@@ -172,6 +173,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "chateau_letterpress",
   "classic_photo",
   "elegant_gold",
+  "emerald_botanical_halo",
   "heritage_monogram",
   "luxury_envelope",
   "minimal_ivory",

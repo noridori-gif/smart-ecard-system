@@ -12,7 +12,7 @@ type RsvpButtonsProps = {
   currentStatus: string;
   language?: Language;
   accentTextClass?: string;
-  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage" | "letterpress";
+  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage" | "letterpress" | "emerald";
 };
 
 type RsvpResponse = {
@@ -202,6 +202,28 @@ export default function RsvpButtons({
   const selectedOption = options.find(
     (option) => option.value === selectedStatus
   );
+
+  if (variant === "emerald") {
+    return (
+      <section className="relative mt-12 overflow-hidden rounded-[2rem] border border-[var(--theme-accent)]/55 bg-[color-mix(in_srgb,var(--theme-primary)_88%,#020806)] px-4 py-10 text-white shadow-[0_24px_70px_rgba(0,0,0,.28)] sm:px-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full border border-[var(--theme-accent)]/30" />
+        <div className="relative text-center">
+          <p className="text-[9px] font-bold uppercase tracking-[0.44em] text-[var(--theme-accent)]">{translations.title}</p>
+          <h3 className="mt-3 font-serif text-3xl sm:text-4xl">{translations.heading}</h3>
+          <p className="mt-3 text-sm text-white/70">{translations.instruction}</p>
+        </div>
+        <div className="relative mt-8 grid grid-cols-3 gap-2 sm:gap-4">
+          {options.map((option) => {
+            const isSelected = selectedStatus === option.value;
+            const isThisUpdating = updatingStatus === option.value;
+            return <button key={option.value} type="button" aria-pressed={isSelected} aria-label={option.statusLabel} disabled={isUpdating} onClick={() => updateRsvp(option.value)} className={`min-w-0 rounded-full border px-2 py-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-accent)] disabled:opacity-60 ${isSelected ? "border-[var(--theme-accent)] bg-[var(--theme-accent)] text-[#07120d] shadow-[0_0_28px_color-mix(in_srgb,var(--theme-accent)_28%,transparent)]" : "border-[var(--theme-accent)]/45 bg-white/[0.04] text-white hover:bg-white/[0.09]"}`}><span className="block font-serif text-xl sm:text-2xl">{isThisUpdating ? "…" : option.icon}</span><span className="mt-2 block truncate text-[9px] font-bold uppercase tracking-[0.14em] sm:text-[10px] sm:tracking-[0.22em]">{isThisUpdating ? translations.saving : option.label}</span></button>;
+          })}
+        </div>
+        <p className="relative mt-6 text-center text-xs text-white/65">{translations.currentResponse}: <span className="font-bold text-[var(--theme-accent)]">{selectedOption?.statusLabel ?? getStatusLabel(selectedStatus)}</span></p>
+        {message && <p role="status" aria-live="polite" className={`relative mt-4 text-center text-xs font-semibold ${isSuccess ? "text-[var(--theme-accent)]" : "text-red-200"}`}>{message}</p>}
+      </section>
+    );
+  }
 
   if (variant === "letterpress") {
     return (

@@ -249,6 +249,7 @@ function normalizeInvitationTemplate(
     template === "african_royal" ||
     template === "chateau_letterpress" ||
     template === "elegant_gold" ||
+    template === "emerald_botanical_halo" ||
     template === "heritage_monogram" ||
     template === "luxury_envelope" ||
     template === "minimal_ivory" ||

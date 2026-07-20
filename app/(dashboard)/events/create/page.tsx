@@ -98,6 +98,13 @@ const invitationTemplates: Array<{
       "European letterpress stationery yenye landscape print, fine frames na initials seal.",
     icon: "CL",
   },
+  {
+    value: "emerald_botanical_halo",
+    name: "Emerald Botanical Halo",
+    description:
+      "Botanical luxury yenye emerald background, oval photo halo na fine metallic-gold leaves.",
+    icon: "EH",
+  },
 ];
 
 type CreateEventForm = {
@@ -492,6 +499,14 @@ export default function CreateEventPage() {
                 accentColor={formData.theme_accent_color}
               />
             )}
+            {formData.invitation_template === "emerald_botanical_halo" && (
+              <EmeraldBotanicalHaloPreview
+                title={formData.title}
+                primaryColor={formData.theme_primary_color}
+                secondaryColor={formData.theme_secondary_color}
+                accentColor={formData.theme_accent_color}
+              />
+            )}
           </FormSection>
 
           <FormSection
@@ -823,6 +838,24 @@ function ChateauLetterpressPreview({ title, primaryColor, secondaryColor, accent
         <div className="mx-auto my-5 flex max-w-48 items-center gap-3"><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /><span className="font-serif text-xs" style={{ color: primaryColor }}>CL</span><span className="h-px flex-1" style={{ backgroundColor: accentColor }} /></div>
         <p className="font-serif text-xs text-slate-700">Formal letterpress preview</p>
       </div>
+    </div>
+  );
+}
+
+function EmeraldBotanicalHaloPreview({ title, primaryColor, secondaryColor, accentColor }: {
+  title: string;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+}) {
+  return (
+    <div className="relative mt-6 min-h-80 overflow-hidden p-7 text-center text-white shadow-xl" style={{ background: `linear-gradient(155deg, ${primaryColor}, #020806)` }}>
+      <svg viewBox="0 0 130 240" className="absolute -left-4 top-8 h-56 opacity-30" fill="none" stroke={secondaryColor} aria-hidden="true"><path d="M8 230C34 172 45 92 116 10M33 174C8 160 8 132 12 113c24 9 34 31 21 61Zm30-55c25-6 43-25 50-49-27 1-45 17-50 49Z" /></svg>
+      <p className="relative text-[8px] font-bold uppercase tracking-[0.42em]" style={{ color: accentColor }}>Emerald Botanical Halo</p>
+      <div className="relative mx-auto mt-6 flex h-36 w-28 items-center justify-center rounded-[50%] border-4 font-serif text-3xl" style={{ borderColor: accentColor, boxShadow: `0 0 0 7px ${primaryColor}, 0 0 0 8px ${accentColor}` }}>EH</div>
+      <h3 className="relative mt-8 break-words font-serif text-3xl leading-none">{title || "Event Title"}</h3>
+      <div className="mx-auto mt-5 h-px w-36" style={{ backgroundColor: accentColor }} />
+      <p className="mt-4 text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: accentColor }}>Botanical luxury preview</p>
     </div>
   );
 }
