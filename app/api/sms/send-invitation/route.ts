@@ -270,7 +270,7 @@ export async function POST(request: Request) {
           success: false,
           message:
             result.errorDetails?.type === "configuration"
-              ? "SMS sending is not configured yet."
+              ? result.message || "SMS sending is not configured yet."
               : result.errorDetails?.type === "validation"
                 ? "The guest phone number is invalid."
                 : result.errorDetails?.type === "timeout"

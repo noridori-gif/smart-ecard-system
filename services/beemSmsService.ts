@@ -50,14 +50,29 @@ function getBeemConfig() {
   const secretKey = process.env.BEEM_SECRET_KEY?.trim();
   const senderName = process.env.BEEM_SENDER_NAME?.trim();
 
-  if (!apiKey || !secretKey || !senderName) {
-    return null;
+  if (!apiKey || !secretKey) {
+    return {
+      apiKey: null,
+      secretKey: null,
+      senderName,
+      errorMessage: "BEEM API key or Secret key has not been configured yet.",
+    };
+  }
+
+  if (!senderName) {
+    return {
+      apiKey,
+      secretKey,
+      senderName: null,
+      errorMessage: "BEEM Sender Name has not been configured yet.",
+    };
   }
 
   return {
     apiKey,
     secretKey,
     senderName,
+    errorMessage: null,
   };
 }
 
@@ -143,9 +158,9 @@ export async function sendBeemSms({
 
   const config = getBeemConfig();
 
-  if (!config) {
+  if (config.errorMessage) {
     return buildErrorResult(
-      "BEEM SMS configuration is incomplete.",
+      config.errorMessage,
       "configuration"
     );
   }
