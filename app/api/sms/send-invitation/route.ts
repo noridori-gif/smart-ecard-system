@@ -17,9 +17,6 @@ type ProfileRecord = {
 type InvitationRow = {
   id: number;
   invitation_token: string;
-  event_pass_id: string | null;
-  allowed_guests: number | null;
-  language: string | null;
   guests:
     | {
         full_name: string | null;
@@ -163,9 +160,6 @@ export async function POST(request: Request) {
       .select(`
         id,
         invitation_token,
-        event_pass_id,
-        allowed_guests,
-        language,
         guests!inner (
           full_name,
           phone,
@@ -219,9 +213,9 @@ export async function POST(request: Request) {
         invitation_status: "sent",
         rsvp_status: "pending",
         created_at: new Date().toISOString(),
-        event_pass_id: invitationRecord.event_pass_id ?? guest.event_pass_id ?? null,
-        allowed_guests: invitationRecord.allowed_guests ?? guest.allowed_guests ?? 1,
-        language: (invitationRecord.language || event.language || "sw") as "sw" | "en",
+        event_pass_id: guest.event_pass_id ?? null,
+        allowed_guests: guest.allowed_guests ?? 1,
+        language: (event.language || "sw") as "sw" | "en",
         invitation_template: "minimal_ivory",
         events: {
           title: event.title ?? "Event",
