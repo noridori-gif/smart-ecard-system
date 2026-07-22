@@ -17,12 +17,11 @@ import {
 } from "@/services/invitationService";
 
 import {
-  buildDeviceSmsUrl,
-  buildSmsMessage,
   buildWhatsAppMessage,
   buildWhatsAppUrl,
   formatGuestPhoneNumber,
 } from "@/services/invitationMessageService";
+import { sendSmsInvitation } from "@/services/smsService";
 
 type NotificationType =
   | "success"
@@ -54,6 +53,7 @@ type InvitationActionsProps =
   InvitationActionHandlers & {
     invitation:
       InvitationWithDetails;
+    sendingInvitationId: number | null;
   };
 
 const INVITATIONS_PER_PAGE = 10;
@@ -98,6 +98,11 @@ export default function InvitationsPage() {
     currentPage,
     setCurrentPage,
   ] = useState(1);
+
+  const [
+    sendingInvitationId,
+    setSendingInvitationId,
+  ] = useState<number | null>(null);
 
   useEffect(() => {
     loadInvitations();
@@ -190,10 +195,17 @@ export default function InvitationsPage() {
     );
   }
 
-  function handleSMS(
+  async function handleSMS(
     invitation:
       InvitationWithDetails
   ) {
+    if (
+      sendingInvitationId ===
+      invitation.id
+    ) {
+      return;
+    }
+
     const phoneNumber =
       formatGuestPhoneNumber(
         invitation.guests?.phone
@@ -208,20 +220,36 @@ export default function InvitationsPage() {
       return;
     }
 
-    const message =
-      buildSmsMessage(
-        invitation,
-        window.location.origin
+    setSendingInvitationId(
+      invitation.id
+    );
+
+    try {
+      const result =
+        await sendSmsInvitation(
+          invitation.id
+        );
+
+      showNotification(
+        result.message ||
+          "SMS invitation accepted by BEEM Africa.",
+        "success"
+      );
+    } catch (error) {
+      console.error(
+        "Send SMS invitation error:",
+        error
       );
 
-    const smsUrl =
-      buildDeviceSmsUrl(
-        phoneNumber,
-        message
+      showNotification(
+        error instanceof Error
+          ? error.message
+          : "SMS invitation haikuweza kutumwa.",
+        "error"
       );
-
-    window.location.href =
-      smsUrl;
+    } finally {
+      setSendingInvitationId(null);
+    }
   }
 
   async function handleCopyMessage(
@@ -609,6 +637,7 @@ export default function InvitationsPage() {
             onCopy={
               handleCopyMessage
             }
+            sendingInvitationId={sendingInvitationId}
           />
 
           <MobileInvitationsList
@@ -622,6 +651,7 @@ export default function InvitationsPage() {
             onCopy={
               handleCopyMessage
             }
+            sendingInvitationId={sendingInvitationId}
           />
 
           <Pagination
@@ -672,9 +702,11 @@ function DesktopInvitationsTable({
   onWhatsApp,
   onSMS,
   onCopy,
+  sendingInvitationId,
 }: InvitationActionHandlers & {
   invitations:
     InvitationWithDetails[];
+  sendingInvitationId: number | null;
 }) {
   return (
     <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
@@ -768,6 +800,7 @@ function DesktopInvitationsTable({
                       onSMS={onSMS}
                       onCopy={onCopy}
                       compact
+                      sendingInvitationId={sendingInvitationId}
                     />
                   </td>
                 </tr>
@@ -785,9 +818,11 @@ function MobileInvitationsList({
   onWhatsApp,
   onSMS,
   onCopy,
+  sendingInvitationId,
 }: InvitationActionHandlers & {
   invitations:
     InvitationWithDetails[];
+  sendingInvitationId: number | null;
 }) {
   const [
     openInvitationId,
@@ -967,13 +1002,17 @@ function MobileInvitationsList({
 
                 <button
                   type="button"
+                  disabled={
+                    !invitation.guests?.phone ||
+                    sendingInvitationId === invitation.id
+                  }
                   onClick={() => {
                     onSMS(invitation);
                     closeMore();
                   }}
-                  className="min-h-11 rounded-lg bg-blue-600 px-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                  className="min-h-11 rounded-lg bg-blue-600 px-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  SMS
+                  {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
                 </button>
 
                 <button
@@ -1019,6 +1058,7 @@ function InvitationActions({
   onSMS,
   onCopy,
   compact = false,
+  sendingInvitationId,
 }: InvitationActionsProps & {
   compact?: boolean;
 }) {
@@ -1055,12 +1095,16 @@ function InvitationActions({
 
       <button
         type="button"
+        disabled={
+          !invitation.guests?.phone ||
+          sendingInvitationId === invitation.id
+        }
         onClick={() =>
           onSMS(invitation)
         }
-        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        SMS
+        {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
       </button>
 
       <button

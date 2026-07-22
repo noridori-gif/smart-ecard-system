@@ -353,7 +353,7 @@ export function buildSmsMessage(
     );
 
   const venue =
-    event?.venue ?? "-";
+    event?.venue?.trim() || "";
 
   const eventPassId =
     invitation.event_pass_id ??
@@ -375,19 +375,20 @@ export function buildSmsMessage(
     return [
       `Hello ${guestName},`,
       "",
-      `You are invited to the wedding of ${eventTitle}.`,
+      `You are invited to ${eventTitle}.`,
       eventDate
-        ? `Date: ${eventDate}.`
+        ? `Date: ${eventDate}`
         : "",
       eventTime
-        ? `Time: ${eventTime}.`
+        ? `Time: ${eventTime}`
         : "",
-      `Venue: ${venue}.`,
+      venue
+        ? `Venue: ${venue}`
+        : "",
+      `Event Pass ID: ${eventPassId}`,
+      `Allowed guests: ${allowedGuests}`,
       "",
-      `Pass ID: ${eventPassId}.`,
-      `Allowed guests: ${allowedGuests}.`,
-      "",
-      "Open invitation:",
+      "Open your invitation:",
       invitationUrl,
     ]
       .filter(
@@ -401,19 +402,20 @@ export function buildSmsMessage(
   return [
     `Habari ${guestName},`,
     "",
-    `Umealikwa kwenye harusi ya ${eventTitle}.`,
+    `Umealikwa kwenye ${eventTitle}.`,
     eventDate
-      ? `Tarehe: ${eventDate}.`
+      ? `Tarehe: ${eventDate}`
       : "",
     eventTime
-      ? `Muda: ${eventTime}.`
+      ? `Muda: ${eventTime}`
       : "",
-    `Mahali: ${venue}.`,
+    venue
+      ? `Mahali: ${venue}`
+      : "",
+    `Event Pass ID: ${eventPassId}`,
+    `Idadi ya wageni: ${allowedGuests}`,
     "",
-    `Pass ID: ${eventPassId}.`,
-    `Idadi: ${allowedGuests}.`,
-    "",
-    "Fungua mwaliko:",
+    "Fungua mwaliko wako:",
     invitationUrl,
   ]
     .filter(

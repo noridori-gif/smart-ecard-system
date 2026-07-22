@@ -20,6 +20,20 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## BEEM SMS integration
+
+To enable BEEM Africa SMS invitations, configure these server-side environment variables:
+
+- BEEM_API_KEY
+- BEEM_SECRET_KEY
+- BEEM_SENDER_NAME
+
+Keep these values in your local environment and in Vercel production settings. Do not expose them to the browser or prefix them with NEXT_PUBLIC.
+
+BEEM_SENDER_NAME must be approved by the provider before production use. The SMS endpoint is protected by Supabase authentication and only allows admin and organizer roles.
+
+For safe testing, use a non-production invitation and a test phone number that you control. You can call the SMS endpoint with an authenticated admin or organizer session to verify the integration without sending messages to real guests.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
