@@ -2,7 +2,7 @@ import type {
   InvitationWithDetails,
 } from "@/services/invitationService";
 
-type MessageLanguage =
+export type MessageLanguage =
   | "sw"
   | "en";
 
@@ -11,6 +11,7 @@ type InvitationEventDetails = {
   event_date?: string | null;
   event_time?: string | null;
   venue?: string | null;
+  dress_code?: string | null;
 };
 
 type InvitationGuestDetails = {
@@ -52,6 +53,49 @@ function getLanguage(
     : "sw";
 }
 
+export function getInvitationStatusLabel(
+  language: MessageLanguage,
+  allowedGuests:
+    | number
+    | null
+    | undefined
+) {
+  const normalizedAllowedGuests =
+    Number(allowedGuests);
+
+  const safeCount =
+    Number.isFinite(
+      normalizedAllowedGuests
+    ) &&
+    normalizedAllowedGuests >= 1
+      ? Math.floor(
+          normalizedAllowedGuests
+        )
+      : 1;
+
+  if (language === "en") {
+    if (safeCount === 1) {
+      return "Single (1 Person)";
+    }
+
+    if (safeCount === 2) {
+      return "Double (2 People)";
+    }
+
+    return `${safeCount} People`;
+  }
+
+  if (safeCount === 1) {
+    return "Single (Mtu 1)";
+  }
+
+  if (safeCount === 2) {
+    return "Double (Watu 2)";
+  }
+
+  return `Watu ${safeCount}`;
+}
+
 function getEventDetails(
   invitation:
     InvitationWithDetails
@@ -72,7 +116,7 @@ function getGuestDetails(
     | undefined;
 }
 
-function formatEventDate(
+export function formatEventDate(
   eventDate:
     | string
     | null
@@ -109,7 +153,7 @@ function formatEventDate(
   ).format(parsedDate);
 }
 
-function formatEventTime(
+export function formatEventTime(
   eventTime:
     | string
     | null
@@ -235,20 +279,21 @@ export function buildWhatsAppMessage(
   const venue =
     event?.venue ?? "";
 
-  const category =
-    formatCategory(
-      guest?.category
-    );
+  const dressCode =
+    event?.dress_code ?? "";
 
   const eventPassId =
-    invitation.event_pass_id ??
-    guest?.event_pass_id ??
-    "-";
+    guest?.event_pass_id?.trim() ||
+    "";
 
   const allowedGuests =
-    invitation.allowed_guests ??
-    guest?.allowed_guests ??
-    1;
+    guest?.allowed_guests ?? 1;
+
+  const status =
+    getInvitationStatusLabel(
+      language,
+      allowedGuests
+    );
 
   const invitationUrl =
     buildInvitationUrl(
@@ -256,28 +301,42 @@ export function buildWhatsAppMessage(
       siteOrigin
     );
 
+  const details = [
+    eventDate
+      ? `${language === "en" ? "Date" : "Tarehe"}: ${eventDate}`
+      : null,
+    eventTime
+      ? `${language === "en" ? "Time" : "Muda"}: ${eventTime}`
+      : null,
+    venue
+      ? `${language === "en" ? "Venue" : "Mahali"}: ${venue}`
+      : null,
+    dressCode
+      ? `Dress Code: ${dressCode}`
+      : null,
+    status
+      ? `${language === "en" ? "Status" : "Status"}: ${status}`
+      : null,
+    eventPassId
+      ? `Pass ID: ${eventPassId}`
+      : null,
+  ].filter(
+    (line): line is string =>
+      Boolean(line)
+  );
+
   if (language === "en") {
     return [
       `Hello ${guestName},`,
       "",
-      `You are invited to the wedding of *${eventTitle}*.`,
-      eventDate
-        ? `Date: ${eventDate}`
-        : "",
-      eventTime
-        ? `Time: ${eventTime}`
-        : "",
-      venue
-        ? `Venue: ${venue}`
-        : "",
-      `Category: ${category}`,
-      `Allowed guests: ${allowedGuests}`,
-      `Pass ID: *${eventPassId}*`,
+      `You are invited to ${eventTitle}.`,
+      "",
+      ...details,
+      "",
+      "We look forward to celebrating with you.",
       "",
       "Open invitation:",
       invitationUrl,
-      "",
-      "Please present your QR code or Pass ID at check-in.",
     ]
       .filter(
         (line) =>
@@ -290,24 +349,14 @@ export function buildWhatsAppMessage(
   return [
     `Habari ${guestName},`,
     "",
-    `Umealikwa kwenye harusi ya *${eventTitle}*.`,
-    eventDate
-      ? `Tarehe: ${eventDate}`
-      : "",
-    eventTime
-      ? `Muda: ${eventTime}`
-      : "",
-    venue
-      ? `Mahali: ${venue}`
-      : "",
-    `Kundi: ${category}`,
-    `Idadi inayoruhusiwa: ${allowedGuests}`,
-    `Pass ID: *${eventPassId}*`,
+    `Umealikwa kwenye ${eventTitle}.`,
+    "",
+    ...details,
+    "",
+    "Tunakuja kwa furaha kuungana nasi.",
     "",
     "Fungua mwaliko:",
     invitationUrl,
-    "",
-    "Onyesha QR code au Pass ID wakati wa kuingia.",
   ]
     .filter(
       (line) =>

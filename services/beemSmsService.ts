@@ -166,7 +166,7 @@ export async function sendBeemSms({
   }
 
   const payload: BeemPayload = {
-    sender: config.senderName,
+    sender: config.senderName || undefined,
     recipient: normalizedPhone,
     message: message.trim(),
   };

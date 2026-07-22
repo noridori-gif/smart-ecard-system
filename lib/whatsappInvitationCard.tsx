@@ -1,27 +1,34 @@
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
+import QRCode from "qrcode";
 
+import type {
+  EventLanguage,
+  InvitationTemplate,
+} from "@/services/eventService";
 import type { PublicInvitation } from "@/services/invitationService";
+import {
+  formatEventDate,
+  formatEventTime,
+  getInvitationStatusLabel,
+} from "@/services/invitationMessageService";
 
-export type WhatsAppCardTemplate =
-  | "african_royal"
-  | "chateau_letterpress"
-  | "classic_photo"
-  | "elegant_gold"
-  | "emerald_botanical_halo"
-  | "heritage_monogram"
-  | "modern_floral"
-  | "luxury_envelope"
-  | "minimal_ivory"
-  | "midnight_luxe"
-  | "royal_dark";
+export type WhatsAppCardTemplate = InvitationTemplate;
 
 export type WhatsAppCardData = {
+  guestName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  venue: string;
+  dressCode: string;
+  allowedGuests: number;
+  eventPassId: string;
+  qrToken: string | null;
+  language: EventLanguage;
+  invitationTemplate: WhatsAppCardTemplate;
   title: string;
   date: string;
-  venue: string;
-  guestName: string;
-  guestLabel: string;
   coverImageUrl: string | null;
   primary: string;
   secondary: string;
@@ -30,6 +37,7 @@ export type WhatsAppCardData = {
 
 type RenderData = WhatsAppCardData & {
   coverImageDataUrl: string | null;
+  qrCodeDataUrl: string | null;
   primaryText: string;
   secondaryText: string;
   accentText: string;
@@ -46,22 +54,12 @@ function cleanText(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
 }
 
-function formatDate(dateValue: string | null, language: "sw" | "en") {
-  if (!dateValue) {
-    return "-";
-  }
+function formatDate(dateValue: string | null, language: EventLanguage) {
+  return formatEventDate(dateValue, language);
+}
 
-  const date = new Date(`${dateValue}T00:00:00`);
-
-  if (Number.isNaN(date.getTime())) {
-    return dateValue;
-  }
-
-  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "sw-TZ", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+function formatTime(timeValue: string | null, language: EventLanguage) {
+  return formatEventTime(timeValue, language);
 }
 
 function safeColor(value: string | null, fallback: string) {
@@ -131,13 +129,26 @@ export function getWhatsAppCardData(
   invitation: PublicInvitation
 ): WhatsAppCardData {
   const language = invitation.language === "en" ? "en" : "sw";
+  const eventTitle = cleanText(displayTitle(invitation), "Invitation");
+  const eventDate = formatDate(invitation.event_date, language);
+  const eventTime = formatTime(invitation.event_time, language);
 
   return {
-    title: cleanText(displayTitle(invitation), "Invitation"),
-    date: formatDate(invitation.event_date, language),
-    venue: cleanText(invitation.venue, "-"),
     guestName: cleanText(invitation.guest_name, "Guest"),
-    guestLabel: language === "en" ? "PREPARED FOR" : "KWA HESHIMA YA",
+    eventTitle,
+    eventDate,
+    eventTime,
+    venue: cleanText(invitation.venue, "-"),
+    dressCode: cleanText(invitation.dress_code, ""),
+    allowedGuests: Number.isFinite(invitation.allowed_guests)
+      ? Math.max(1, Math.floor(invitation.allowed_guests))
+      : 1,
+    eventPassId: cleanText(invitation.event_pass_id, ""),
+    qrToken: invitation.qr_token?.trim() || null,
+    language,
+    invitationTemplate: normalizeWhatsAppCardTemplate(invitation.invitation_template),
+    title: eventTitle,
+    date: eventDate,
     coverImageUrl: invitation.cover_image_url?.trim() || null,
     primary: safeColor(invitation.theme_primary_color, "#BE123C"),
     secondary: safeColor(invitation.theme_secondary_color, "#FFF1F2"),
@@ -221,7 +232,8 @@ function getUrlHost(urlValue: string) {
 
 function renderData(
   data: WhatsAppCardData,
-  coverImageDataUrl: string | null
+  coverImageDataUrl: string | null,
+  qrCodeDataUrl: string | null
 ): RenderData {
   const primary = safeColor(data.primary, "#BE123C");
   const secondary = safeColor(data.secondary, "#FFF1F2");
@@ -231,14 +243,14 @@ function renderData(
   return {
     ...data,
     title,
-    date: cleanText(data.date, "-"),
+    date: cleanText(data.eventDate, "-"),
     venue: cleanText(data.venue, "-"),
     guestName: cleanText(data.guestName, "Guest"),
-    guestLabel: cleanText(data.guestLabel, "PREPARED FOR"),
     primary,
     secondary,
     accent,
     coverImageDataUrl,
+    qrCodeDataUrl,
     primaryText: readableText(primary),
     secondaryText: readableText(secondary),
     accentText: readableText(accent),
@@ -273,12 +285,34 @@ function pngResponse(buffer: ArrayBuffer) {
   });
 }
 
+async function buildQrCodeDataUrl(token: string | null | undefined) {
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return await QRCode.toDataURL(token, {
+      margin: 1,
+      width: 240,
+      errorCorrectionLevel: "M",
+      color: {
+        dark: "#0F172A",
+        light: "#FFFFFF",
+      },
+    });
+  } catch (error) {
+    console.warn("WhatsApp card QR fallback:", error);
+    return null;
+  }
+}
+
 export async function createWhatsAppInvitationCard(
   template: WhatsAppCardTemplate,
   data: WhatsAppCardData
 ) {
   const coverImageDataUrl = await fetchCoverImageDataUrl(data.coverImageUrl);
-  let normalizedData = renderData(data, coverImageDataUrl);
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  let normalizedData = renderData(data, coverImageDataUrl, qrCodeDataUrl);
 
   try {
     return pngResponse(
@@ -287,7 +321,7 @@ export async function createWhatsAppInvitationCard(
   } catch (error) {
     if (normalizedData.coverImageDataUrl) {
       console.warn("WhatsApp card image decode fallback:", error);
-      normalizedData = renderData(data, null);
+      normalizedData = renderData(data, null, qrCodeDataUrl);
 
       try {
         return pngResponse(
@@ -344,27 +378,62 @@ function CoverImage({
   if (!data.coverImageDataUrl) return null;
 
   return (
-    // Satori requires a plain img element and receives validated embedded bytes.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={data.coverImageDataUrl}
-      alt=""
-      width={CARD_WIDTH}
-      height={CARD_HEIGHT}
+    <div
       style={{
         position: "absolute",
-        left: 0,
-        top: 0,
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        ...(borderRadius
-          ? {
-              borderRadius,
-            }
-          : {}),
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        padding: 28,
+        backgroundColor: "rgba(15, 23, 42, 0.06)",
       }}
-    />
+    >
+      {/* Satori requires a plain img element and receives validated embedded bytes. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={data.coverImageDataUrl}
+        alt=""
+        width={CARD_WIDTH}
+        height={CARD_HEIGHT}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          objectPosition: "center",
+          filter: "blur(28px) scale(1.08)",
+          opacity: 0.72,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(135deg, rgba(255,255,255,0.2), rgba(15,23,42,0.2))",
+        }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={data.coverImageDataUrl}
+        alt=""
+        width={CARD_WIDTH}
+        height={CARD_HEIGHT}
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          height: "100%",
+          objectFit: "contain",
+          objectPosition: "center",
+          borderRadius,
+          boxShadow: "0 24px 48px rgba(15, 23, 42, 0.18)",
+        }}
+      />
+    </div>
   );
 }
 
@@ -422,7 +491,7 @@ function Guest({
           opacity: 0.72,
         }}
       >
-        {data.guestLabel}
+        {data.language === "en" ? "Hello" : "Habari"}
       </div>
       <div
         style={{
@@ -440,6 +509,241 @@ function Guest({
   );
 }
 
+function getPassStatusMeta(data: RenderData) {
+  const safeCount = Number.isFinite(data.allowedGuests)
+    ? Math.max(1, Math.floor(data.allowedGuests))
+    : 1;
+
+  if (data.language === "en") {
+    if (safeCount === 1) {
+      return {
+        title: "SINGLE PASS",
+        detail: "1 Person",
+      };
+    }
+
+    if (safeCount === 2) {
+      return {
+        title: "DOUBLE PASS",
+        detail: "2 People",
+      };
+    }
+
+    return {
+      title: "GROUP PASS",
+      detail: `${safeCount} People`,
+    };
+  }
+
+  if (safeCount === 1) {
+    return {
+      title: "SINGLE PASS",
+      detail: "Mtu 1",
+    };
+  }
+
+  if (safeCount === 2) {
+    return {
+      title: "DOUBLE PASS",
+      detail: "Watu 2",
+    };
+  }
+
+  return {
+    title: "GROUP PASS",
+    detail: `Watu ${safeCount}`,
+  };
+}
+
+function PremiumPassStrip({
+  data,
+  color,
+}: {
+  data: RenderData;
+  color: string;
+}) {
+  const passStatus = getPassStatusMeta(data);
+  const passIdLabel =
+    data.language === "en"
+      ? "ENTRY PASS ID"
+      : "PASS ID YA KUINGIA";
+  const passIdValue = cleanText(
+    data.eventPassId,
+    data.language === "en" ? "PENDING" : "INASUBIRI"
+  );
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        marginTop: 22,
+        padding: 18,
+        borderRadius: 26,
+        border: `2px solid ${data.accent}`,
+        backgroundColor: data.secondary,
+        boxShadow: `0 18px 45px rgba(15, 23, 42, 0.14)`,
+        color,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          paddingBottom: 14,
+          borderBottom: `1px dashed ${data.accent}88`,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Arial, sans-serif",
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              color: data.accent,
+            }}
+          >
+            Verified Event Pass
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 8,
+              fontFamily: "Arial, sans-serif",
+              fontSize: 26,
+              fontWeight: 800,
+              lineHeight: 1.1,
+            }}
+          >
+            {passStatus.title}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 6,
+              fontSize: 20,
+              fontWeight: 600,
+              opacity: 0.82,
+            }}
+          >
+            {passStatus.detail}
+          </div>
+        </div>
+        <div
+          style={{
+            width: 132,
+            height: 132,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 18,
+            border: `1px solid ${data.accent}44`,
+            backgroundColor: "#FFFFFF",
+            padding: 10,
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {data.qrCodeDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.qrCodeDataUrl}
+              alt=""
+              width={112}
+              height={112}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 12,
+                border: `1px dashed ${data.accent}`,
+                color: data.accent,
+                fontFamily: "Arial, sans-serif",
+                fontSize: 15,
+                fontWeight: 700,
+                textAlign: "center",
+                padding: 8,
+              }}
+            >
+              {data.language === "en" ? "QR Ready" : "QR Tayari"}
+            </div>
+          )}
+        </div>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          marginTop: 14,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              opacity: 0.82,
+            }}
+          >
+            {passIdLabel}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              marginTop: 8,
+              fontFamily: "Arial, sans-serif",
+              fontSize: 32,
+              fontWeight: 800,
+              lineHeight: 1.05,
+              letterSpacing: 1.5,
+            }}
+          >
+            {passIdValue}
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            padding: "10px 12px",
+            borderRadius: 999,
+            backgroundColor: `${data.accent}18`,
+            color: data.accent,
+            fontFamily: "Arial, sans-serif",
+            fontSize: 13,
+            fontWeight: 800,
+            letterSpacing: 2,
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {data.language === "en" ? "VIP Access" : "Ufikiaji wa VIP"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Details({
   data,
   color,
@@ -449,6 +753,48 @@ function Details({
   color: string;
   centered?: boolean;
 }) {
+  const detailItems = [
+    data.date && data.date !== "-"
+      ? {
+          label: data.language === "en" ? "Date" : "Tarehe",
+          value: data.date,
+        }
+      : null,
+    data.eventTime
+      ? {
+          label: data.language === "en" ? "Time" : "Muda",
+          value: data.eventTime,
+        }
+      : null,
+    data.venue && data.venue !== "-"
+      ? {
+          label: data.language === "en" ? "Venue" : "Mahali",
+          value: data.venue,
+        }
+      : null,
+    data.dressCode
+      ? {
+          label: "Dress Code",
+          value: data.dressCode,
+        }
+      : null,
+    {
+      label: "Status",
+      value: getInvitationStatusLabel(
+        data.language,
+        data.allowedGuests
+      ),
+    },
+    data.eventPassId
+      ? {
+          label: "Pass ID",
+          value: data.eventPassId,
+        }
+      : null,
+  ].filter(
+    (item): item is { label: string; value: string } => Boolean(item)
+  );
+
   return (
     <div
       style={{
@@ -460,20 +806,23 @@ function Details({
         textAlign: centered ? "center" : "left",
       }}
     >
-      <div style={{ display: "flex", fontSize: 30, fontWeight: 700 }}>
-        {data.date}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          marginTop: 13,
-          fontSize: 27,
-          lineHeight: 1.3,
-          opacity: 0.82,
-        }}
-      >
-        {data.venue}
-      </div>
+      {detailItems.map((item, index) => (
+        <div
+          key={`${item.label}-${index}`}
+          style={{
+            display: "flex",
+            fontSize: index === 0 ? 30 : 24,
+            fontWeight: index === 0 ? 700 : 500,
+            lineHeight: 1.25,
+            marginTop: index === 0 ? 0 : 10,
+            opacity: index === 0 ? 1 : 0.86,
+          }}
+        >
+          <span style={{ marginRight: 8, opacity: 0.82 }}>{item.label}:</span>
+          <span>{item.value}</span>
+        </div>
+      ))}
+      <PremiumPassStrip data={data} color={color} />
     </div>
   );
 }
