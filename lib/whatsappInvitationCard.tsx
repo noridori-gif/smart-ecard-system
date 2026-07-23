@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
+import PremiumWhatsAppCard from "./PremiumWhatsAppCard";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -396,30 +397,7 @@ function renderWhatsAppCard(
   template: WhatsAppCardTemplate,
   data: RenderData
 ): ReactElement {
-  switch (template) {
-    case "african_royal":
-      return <AfricanRoyalCard data={data} />;
-    case "chateau_letterpress":
-      return <ChateauLetterpressCard data={data} />;
-    case "elegant_gold":
-      return <ElegantGoldCard data={data} />;
-    case "emerald_botanical_halo":
-      return <EmeraldBotanicalHaloCard data={data} />;
-    case "heritage_monogram":
-      return <HeritageMonogramCard data={data} />;
-    case "modern_floral":
-      return <ModernFloralCard data={data} />;
-    case "luxury_envelope":
-      return <LuxuryEnvelopeCard data={data} />;
-    case "minimal_ivory":
-      return <MinimalIvoryCard data={data} />;
-    case "midnight_luxe":
-      return <MidnightLuxeCard data={data} />;
-    case "royal_dark":
-      return <RoyalDarkCard data={data} />;
-    default:
-      return <ClassicPhotoCard data={data} />;
-  }
+  return <PremiumWhatsAppCard data={data} template={template} />;
 }
 
 function CoverImage({
