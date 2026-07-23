@@ -279,9 +279,6 @@ export function buildWhatsAppMessage(
   const venue =
     event?.venue ?? "";
 
-  const dressCode =
-    event?.dress_code ?? "";
-
   const eventPassId =
     guest?.event_pass_id?.trim() ||
     "";
@@ -289,41 +286,11 @@ export function buildWhatsAppMessage(
   const allowedGuests =
     guest?.allowed_guests ?? 1;
 
-  const status =
-    getInvitationStatusLabel(
-      language,
-      allowedGuests
-    );
-
   const invitationUrl =
     buildInvitationUrl(
       invitation.invitation_token,
       siteOrigin
     );
-
-  const details = [
-    eventDate
-      ? `${language === "en" ? "Date" : "Tarehe"}: ${eventDate}`
-      : null,
-    eventTime
-      ? `${language === "en" ? "Time" : "Muda"}: ${eventTime}`
-      : null,
-    venue
-      ? `${language === "en" ? "Venue" : "Mahali"}: ${venue}`
-      : null,
-    dressCode
-      ? `Dress Code: ${dressCode}`
-      : null,
-    status
-      ? `${language === "en" ? "Status" : "Status"}: ${status}`
-      : null,
-    eventPassId
-      ? `Pass ID: ${eventPassId}`
-      : null,
-  ].filter(
-    (line): line is string =>
-      Boolean(line)
-  );
 
   if (language === "en") {
     return [
@@ -331,11 +298,14 @@ export function buildWhatsAppMessage(
       "",
       `You are invited to ${eventTitle}.`,
       "",
-      ...details,
+      eventDate ? `📅 ${eventDate}` : null,
+      eventTime ? `🕒 ${eventTime}` : null,
+      venue ? `📍 ${venue}` : null,
       "",
-      "We look forward to celebrating with you.",
+      `🎟️ Pass ID: ${eventPassId || "-"}`,
+      `👥 Guests: ${allowedGuests}`,
       "",
-      "Open invitation:",
+      "Use the button below to open your full invitation.",
       invitationUrl,
     ]
       .filter(
@@ -351,11 +321,14 @@ export function buildWhatsAppMessage(
     "",
     `Umealikwa kwenye ${eventTitle}.`,
     "",
-    ...details,
+    eventDate ? `📅 ${eventDate}` : null,
+    eventTime ? `🕒 ${eventTime}` : null,
+    venue ? `📍 ${venue}` : null,
     "",
-    "Tunakuja kwa furaha kuungana nasi.",
+    `🎟️ Pass ID: ${eventPassId || "-"}`,
+    `👥 Idadi: ${allowedGuests}`,
     "",
-    "Fungua mwaliko:",
+    "Bonyeza kitufe hapa chini kufungua mwaliko kamili.",
     invitationUrl,
   ]
     .filter(

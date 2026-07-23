@@ -1,7 +1,9 @@
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
-import PremiumWhatsAppCard from "./PremiumWhatsAppCard";
+import PremiumWhatsAppCard, {
+  CompactHorizontalCard,
+} from "./PremiumWhatsAppCard";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -311,10 +313,14 @@ function renderData(
   };
 }
 
-async function materializePng(element: ReactElement) {
+async function materializePng(
+  element: ReactElement,
+  width = CARD_WIDTH,
+  height = CARD_HEIGHT
+) {
   const imageResponse = new ImageResponse(element, {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
+    width,
+    height,
   });
   const buffer = await imageResponse.arrayBuffer();
   const bytes = new Uint8Array(buffer);
@@ -391,6 +397,21 @@ export async function createWhatsAppInvitationCard(
       await materializePng(<SafeFallbackCard data={normalizedData} />)
     );
   }
+}
+
+export async function createCompactWhatsAppInvitationCard(
+  data: WhatsAppCardData
+) {
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  const normalizedData = renderData(data, null, qrCodeDataUrl);
+
+  return pngResponse(
+    await materializePng(
+      <CompactHorizontalCard data={normalizedData} />,
+      1080,
+      520
+    )
+  );
 }
 
 function renderWhatsAppCard(

@@ -79,6 +79,15 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    href: "/whatsapp-card-preview",
+    label: "WhatsApp Card Preview",
+    icon: "🎨",
+    allowedRoles: [
+      "admin",
+      "organizer",
+    ],
+  },
+  {
     href: "/check-in",
     label: "Check-In",
     icon: "📷",
