@@ -2,33 +2,33 @@ import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
 
-import type {
-  EventLanguage,
-  InvitationTemplate,
-} from "@/services/eventService";
 import type { PublicInvitation } from "@/services/invitationService";
-import {
-  formatEventDate,
-  formatEventTime,
-  getInvitationStatusLabel,
-} from "@/services/invitationMessageService";
 
-export type WhatsAppCardTemplate = InvitationTemplate;
+export type WhatsAppCardTemplate =
+  | "african_royal"
+  | "chateau_letterpress"
+  | "classic_photo"
+  | "elegant_gold"
+  | "emerald_botanical_halo"
+  | "heritage_monogram"
+  | "modern_floral"
+  | "luxury_envelope"
+  | "minimal_ivory"
+  | "midnight_luxe"
+  | "royal_dark";
 
 export type WhatsAppCardData = {
-  guestName: string;
-  eventTitle: string;
-  eventDate: string;
+  title: string;
+  date: string;
   eventTime: string;
   venue: string;
+  guestName: string;
   dressCode: string;
   allowedGuests: number;
   eventPassId: string;
   qrToken: string | null;
-  language: EventLanguage;
+  language: "sw" | "en";
   invitationTemplate: WhatsAppCardTemplate;
-  title: string;
-  date: string;
   coverImageUrl: string | null;
   primary: string;
   secondary: string;
@@ -54,13 +54,45 @@ function cleanText(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
 }
 
-function formatDate(dateValue: string | null, language: EventLanguage) {
-  return formatEventDate(dateValue, language);
+function formatDate(dateValue: string | null, language: "sw" | "en") {
+  if (!dateValue) {
+    return "-";
+  }
+
+  const date = new Date(`${dateValue}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "sw-TZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
-function formatTime(timeValue: string | null, language: EventLanguage) {
-  return formatEventTime(timeValue, language);
+function formatTime(timeValue: string | null, language: "sw" | "en") {
+  if (!timeValue) {
+    return "";
+  }
+
+  const [hoursValue, minutesValue] = timeValue.split(":");
+  const hours = Number(hoursValue);
+  const minutes = Number(minutesValue);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return timeValue;
+  }
+
+  const date = new Date(2000, 0, 1, hours, minutes);
+
+  return new Intl.DateTimeFormat(language === "en" ? "en-GB" : "sw-TZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
+
 
 function safeColor(value: string | null, fallback: string) {
   const normalized = value?.trim();
@@ -129,16 +161,16 @@ export function getWhatsAppCardData(
   invitation: PublicInvitation
 ): WhatsAppCardData {
   const language = invitation.language === "en" ? "en" : "sw";
-  const eventTitle = cleanText(displayTitle(invitation), "Invitation");
-  const eventDate = formatDate(invitation.event_date, language);
-  const eventTime = formatTime(invitation.event_time, language);
+  const invitationTemplate = normalizeWhatsAppCardTemplate(
+    invitation.invitation_template
+  );
 
   return {
-    guestName: cleanText(invitation.guest_name, "Guest"),
-    eventTitle,
-    eventDate,
-    eventTime,
+    title: cleanText(displayTitle(invitation), "Invitation"),
+    date: formatDate(invitation.event_date, language),
+    eventTime: formatTime(invitation.event_time, language),
     venue: cleanText(invitation.venue, "-"),
+    guestName: cleanText(invitation.guest_name, "Guest"),
     dressCode: cleanText(invitation.dress_code, ""),
     allowedGuests: Number.isFinite(invitation.allowed_guests)
       ? Math.max(1, Math.floor(invitation.allowed_guests))
@@ -146,13 +178,11 @@ export function getWhatsAppCardData(
     eventPassId: cleanText(invitation.event_pass_id, ""),
     qrToken: invitation.qr_token?.trim() || null,
     language,
-    invitationTemplate: normalizeWhatsAppCardTemplate(invitation.invitation_template),
-    title: eventTitle,
-    date: eventDate,
+    invitationTemplate,
     coverImageUrl: invitation.cover_image_url?.trim() || null,
-    primary: safeColor(invitation.theme_primary_color, "#BE123C"),
-    secondary: safeColor(invitation.theme_secondary_color, "#FFF1F2"),
-    accent: safeColor(invitation.theme_accent_color, "#D4AF37"),
+    primary: safeColor(invitation.theme_primary_color, "#145A46"),
+    secondary: safeColor(invitation.theme_secondary_color, "#FFF8EC"),
+    accent: safeColor(invitation.theme_accent_color, "#C9A962"),
   };
 }
 
@@ -235,17 +265,23 @@ function renderData(
   coverImageDataUrl: string | null,
   qrCodeDataUrl: string | null
 ): RenderData {
-  const primary = safeColor(data.primary, "#BE123C");
-  const secondary = safeColor(data.secondary, "#FFF1F2");
-  const accent = safeColor(data.accent, "#D4AF37");
+  const primary = safeColor(data.primary, "#145A46");
+  const secondary = safeColor(data.secondary, "#FFF8EC");
+  const accent = safeColor(data.accent, "#C9A962");
   const title = cleanText(data.title, "Invitation");
 
   return {
     ...data,
     title,
-    date: cleanText(data.eventDate, "-"),
+    date: cleanText(data.date, "-"),
+    eventTime: cleanText(data.eventTime, ""),
     venue: cleanText(data.venue, "-"),
     guestName: cleanText(data.guestName, "Guest"),
+    dressCode: cleanText(data.dressCode, ""),
+    eventPassId: cleanText(data.eventPassId, ""),
+    allowedGuests: Number.isFinite(data.allowedGuests)
+      ? Math.max(1, Math.floor(data.allowedGuests))
+      : 1,
     primary,
     secondary,
     accent,
@@ -334,7 +370,9 @@ export async function createWhatsAppInvitationCard(
       console.error("WhatsApp card template render failed:", error);
     }
 
-    return pngResponse(await materializePng(<SafeFallbackCard data={normalizedData} />));
+    return pngResponse(
+      await materializePng(<SafeFallbackCard data={normalizedData} />)
+    );
   }
 }
 
@@ -386,11 +424,10 @@ function CoverImage({
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
-        padding: 28,
+        padding: 22,
         backgroundColor: "rgba(15, 23, 42, 0.06)",
       }}
     >
-      {/* Satori requires a plain img element and receives validated embedded bytes. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={data.coverImageDataUrl}
@@ -404,17 +441,20 @@ function CoverImage({
           height: "100%",
           objectFit: "cover",
           objectPosition: "center",
-          filter: "blur(28px) scale(1.08)",
-          opacity: 0.72,
+          filter: "blur(26px)",
+          opacity: 0.58,
         }}
       />
+
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(135deg, rgba(255,255,255,0.2), rgba(15,23,42,0.2))",
+          background:
+            "linear-gradient(135deg, rgba(255,255,255,0.2), rgba(15,23,42,0.16))",
         }}
       />
+
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={data.coverImageDataUrl}
@@ -424,13 +464,11 @@ function CoverImage({
         style={{
           position: "relative",
           width: "100%",
-          maxWidth: "100%",
-          maxHeight: "100%",
           height: "100%",
           objectFit: "contain",
           objectPosition: "center",
           borderRadius,
-          boxShadow: "0 24px 48px rgba(15, 23, 42, 0.18)",
+          boxShadow: "0 18px 38px rgba(15,23,42,0.18)",
         }}
       />
     </div>
@@ -486,20 +524,21 @@ function Guest({
         style={{
           display: "flex",
           fontFamily: "Arial, sans-serif",
-          fontSize: 20,
+          fontSize: 19,
           fontWeight: 700,
           opacity: 0.72,
         }}
       >
         {data.language === "en" ? "Hello" : "Habari"}
       </div>
+
       <div
         style={{
           display: "flex",
-          marginTop: 10,
+          marginTop: 8,
           fontFamily: "Georgia, serif",
-          fontSize: 38,
-          lineHeight: 1.15,
+          fontSize: 36,
+          lineHeight: 1.12,
           fontWeight: 700,
         }}
       >
@@ -510,64 +549,39 @@ function Guest({
 }
 
 function getPassStatusMeta(data: RenderData) {
-  const safeCount = Number.isFinite(data.allowedGuests)
+  const count = Number.isFinite(data.allowedGuests)
     ? Math.max(1, Math.floor(data.allowedGuests))
     : 1;
 
-  if (data.language === "en") {
-    if (safeCount === 1) {
-      return {
-        title: "SINGLE PASS",
-        detail: "1 Person",
-      };
-    }
-
-    if (safeCount === 2) {
-      return {
-        title: "DOUBLE PASS",
-        detail: "2 People",
-      };
-    }
-
-    return {
-      title: "GROUP PASS",
-      detail: `${safeCount} People`,
-    };
-  }
-
-  if (safeCount === 1) {
+  if (count === 1) {
     return {
       title: "SINGLE PASS",
-      detail: "Mtu 1",
+      detail: data.language === "en" ? "1 Person" : "Mtu 1",
     };
   }
 
-  if (safeCount === 2) {
+  if (count === 2) {
     return {
       title: "DOUBLE PASS",
-      detail: "Watu 2",
+      detail: data.language === "en" ? "2 People" : "Watu 2",
     };
   }
 
   return {
     title: "GROUP PASS",
-    detail: `Watu ${safeCount}`,
+    detail: data.language === "en" ? `${count} People` : `Watu ${count}`,
   };
 }
 
-function PremiumPassStrip({
+function CompactPassStrip({
   data,
   color,
 }: {
   data: RenderData;
   color: string;
 }) {
-  const passStatus = getPassStatusMeta(data);
-  const passIdLabel =
-    data.language === "en"
-      ? "ENTRY PASS ID"
-      : "PASS ID YA KUINGIA";
-  const passIdValue = cleanText(
+  const status = getPassStatusMeta(data);
+  const passId = cleanText(
     data.eventPassId,
     data.language === "en" ? "PENDING" : "INASUBIRI"
   );
@@ -577,167 +591,128 @@ function PremiumPassStrip({
       style={{
         width: "100%",
         display: "flex",
-        flexDirection: "column",
-        marginTop: 22,
-        padding: 18,
-        borderRadius: 26,
+        alignItems: "stretch",
+        marginTop: 18,
+        borderRadius: 18,
+        overflow: "hidden",
         border: `2px solid ${data.accent}`,
         backgroundColor: data.secondary,
-        boxShadow: `0 18px 45px rgba(15, 23, 42, 0.14)`,
         color,
       }}
     >
       <div
         style={{
+          width: 132,
+          minHeight: 132,
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          gap: 16,
-          paddingBottom: 14,
-          borderBottom: `1px dashed ${data.accent}88`,
+          justifyContent: "center",
+          padding: 10,
+          backgroundColor: "#FFFFFF",
+          borderRight: `1px dashed ${data.accent}`,
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+        {data.qrCodeDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.qrCodeDataUrl}
+            alt=""
+            width={110}
+            height={110}
+            style={{
+              width: 110,
+              height: 110,
+              objectFit: "contain",
+            }}
+          />
+        ) : (
           <div
             style={{
               display: "flex",
               fontFamily: "Arial, sans-serif",
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 800,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-              color: data.accent,
+              textAlign: "center",
+              color: data.primary,
             }}
           >
-            Verified Event Pass
+            QR
           </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 8,
-              fontFamily: "Arial, sans-serif",
-              fontSize: 26,
-              fontWeight: 800,
-              lineHeight: 1.1,
-            }}
-          >
-            {passStatus.title}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 6,
-              fontSize: 20,
-              fontWeight: 600,
-              opacity: 0.82,
-            }}
-          >
-            {passStatus.detail}
-          </div>
-        </div>
-        <div
-          style={{
-            width: 132,
-            height: 132,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 18,
-            border: `1px solid ${data.accent}44`,
-            backgroundColor: "#FFFFFF",
-            padding: 10,
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
-          {data.qrCodeDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.qrCodeDataUrl}
-              alt=""
-              width={112}
-              height={112}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 12,
-                border: `1px dashed ${data.accent}`,
-                color: data.accent,
-                fontFamily: "Arial, sans-serif",
-                fontSize: 15,
-                fontWeight: 700,
-                textAlign: "center",
-                padding: 8,
-              }}
-            >
-              {data.language === "en" ? "QR Ready" : "QR Tayari"}
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
       <div
         style={{
+          flex: 1,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 16,
-          marginTop: 14,
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "15px 20px",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              opacity: 0.82,
-            }}
-          >
-            {passIdLabel}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: 8,
-              fontFamily: "Arial, sans-serif",
-              fontSize: 32,
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: 1.5,
-            }}
-          >
-            {passIdValue}
-          </div>
-        </div>
         <div
           style={{
             display: "flex",
-            padding: "10px 12px",
-            borderRadius: 999,
-            backgroundColor: `${data.accent}18`,
-            color: data.accent,
             fontFamily: "Arial, sans-serif",
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            whiteSpace: "nowrap",
+            fontSize: 12,
+            fontWeight: 900,
+            letterSpacing: 2.4,
+            color: data.accent,
           }}
         >
-          {data.language === "en" ? "VIP Access" : "Ufikiaji wa VIP"}
+          VERIFIED EVENT PASS
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 7,
+            fontFamily: "Arial, sans-serif",
+            fontSize: 23,
+            fontWeight: 900,
+          }}
+        >
+          {status.title}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 3,
+            fontFamily: "Arial, sans-serif",
+            fontSize: 16,
+            fontWeight: 700,
+            opacity: 0.78,
+          }}
+        >
+          {status.detail}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 9,
+            fontFamily: "Arial, sans-serif",
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 1.8,
+            opacity: 0.75,
+          }}
+        >
+          {data.language === "en" ? "ENTRY PASS ID" : "PASS ID YA KUINGIA"}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            marginTop: 3,
+            fontFamily: "Georgia, serif",
+            fontSize: 27,
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}
+        >
+          {passId}
         </div>
       </div>
     </div>
@@ -753,51 +728,12 @@ function Details({
   color: string;
   centered?: boolean;
 }) {
-  const detailItems = [
-    data.date && data.date !== "-"
-      ? {
-          label: data.language === "en" ? "Date" : "Tarehe",
-          value: data.date,
-        }
-      : null,
-    data.eventTime
-      ? {
-          label: data.language === "en" ? "Time" : "Muda",
-          value: data.eventTime,
-        }
-      : null,
-    data.venue && data.venue !== "-"
-      ? {
-          label: data.language === "en" ? "Venue" : "Mahali",
-          value: data.venue,
-        }
-      : null,
-    data.dressCode
-      ? {
-          label: "Dress Code",
-          value: data.dressCode,
-        }
-      : null,
-    {
-      label: "Status",
-      value: getInvitationStatusLabel(
-        data.language,
-        data.allowedGuests
-      ),
-    },
-    data.eventPassId
-      ? {
-          label: "Pass ID",
-          value: data.eventPassId,
-        }
-      : null,
-  ].filter(
-    (item): item is { label: string; value: string } => Boolean(item)
-  );
+  const status = getPassStatusMeta(data);
 
   return (
     <div
       style={{
+        width: "100%",
         display: "flex",
         flexDirection: "column",
         alignItems: centered ? "center" : "flex-start",
@@ -806,23 +742,98 @@ function Details({
         textAlign: centered ? "center" : "left",
       }}
     >
-      {detailItems.map((item, index) => (
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: centered ? "center" : "flex-start",
+          gap: 10,
+        }}
+      >
         <div
-          key={`${item.label}-${index}`}
           style={{
             display: "flex",
-            fontSize: index === 0 ? 30 : 24,
-            fontWeight: index === 0 ? 700 : 500,
-            lineHeight: 1.25,
-            marginTop: index === 0 ? 0 : 10,
-            opacity: index === 0 ? 1 : 0.86,
+            padding: "9px 12px",
+            borderRadius: 12,
+            backgroundColor: `${data.accent}18`,
+            fontSize: 20,
+            fontWeight: 800,
           }}
         >
-          <span style={{ marginRight: 8, opacity: 0.82 }}>{item.label}:</span>
-          <span>{item.value}</span>
+          {data.date}
         </div>
-      ))}
-      <PremiumPassStrip data={data} color={color} />
+
+        {data.eventTime ? (
+          <div
+            style={{
+              display: "flex",
+              padding: "9px 12px",
+              borderRadius: 12,
+              backgroundColor: `${data.accent}18`,
+              fontSize: 20,
+              fontWeight: 700,
+            }}
+          >
+            {data.eventTime}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          marginTop: 12,
+          fontSize: 23,
+          lineHeight: 1.25,
+          fontWeight: 700,
+          opacity: 0.9,
+        }}
+      >
+        {data.venue}
+      </div>
+
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: centered ? "center" : "flex-start",
+          gap: 10,
+          marginTop: 12,
+        }}
+      >
+        {data.dressCode ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "8px 11px",
+              borderRadius: 12,
+              border: `1px solid ${data.accent}`,
+              fontSize: 16,
+              fontWeight: 700,
+            }}
+          >
+            Dress Code: {data.dressCode}
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            display: "flex",
+            padding: "8px 11px",
+            borderRadius: 12,
+            backgroundColor: data.primary,
+            color: data.primaryText,
+            fontSize: 15,
+            fontWeight: 900,
+          }}
+        >
+          {status.title}
+        </div>
+      </div>
+
+      <CompactPassStrip data={data} color={color} />
     </div>
   );
 }
