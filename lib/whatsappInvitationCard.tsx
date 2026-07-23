@@ -49,6 +49,8 @@ const CARD_HEIGHT = 1350;
 const COVER_FETCH_TIMEOUT_MS = 6_000;
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+const WEBP_RIFF_SIGNATURE = [0x52, 0x49, 0x46, 0x46];
+const WEBP_FORMAT_SIGNATURE = [0x57, 0x45, 0x42, 0x50];
 
 function cleanText(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
@@ -194,6 +196,18 @@ function isJpeg(bytes: Uint8Array) {
   return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
 }
 
+function isWebP(bytes: Uint8Array) {
+  const hasRiffHeader = WEBP_RIFF_SIGNATURE.every(
+    (byte, index) => bytes[index] === byte
+  );
+
+  const hasWebPHeader = WEBP_FORMAT_SIGNATURE.every(
+    (byte, index) => bytes[index + 8] === byte
+  );
+
+  return hasRiffHeader && hasWebPHeader;
+}
+
 async function fetchCoverImageDataUrl(urlValue: string | null) {
   if (!urlValue) {
     return null;
@@ -208,7 +222,7 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
 
     const response = await fetch(url, {
       headers: {
-        Accept: "image/png,image/jpeg",
+        Accept: "image/png,image/jpeg,image/webp",
       },
       cache: "no-store",
       signal: AbortSignal.timeout(COVER_FETCH_TIMEOUT_MS),
@@ -232,13 +246,15 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
 
     const bytes = new Uint8Array(buffer);
     const mimeType = isPng(bytes)
-      ? "image/png"
-      : isJpeg(bytes)
-        ? "image/jpeg"
-        : null;
+  ? "image/png"
+  : isJpeg(bytes)
+    ? "image/jpeg"
+    : isWebP(bytes)
+      ? "image/webp"
+      : null;
 
     if (!mimeType) {
-      throw new Error("Cover image is not a supported PNG or JPEG file.");
+      throw new Error("Cover image is not a supported PNG, JPEG, or WebP file.");
     }
 
     return `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
