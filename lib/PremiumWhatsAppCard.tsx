@@ -29,6 +29,15 @@ export type PremiumWhatsAppCardData = {
   accent: string;
 };
 
+type OrnamentKind =
+  | "botanical"
+  | "floral"
+  | "artdeco"
+  | "letterpress"
+  | "heritage"
+  | "african"
+  | "minimal";
+
 type Preset = {
   outer: string;
   paper: string;
@@ -37,29 +46,30 @@ type Preset = {
   accent: string;
   soft: string;
   darkPass: boolean;
+  ornament: OrnamentKind;
 };
 
 function presetFor(template: PremiumWhatsAppTemplate, data: PremiumWhatsAppCardData): Preset {
   switch (template) {
     case "emerald_botanical_halo":
-      return { outer: "#0C4C3A", paper: "#FFF9ED", ink: "#173D32", muted: "#68766F", accent: "#C7A75F", soft: "#F2E9DA", darkPass: false };
+      return { outer: "#0C4C3A", paper: "#FFF9ED", ink: "#173D32", muted: "#68766F", accent: "#C7A75F", soft: "#F2E9DA", darkPass: false,ornament: "botanical", };
     case "modern_floral":
-      return { outer: "#E8C7CF", paper: "#FFF9FA", ink: "#753347", muted: "#8D7078", accent: "#C78B9B", soft: "#F8E8EC", darkPass: false };
+      return { outer: "#E8C7CF", paper: "#FFF9FA", ink: "#753347", muted: "#8D7078", accent: "#C78B9B", soft: "#F8E8EC", darkPass: false,ornament: "floral", };
     case "midnight_luxe":
     case "royal_dark":
-      return { outer: "#09172C", paper: "#10213C", ink: "#F8F3E8", muted: "#BBC5D7", accent: "#D4B466", soft: "#172C4B", darkPass: true };
+      return { outer: "#09172C", paper: "#10213C", ink: "#F8F3E8", muted: "#BBC5D7", accent: "#D4B466", soft: "#172C4B", darkPass: true, ornament: "artdeco", };
     case "elegant_gold":
     case "chateau_letterpress":
     case "luxury_envelope":
-      return { outer: "#775521", paper: "#FFF9EC", ink: "#513815", muted: "#806D51", accent: "#C9A55A", soft: "#F3E7CF", darkPass: false };
+      return { outer: "#775521", paper: "#FFF9EC", ink: "#513815", muted: "#806D51", accent: "#C9A55A", soft: "#F3E7CF", darkPass: false, ornament: "letterpress", };
     case "heritage_monogram":
-      return { outer: "#562632", paper: "#FFF9F2", ink: "#4A2630", muted: "#7B6268", accent: "#C7A66A", soft: "#F2E7DD", darkPass: false };
+      return { outer: "#562632", paper: "#FFF9F2", ink: "#4A2630", muted: "#7B6268", accent: "#C7A66A", soft: "#F2E7DD", darkPass: false,ornament: "heritage", };
     case "african_royal":
-      return { outer: "#28170E", paper: "#FBF1DD", ink: "#2D1D13", muted: "#796354", accent: "#C9903C", soft: "#F0DDBD", darkPass: false };
+      return { outer: "#28170E", paper: "#FBF1DD", ink: "#2D1D13", muted: "#796354", accent: "#C9903C", soft: "#F0DDBD", darkPass: false,ornament: "african", };
     case "minimal_ivory":
-      return { outer: "#DED5C4", paper: "#FFFDF8", ink: "#2D2A24", muted: "#777167", accent: "#B7A078", soft: "#F4EFE6", darkPass: false };
+      return { outer: "#DED5C4", paper: "#FFFDF8", ink: "#2D2A24", muted: "#777167", accent: "#B7A078", soft: "#F4EFE6", darkPass: false,ornament: "minimal", };
     default:
-      return { outer: data.primary, paper: data.secondary, ink: "#172033", muted: "#6B7280", accent: data.accent, soft: data.secondary, darkPass: false };
+      return { outer: data.primary, paper: data.secondary, ink: "#172033", muted: "#6B7280", accent: data.accent, soft: data.secondary, darkPass: false,ornament: "minimal", };
   }
 }
 
@@ -68,6 +78,179 @@ function passStatus(data: PremiumWhatsAppCardData) {
   if (count === 1) return { title: "SINGLE PASS", detail: data.language === "en" ? "1 Person" : "Mtu 1" };
   if (count === 2) return { title: "DOUBLE PASS", detail: data.language === "en" ? "2 People" : "Watu 2" };
   return { title: "GROUP PASS", detail: data.language === "en" ? `${count} People` : `Watu ${count}` };
+}
+
+function CornerDecoration({
+  preset,
+  right = false,
+  bottom = false,
+}: {
+  preset: Preset;
+  right?: boolean;
+  bottom?: boolean;
+}) {
+  const positionStyle = {
+    position: "absolute" as const,
+    width: 160,
+    height: 160,
+    display: "flex",
+    ...(right ? { right: -18 } : { left: -18 }),
+    ...(bottom ? { bottom: -18 } : { top: -18 }),
+    transform: `${right ? "scaleX(-1)" : ""} ${
+      bottom ? "scaleY(-1)" : ""
+    }`.trim(),
+    opacity: 0.42,
+  };
+
+  if (preset.ornament === "botanical" || preset.ornament === "floral") {
+    return (
+      <div style={positionStyle}>
+        <div
+          style={{
+            position: "absolute",
+            left: 34,
+            top: 12,
+            width: 15,
+            height: 140,
+            borderRadius: 999,
+            backgroundColor: preset.accent,
+            transform: "rotate(-35deg)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 24,
+            top: 30,
+            width: 76,
+            height: 34,
+            borderRadius: "80px 0 80px 0",
+            backgroundColor: preset.accent,
+            transform: "rotate(-18deg)",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 58,
+            top: 78,
+            width: 82,
+            height: 36,
+            borderRadius: "80px 0 80px 0",
+            backgroundColor: preset.accent,
+            transform: "rotate(12deg)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (preset.ornament === "african") {
+    return (
+      <div style={positionStyle}>
+        {[0, 1, 2].map((index) => (
+          <div
+            key={index}
+            style={{
+              position: "absolute",
+              left: 18 + index * 18,
+              top: 18 + index * 18,
+              width: 84,
+              height: 84,
+              border: `5px solid ${preset.accent}`,
+              transform: "rotate(45deg)",
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (
+    preset.ornament === "artdeco" ||
+    preset.ornament === "heritage"
+  ) {
+    return (
+      <div style={positionStyle}>
+        <div
+          style={{
+            position: "absolute",
+            left: 20,
+            top: 20,
+            width: 105,
+            height: 105,
+            borderTop: `5px solid ${preset.accent}`,
+            borderLeft: `5px solid ${preset.accent}`,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 42,
+            top: 42,
+            width: 65,
+            height: 65,
+            borderTop: `3px solid ${preset.accent}`,
+            borderLeft: `3px solid ${preset.accent}`,
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (preset.ornament === "letterpress") {
+    return (
+      <div style={positionStyle}>
+        <div
+          style={{
+            position: "absolute",
+            left: 20,
+            top: 20,
+            width: 108,
+            height: 108,
+            borderRadius: 999,
+            border: `3px double ${preset.accent}`,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: 52,
+            top: 52,
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            backgroundColor: preset.accent,
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={positionStyle}>
+      <div
+        style={{
+          position: "absolute",
+          left: 20,
+          top: 20,
+          width: 76,
+          height: 2,
+          backgroundColor: preset.accent,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 20,
+          top: 20,
+          width: 2,
+          height: 76,
+          backgroundColor: preset.accent,
+        }}
+      />
+    </div>
+  );
 }
 
 function DetailBox({
@@ -119,6 +302,10 @@ export default function PremiumWhatsAppCard({
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 34, background: `linear-gradient(150deg, ${preset.outer}, #07110E)` }}>
       <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", padding: "32px 42px 28px", borderRadius: 28, border: `3px solid ${preset.accent}`, backgroundColor: preset.paper, boxShadow: "0 28px 76px rgba(0,0,0,0.34)", color: preset.ink }}>
+<CornerDecoration preset={preset} />
+<CornerDecoration preset={preset} right />
+<CornerDecoration preset={preset} bottom />
+<CornerDecoration preset={preset} right bottom />
         <div style={{ position: "absolute", left: -55, top: -55, width: 190, height: 190, display: "flex", borderRadius: 999, border: `18px solid ${preset.accent}`, opacity: 0.18 }} />
         <div style={{ position: "absolute", right: -60, bottom: -60, width: 210, height: 210, display: "flex", borderRadius: 999, border: `18px solid ${preset.accent}`, opacity: 0.18 }} />
 
