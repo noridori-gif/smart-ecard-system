@@ -22,9 +22,14 @@ export type WhatsAppCardTemplate =
 
 export type WhatsAppCardData = {
   title: string;
+  invitationMessage: string;
   date: string;
   eventTime: string;
   venue: string;
+  ceremonyTitle: string;
+  ceremonyTime: string;
+  ceremonyVenue: string;
+  receptionVenue: string;
   guestName: string;
   dressCode: string;
   allowedGuests: number;
@@ -48,7 +53,7 @@ type RenderData = WhatsAppCardData & {
 };
 
 const CARD_WIDTH = 1080;
-const CARD_HEIGHT = 1350;
+const CARD_HEIGHT = 1600;
 const COVER_FETCH_TIMEOUT_MS = 6_000;
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -57,6 +62,102 @@ const WEBP_FORMAT_SIGNATURE = [0x57, 0x45, 0x42, 0x50];
 
 function cleanText(value: string | null | undefined, fallback: string) {
   return value?.trim() || fallback;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function truncateInvitationMessage(value: string, maxLength = 210) {
+  if (value.length <= maxLength) return value;
+
+  const shortened = value.slice(0, maxLength + 1);
+  const lastBreak = Math.max(
+    shortened.lastIndexOf("\n"),
+    shortened.lastIndexOf(". "),
+    shortened.lastIndexOf(", "),
+    shortened.lastIndexOf(" ")
+  );
+  const cutoff = lastBreak >= maxLength * 0.65 ? lastBreak : maxLength;
+
+  return `${shortened.slice(0, cutoff).trim().replace(/[.,;:!?-]+$/, "")}…`;
+}
+
+function formatInvitationMessage(
+  data: WhatsAppCardData
+) {
+  const fallback =
+    data.language === "en"
+      ? "The family and event hosts are delighted to invite"
+      : "Familia na waandaaji wa hafla wana furaha kukualika";
+  let message = data.invitationMessage.trim();
+
+  if (!message) return fallback;
+
+  message = message
+    .replace(/\r\n?/g, "\n")
+    .replace(/(?:https?:\/\/|www\.)\S+/gi, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n");
+
+  const duplicateValues = [
+    data.guestName,
+    data.title,
+    data.eventPassId,
+    data.date,
+    data.ceremonyTime,
+    data.eventTime,
+    data.ceremonyVenue,
+    data.receptionVenue,
+    data.venue,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value && value !== "-"));
+
+  for (const duplicate of duplicateValues) {
+    message = message.replace(
+      new RegExp(`(?:^|\\n)[^\\n]{0,28}${escapeRegExp(duplicate)}[^\\n]{0,28}(?=\\n|$)`, "gi"),
+      "\n"
+    );
+  }
+
+  message = message
+    .split("\n")
+    .filter((line) => {
+      const normalized = line.trim().toLowerCase();
+      if (!normalized) return false;
+
+      return !(
+        /\b(pass\s*id|qr(?:\s*code)?|scan|link|url|sms|whats\s*app|technical|ticket)\b/i.test(normalized) ||
+        /\b(tarehe|date|venue|mahali|ukumbi|location|time|saa)\s*[:：-]/i.test(normalized)
+      );
+    })
+    .join("\n");
+
+  const guestName = data.guestName.trim();
+  if (guestName) {
+    message = message.replace(
+      new RegExp(
+        `^(?:(?:dear|hello|hi|habari|ndugu|mpendwa)\\s*[,!:-]?\\s*)?${escapeRegExp(guestName)}\\s*[,!:-]?\\s*`,
+        "i"
+      ),
+      ""
+    );
+  }
+
+  message = message
+    .replace(
+      new RegExp(`^${escapeRegExp(data.title)}\\s*[,!:-]?\\s*`, "i"),
+      ""
+    )
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+
+  if (message.length < 12 || !/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(message)) {
+    return fallback;
+  }
+
+  return truncateInvitationMessage(message);
 }
 
 function formatDate(dateValue: string | null, language: "sw" | "en") {
@@ -166,15 +267,21 @@ export function getWhatsAppCardData(
   invitation: PublicInvitation
 ): WhatsAppCardData {
   const language = invitation.language === "en" ? "en" : "sw";
+  const title = cleanText(displayTitle(invitation), "Invitation");
   const invitationTemplate = normalizeWhatsAppCardTemplate(
     invitation.invitation_template
   );
 
   return {
-    title: cleanText(displayTitle(invitation), "Invitation"),
+    title,
+    invitationMessage: invitation.invitation_message?.trim() || "",
     date: formatDate(invitation.event_date, language),
     eventTime: formatTime(invitation.event_time, language),
     venue: cleanText(invitation.venue, "-"),
+    ceremonyTitle: cleanText(invitation.ceremony_title, ""),
+    ceremonyTime: formatTime(invitation.ceremony_time, language),
+    ceremonyVenue: cleanText(invitation.ceremony_venue, ""),
+    receptionVenue: cleanText(invitation.venue, ""),
     guestName: cleanText(invitation.guest_name, "Guest"),
     dressCode: cleanText(invitation.dress_code, ""),
     allowedGuests: Number.isFinite(invitation.allowed_guests)
@@ -292,9 +399,14 @@ function renderData(
   return {
     ...data,
     title,
+    invitationMessage: formatInvitationMessage(data),
     date: cleanText(data.date, "-"),
     eventTime: cleanText(data.eventTime, ""),
     venue: cleanText(data.venue, "-"),
+    ceremonyTitle: cleanText(data.ceremonyTitle, ""),
+    ceremonyTime: cleanText(data.ceremonyTime, ""),
+    ceremonyVenue: cleanText(data.ceremonyVenue, ""),
+    receptionVenue: cleanText(data.receptionVenue, ""),
     guestName: cleanText(data.guestName, "Guest"),
     dressCode: cleanText(data.dressCode, ""),
     eventPassId: cleanText(data.eventPassId, ""),

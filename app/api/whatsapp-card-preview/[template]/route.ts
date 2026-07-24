@@ -10,6 +10,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const previewTemplates = new Set<WhatsAppCardTemplate>([
+  "midnight_luxe",
+  "emerald_botanical_halo",
+  "modern_floral",
   "royal_dark",
   "elegant_gold",
   "chateau_letterpress",
@@ -51,9 +54,15 @@ function previewData(
 ) {
   return {
     title: "Samwel & Dio",
+    invitationMessage:
+      "Familia za Bw. na Bi. Mushi pamoja na waandaaji wa hafla\nwana furaha kubwa kukualika kushiriki nasi siku hii ya pekee.",
     date: "12 Septemba 2026",
     eventTime: "Saa 2:00 Asubuhi",
     venue: "Noble Hall Kimara,\nDar es Salaam",
+    ceremonyTitle: "IBADA YA NDOA",
+    ceremonyTime: "Saa 2:00 Asubuhi",
+    ceremonyVenue: "Kanisa la Mt. Yosefu, Dar es Salaam",
+    receptionVenue: "Noble Hall Kimara,\nDar es Salaam",
     guestName: "Mr & Mrs Noriega Ludovick",
     dressCode: "Emerald Green",
     allowedGuests: 2,

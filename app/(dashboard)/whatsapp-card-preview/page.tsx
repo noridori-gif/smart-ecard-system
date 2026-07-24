@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { getCurrentUserProfile } from "@/services/profileService";
 
 const templates = [
+  ["midnight_luxe", "Midnight Luxe"],
+  ["emerald_botanical_halo", "Emerald Botanical Halo"],
+  ["modern_floral", "Modern Floral"],
   ["royal_dark", "Royal Dark"],
   ["elegant_gold", "Elegant Gold"],
   ["chateau_letterpress", "Chateau Letterpress"],
@@ -73,7 +76,7 @@ export default function WhatsAppCardPreviewPage() {
             WhatsApp Invitation Card Review
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Every preview below is a real 1080 × 1350 PNG from the production card renderer. No WhatsApp or Meta API is called.
+            Every preview below is a real 1080 × 1600 PNG from the production card renderer. No WhatsApp or Meta API is called.
           </p>
         </div>
         <button
@@ -101,7 +104,7 @@ export default function WhatsAppCardPreviewPage() {
                 src={`/api/whatsapp-card-preview/${template}?v=${refreshKey}`}
                 alt={`${label} WhatsApp invitation card preview`}
                 width={1080}
-                height={1350}
+                height={1600}
                 className="h-auto w-full rounded-lg shadow-lg"
               />
             </div>
