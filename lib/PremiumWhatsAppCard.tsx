@@ -259,8 +259,8 @@ export function GuestSection({ data, theme }: { data: PremiumWhatsAppCardData; t
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 11, textAlign: "center" }}>
       <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 900, letterSpacing: 3, color: theme.muted }}>{copy.hello.toUpperCase()}</div>
-      <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: 31, lineHeight: 1.1, fontWeight: 700, color: theme.ink }}>{guestWords.slice(0, splitAt).join(" ")}</div>
-      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 38, lineHeight: 1.08, fontWeight: 700, color: theme.ink }}>{guestWords.slice(splitAt).join(" ")}</div>
+      <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: 34, lineHeight: 1.1, fontWeight: 700, color: theme.ink }}>{guestWords.slice(0, splitAt).join(" ")}</div>
+      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 44, lineHeight: 1.08, fontWeight: 700, fontStyle: "italic", letterSpacing: -0.6, color: theme.ink }}>{guestWords.slice(splitAt).join(" ")}</div>
     </div>
   );
 }
@@ -325,7 +325,7 @@ function SimpleMeta({ label, value, theme, width }: { label: string; value: stri
 export function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
   const copy = labels(data.language);
   return (
-    <div style={{ width: "100%", minHeight: 185, display: "flex", alignItems: "stretch", marginTop: 22, border: `2px solid ${theme.gold}`, backgroundColor: theme.passPaper, color: theme.passInk }}>
+    <div style={{ width: "100%", minHeight: 185, display: "flex", alignItems: "stretch", border: `2px solid ${theme.gold}`, backgroundColor: theme.passPaper, color: theme.passInk }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "22px 30px" }}>
         <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 12, fontWeight: 900, letterSpacing: 3, color: theme.gold }}>VERIFIED EVENT PASS</div>
         <div style={{ display: "flex", marginTop: 11, fontFamily: "Arial, sans-serif", fontSize: 12, fontWeight: 900, letterSpacing: 2, color: theme.muted }}>{copy.passId}</div>
@@ -360,22 +360,27 @@ function TopIdentity({ theme }: { theme: Theme }) {
 export default function PremiumWhatsAppCard({ data, template }: { data: PremiumWhatsAppCardData; template: PremiumWhatsAppTemplate }): ReactElement {
   const theme = getTheme(template);
   const copy = labels(data.language);
-  const titleSize = data.title.length > 30 ? 47 : 55;
+  const titleSize = data.title.length > 30 ? 54 : 62;
+  const isRoyal = theme.frame === "royal";
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", padding: "45px 76px 37px", backgroundColor: theme.paper, color: theme.ink }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", padding: "44px 76px 46px", backgroundColor: theme.paper, color: theme.ink }}>
       <Frame theme={theme} />
-      <BrandHeader theme={theme} />
-      <TopIdentity theme={theme} />
-      <div style={{ display: "flex", marginTop: theme.frame === "classic" ? 10 : 4, fontFamily: "Georgia, serif", fontSize: 54, lineHeight: 1, fontWeight: 700, fontStyle: theme.frame === "royal" ? "normal" : "italic", color: theme.frame === "royal" ? theme.gold : theme.ink }}>{copy.heading}</div>
-      <GuestSection data={data} theme={theme} />
-      <Divider color={theme.gold} ornament={theme.frame === "royal" || theme.frame === "classic"} />
-      <div style={{ display: "flex", marginTop: 14, fontFamily: "Arial, sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 0.3, color: theme.muted }}>{copy.invitation}</div>
-      <div style={{ maxWidth: 820, display: "flex", marginTop: 7, fontFamily: "Georgia, serif", fontSize: titleSize, lineHeight: 1, fontWeight: 700, textAlign: "center", color: theme.ink }}>{data.title}</div>
-      <EventDetails data={data} theme={theme} />
-      <DressStatusRow data={data} theme={theme} />
-      <PassTicket data={data} theme={theme} />
-      <div style={{ display: "flex", marginTop: 17, fontFamily: "Georgia, serif", fontSize: 17, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>{copy.closing}</div>
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <BrandHeader theme={theme} />
+        <TopIdentity theme={theme} />
+        <div style={{ display: "flex", marginTop: theme.frame === "classic" ? 10 : 4, fontFamily: "Georgia, serif", fontSize: 68, lineHeight: 1, fontWeight: 700, fontStyle: "italic", letterSpacing: -1.4, color: isRoyal ? theme.gold : theme.ink, textShadow: isRoyal ? `0 2px 10px ${theme.gold}55` : "none" }}>{copy.heading}</div>
+        <GuestSection data={data} theme={theme} />
+        <Divider color={theme.gold} ornament={theme.frame === "royal" || theme.frame === "classic"} />
+        <div style={{ display: "flex", marginTop: 14, fontFamily: "Arial, sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 0.3, color: theme.muted }}>{copy.invitation}</div>
+        <div style={{ maxWidth: 820, display: "flex", marginTop: 7, fontFamily: "Georgia, serif", fontSize: titleSize, lineHeight: 0.98, fontWeight: 700, fontStyle: "italic", letterSpacing: -1, textAlign: "center", color: theme.ink }}>{data.title}</div>
+        <EventDetails data={data} theme={theme} />
+        <DressStatusRow data={data} theme={theme} />
+      </div>
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", marginTop: "auto", paddingTop: 22 }}>
+        <PassTicket data={data} theme={theme} />
+        <div style={{ display: "flex", marginTop: 20, fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", letterSpacing: 0.4, color: theme.muted, textAlign: "center" }}>{copy.closing}</div>
+      </div>
     </div>
   );
 }
