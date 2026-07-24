@@ -294,18 +294,18 @@ export function buildWhatsAppMessage(
 
   if (language === "en") {
     return [
-      `Hello ${guestName},`,
+      `Hello *${guestName}*,`,
       "",
-      `You are invited to ${eventTitle}.`,
+      `You are invited to the wedding of *${eventTitle}*.`,
       "",
       eventDate ? `📅 ${eventDate}` : null,
       eventTime ? `🕒 ${eventTime}` : null,
       venue ? `📍 ${venue}` : null,
       "",
-      `🎟️ Pass ID: ${eventPassId || "-"}`,
+      `🎫 Event Pass ID: ${eventPassId || "-"}`,
       `👥 Guests: ${allowedGuests}`,
       "",
-      "Use the button below to open your full invitation.",
+      "Tap the button below to open your invitation.",
       invitationUrl,
     ]
       .filter(
@@ -317,18 +317,18 @@ export function buildWhatsAppMessage(
   }
 
   return [
-    `Habari ${guestName},`,
+    `Habari *${guestName}*,`,
     "",
-    `Umealikwa kwenye ${eventTitle}.`,
+    `Unakaribishwa kwenye harusi ya *${eventTitle}*.`,
     "",
     eventDate ? `📅 ${eventDate}` : null,
     eventTime ? `🕒 ${eventTime}` : null,
     venue ? `📍 ${venue}` : null,
     "",
-    `🎟️ Pass ID: ${eventPassId || "-"}`,
-    `👥 Idadi: ${allowedGuests}`,
+    `🎫 Event Pass ID: ${eventPassId || "-"}`,
+    `👥 Idadi ya Wageni: ${allowedGuests}`,
     "",
-    "Bonyeza kitufe hapa chini kufungua mwaliko kamili.",
+    "Bonyeza kitufe hapa chini kufungua mwaliko wako.",
     invitationUrl,
   ]
     .filter(

@@ -28,6 +28,7 @@ export type PremiumWhatsAppCardData = {
   allowedGuests: number;
   eventPassId: string;
   language: "sw" | "en";
+  coverImageDataUrl: string | null;
   qrCodeDataUrl: string | null;
   primary: string;
   secondary: string;
@@ -570,6 +571,185 @@ function V3PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: V
   );
 }
 
+function V4FloralSprig({
+  color,
+  side,
+}: {
+  color: string;
+  side: "left" | "right";
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        [side]: -22,
+        top: side === "left" ? 70 : 520,
+        width: 150,
+        height: 250,
+        display: "flex",
+        transform: side === "right" ? "scaleX(-1) rotate(-8deg)" : "rotate(-8deg)",
+        opacity: 0.78,
+      }}
+    >
+      <div style={{ position: "absolute", left: 73, top: 4, width: 2, height: 238, display: "flex", backgroundColor: color, transform: "rotate(-15deg)" }} />
+      {[0, 1, 2, 3, 4].map((leaf) => (
+        <div
+          key={leaf}
+          style={{
+            position: "absolute",
+            left: leaf % 2 === 0 ? 38 : 70,
+            top: 25 + leaf * 41,
+            width: 52,
+            height: 27,
+            display: "flex",
+            border: `2px solid ${color}`,
+            borderRadius: leaf % 2 === 0 ? "100% 0 100% 0" : "0 100% 0 100%",
+            transform: `rotate(${leaf % 2 === 0 ? -24 : 30}deg)`,
+            backgroundColor: "rgba(255,255,255,0.08)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function V4Photo({
+  data,
+  theme,
+}: {
+  data: PremiumWhatsAppCardData;
+  theme: V3Theme;
+}) {
+  const initials = data.title
+    .split(/\s*&\s*|\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join(" & ");
+
+  return (
+    <div style={{ width: 378, height: 1040, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", inset: "28px 12px 22px 18px", display: "flex", border: `1px solid ${theme.accent}`, borderRadius: "190px 190px 42px 42px", transform: "rotate(-2deg)", opacity: 0.55 }} />
+      <div style={{ position: "absolute", inset: "12px 28px 38px 4px", display: "flex", border: `2px solid ${theme.accentSoft}`, borderRadius: "190px 190px 38px 38px", transform: "rotate(2deg)" }} />
+      <div style={{ width: 330, height: 970, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "165px 165px 34px 34px", backgroundColor: theme.ticket, border: `4px solid ${theme.accent}`, boxShadow: "0 26px 54px rgba(24,20,14,0.22)" }}>
+        {data.coverImageDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.coverImageDataUrl}
+            alt=""
+            width={330}
+            height={970}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: theme.ink }}>
+            <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 66, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>{initials || "S & E"}</div>
+            <div style={{ width: 95, height: 1, display: "flex", marginTop: 25, backgroundColor: theme.accent }} />
+            <div style={{ display: "flex", marginTop: 20, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: theme.accent }}>TOGETHER</div>
+          </div>
+        )}
+      </div>
+      <V4FloralSprig color={theme.accent} side="left" />
+      <V4FloralSprig color={theme.accent} side="right" />
+    </div>
+  );
+}
+
+function V4Label({ children, theme }: { children: string; theme: V3Theme }) {
+  return (
+    <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 20, lineHeight: 1, fontWeight: 900, letterSpacing: 3.3, color: theme.accent, textAlign: "center" }}>
+      {children}
+    </div>
+  );
+}
+
+function V4Detail({
+  label,
+  value,
+  detail,
+  theme,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  theme: V3Theme;
+}) {
+  return (
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 17, borderTop: `1px solid ${theme.accentSoft}` }}>
+      <V4Label theme={theme}>{label}</V4Label>
+      <div style={{ maxWidth: 530, display: "flex", marginTop: 9, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 27, lineHeight: 1.18, fontWeight: 700, color: theme.ink, textAlign: "center" }}>{value}</div>
+      {detail && <div style={{ maxWidth: 530, display: "flex", marginTop: 6, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.18, color: theme.muted, textAlign: "center" }}>{detail}</div>}
+    </div>
+  );
+}
+
+function V4Hero({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
+  const copy = v3Copy(data.language);
+  const ceremonyTime = data.ceremonyTime.trim() || data.eventTime.trim();
+  const ceremonyVenue = data.ceremonyVenue.trim();
+  const receptionVenue = data.receptionVenue.trim() || data.venue.trim();
+  const guestSize = heroSize(data.guestName, 58, 54, 50);
+  const coupleSize = heroSize(data.title, 76, 70, 64);
+
+  return (
+    <div style={{ width: "100%", height: 1125, display: "flex", alignItems: "center", padding: "42px 52px 28px" }}>
+      <div style={{ width: "40%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <V4Photo data={data} theme={theme} />
+      </div>
+      <div style={{ width: "60%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "4px 18px 4px 42px", borderLeft: `1px solid ${theme.accentSoft}` }}>
+        <V3BrandHeader theme={theme} />
+        <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 40, lineHeight: 1, fontWeight: 900, letterSpacing: 2.6, color: theme.ink, textAlign: "center" }}>{copy.heading}</div>
+        <div style={{ maxWidth: 525, display: "flex", whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: invitationMessageSize(data.invitationMessage), lineHeight: 1.42, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>{data.invitationMessage}</div>
+        <div style={{ maxWidth: 530, display: "flex", fontFamily: "Georgia, serif", fontSize: guestSize, lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>{data.guestName}</div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <V4Label theme={theme}>{copy.weddingOf}</V4Label>
+          <div style={{ maxWidth: 540, display: "flex", marginTop: 12, fontFamily: "Georgia, serif", fontSize: coupleSize, lineHeight: 0.98, fontWeight: 700, fontStyle: "italic", letterSpacing: -1.4, color: theme.ink, textAlign: "center" }}>{data.title}</div>
+        </div>
+        <V4Detail label={copy.date} value={data.date || "—"} theme={theme} />
+        {(ceremonyTime || ceremonyVenue) && <V4Detail label={data.ceremonyTitle.trim() || copy.ceremony} value={ceremonyTime || ceremonyVenue} detail={ceremonyTime ? ceremonyVenue : undefined} theme={theme} />}
+        {receptionVenue && receptionVenue !== "-" && <V4Detail label={copy.reception} value={receptionVenue} theme={theme} />}
+        <div style={{ width: "100%", display: "flex", paddingTop: 17, borderTop: `1px solid ${theme.accentSoft}` }}>
+          <div style={{ width: "50%", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 10px", textAlign: "center" }}>
+            <V4Label theme={theme}>{copy.dress}</V4Label>
+            <div style={{ display: "flex", marginTop: 9, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{data.dressCode || "—"}</div>
+          </div>
+          <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+          <div style={{ width: "50%", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 10px", textAlign: "center" }}>
+            <V4Label theme={theme}>{copy.status}</V4Label>
+            <div style={{ display: "flex", marginTop: 9, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{v3StatusText(data)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function V4Pass({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
+  const copy = v3Copy(data.language);
+  return (
+    <div style={{ width: 956, height: 500, position: "relative", display: "flex", overflow: "hidden", border: `2px solid ${theme.accent}`, borderRadius: 28, backgroundColor: theme.ticket, color: theme.ticketInk, boxShadow: "0 18px 42px rgba(24,20,14,0.12)" }}>
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 14, display: "flex", backgroundColor: theme.accent }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "48px 48px 42px 62px" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ width: 20, height: 20, display: "flex", marginRight: 16, borderRadius: 99, backgroundColor: theme.accent }} />
+          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 3.2, color: theme.accent }}>{copy.verified}</div>
+        </div>
+        <div style={{ display: "flex", marginTop: 38, fontFamily: "Arial, sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: 3.2, color: theme.muted }}>{copy.passId}</div>
+        <div style={{ display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: data.eventPassId.length > 16 ? 46 : 58, lineHeight: 1, fontWeight: 700, letterSpacing: 1.5 }}>{data.eventPassId || "—"}</div>
+        <div style={{ maxWidth: 540, display: "flex", marginTop: 30, fontFamily: "Georgia, serif", fontSize: 27, lineHeight: 1.35, fontStyle: "italic", color: theme.muted }}>{copy.instruction}</div>
+      </div>
+      <div style={{ width: 350, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
+        {data.qrCodeDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={data.qrCodeDataUrl} alt="" width={270} height={270} style={{ width: 270, height: 270, objectFit: "contain" }} />
+        ) : (
+          <div style={{ width: 270, height: 270, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 30, fontWeight: 900 }}>QR</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PremiumWhatsAppCard({
   data,
   template,
@@ -578,19 +758,13 @@ export default function PremiumWhatsAppCard({
   template: PremiumWhatsAppTemplate;
 }): ReactElement {
   const theme = getV3Theme(template);
-  const copy = v3Copy(data.language);
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", overflow: "hidden", padding: "56px 76px 45px", backgroundColor: theme.paper, color: theme.ink }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
       <V3Frame theme={theme} />
       <V3CornerOrnaments theme={theme} />
-      <V3BrandHeader theme={theme} />
-      <V3InvitationIntro data={data} theme={theme} />
-      <V3GuestHero data={data} theme={theme} />
-      <V3CoupleHero data={data} theme={theme} />
-      <V3Details data={data} theme={theme} />
-      <V3PassTicket data={data} theme={theme} />
-      <div style={{ display: "flex", marginTop: 17, fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", letterSpacing: 0.25, color: theme.muted, textAlign: "center" }}>{copy.closing}</div>
+      <V4Hero data={data} theme={theme} />
+      <V4Pass data={data} theme={theme} />
     </div>
   );
 }
