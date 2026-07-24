@@ -16,6 +16,7 @@ type SendInvitationTemplateInput = {
   allowedGuests: number;
 
   invitationToken: string;
+  locationUrl: string;
   cardImageUrl?: string;
 };
 
@@ -89,6 +90,11 @@ type TemplateImageParameter = {
   };
 };
 
+type TemplatePayloadParameter = {
+  type: "payload";
+  payload: "accepted" | "declined";
+};
+
 type TemplateComponent =
   | {
       type: "header";
@@ -100,8 +106,14 @@ type TemplateComponent =
     }
   | {
       type: "button";
+      sub_type: "quick_reply";
+      index: "0" | "1";
+      parameters: TemplatePayloadParameter[];
+    }
+  | {
+      type: "button";
       sub_type: "url";
-      index: "0";
+      index: "2" | "3";
       parameters: TemplateTextParameter[];
     };
 
@@ -165,6 +177,7 @@ export async function sendWhatsAppInvitationTemplate({
   allowedGuests,
 
   invitationToken,
+  locationUrl,
   cardImageUrl,
 }: SendInvitationTemplateInput) {
   const accessToken =
@@ -243,17 +256,50 @@ export async function sendWhatsAppInvitationTemplate({
     ],
   });
 
+  components.push({
+    type: "button",
+    sub_type: "quick_reply",
+    index: "0",
+    parameters: [
+      {
+        type: "payload",
+        payload: "accepted",
+      },
+    ],
+  });
+
+  components.push({
+    type: "button",
+    sub_type: "quick_reply",
+    index: "1",
+    parameters: [
+      {
+        type: "payload",
+        payload: "declined",
+      },
+    ],
+  });
+
+  components.push({
+    type: "button",
+    sub_type: "url",
+    index: "2",
+    parameters: [
+      {
+        type: "text",
+        text: locationUrl,
+      },
+    ],
+  });
+
   /*
-   * Template yetu itakuwa na URL button:
-   *
-   * https://smart-ecard-system.vercel.app/invite/{{1}}
-   *
-   * invitationToken ndiyo itajaza {{1}}.
+   * The approved template keeps the existing public invitation URL pattern.
+   * invitationToken fills the dynamic suffix of button 4.
    */
   components.push({
     type: "button",
     sub_type: "url",
-    index: "0",
+    index: "3",
 
     parameters: [
       {

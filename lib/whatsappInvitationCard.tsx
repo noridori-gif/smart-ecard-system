@@ -178,7 +178,7 @@ export function getWhatsAppCardData(
 
   return {
     title,
-    invitationMessage: invitation.invitation_message?.trim() || "",
+    invitationMessage: invitation.invitation_message ?? "",
     date: formatDate(invitation.event_date, language),
     eventTime: formatTime(invitation.event_time, language),
     venue: cleanText(invitation.venue, "-"),
@@ -303,11 +303,7 @@ function renderData(
   return {
     ...data,
     title,
-    invitationMessage:
-      data.invitationMessage ||
-      (data.language === "en"
-        ? "The family and event hosts are delighted to invite"
-        : "Familia na waandaaji wa hafla wana furaha kukualika"),
+    invitationMessage: data.invitationMessage,
     date: cleanText(data.date, "-"),
     eventTime: cleanText(data.eventTime, ""),
     venue: cleanText(data.venue, "-"),

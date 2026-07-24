@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 export type PremiumWhatsAppTemplate =
   | "african_royal"
@@ -35,7 +35,7 @@ export type PremiumWhatsAppCardData = {
   accent: string;
 };
 
-type V3Skin =
+type Skin =
   | "african"
   | "botanical"
   | "classic"
@@ -48,158 +48,154 @@ type V3Skin =
   | "minimal"
   | "regal";
 
-type V3Theme = {
-  skin: V3Skin;
+type Theme = {
+  skin: Skin;
   paper: string;
+  paperAlt: string;
   ink: string;
   muted: string;
   accent: string;
   accentSoft: string;
   ticket: string;
-  ticketInk: string;
-  frameWidth: number;
+  shadow: string;
 };
 
-const V3_THEMES: Record<PremiumWhatsAppTemplate, V3Theme> = {
+const THEMES: Record<PremiumWhatsAppTemplate, Theme> = {
+  midnight_luxe: {
+    skin: "midnight",
+    paper: "#071426",
+    paperAlt: "#0C2039",
+    ink: "#FFF9ED",
+    muted: "#C8C3B8",
+    accent: "#D8B56B",
+    accentSoft: "#665638",
+    ticket: "#102742",
+    shadow: "rgba(0,0,0,0.42)",
+  },
   emerald_botanical_halo: {
     skin: "botanical",
-    paper: "#FBF6E8",
-    ink: "#174C3B",
-    muted: "#65776C",
-    accent: "#B79245",
-    accentSoft: "#DCCEA5",
-    ticket: "#EEF2E7",
-    ticketInk: "#153F32",
-    frameWidth: 2,
+    paper: "#F7F2E6",
+    paperAlt: "#E8EEE3",
+    ink: "#173F32",
+    muted: "#637267",
+    accent: "#B18D4C",
+    accentSoft: "#CFC7A8",
+    ticket: "#E6EDDF",
+    shadow: "rgba(28,62,48,0.18)",
   },
   modern_floral: {
     skin: "floral",
-    paper: "#FFF6F2",
-    ink: "#8A4655",
-    muted: "#956F76",
-    accent: "#BD806F",
-    accentSoft: "#E7C7BE",
-    ticket: "#FCEBE7",
-    ticketInk: "#713B47",
-    frameWidth: 1,
-  },
-  midnight_luxe: {
-    skin: "midnight",
-    paper: "#07162E",
-    ink: "#FFF8E9",
-    muted: "#C9C2B3",
-    accent: "#D4AE62",
-    accentSoft: "#806C42",
-    ticket: "#102442",
-    ticketInk: "#FFF9EC",
-    frameWidth: 2,
-  },
-  royal_dark: {
-    skin: "regal",
-    paper: "#081D48",
-    ink: "#FFF9E8",
-    muted: "#D3CCBB",
-    accent: "#D8B45E",
-    accentSoft: "#796A43",
-    ticket: "#102B5C",
-    ticketInk: "#FFF9E8",
-    frameWidth: 3,
-  },
-  elegant_gold: {
-    skin: "gold",
-    paper: "#FFF9ED",
-    ink: "#43351F",
-    muted: "#786B56",
-    accent: "#B68A3D",
-    accentSoft: "#DCC89D",
-    ticket: "#F9EED8",
-    ticketInk: "#43351F",
-    frameWidth: 2,
-  },
-  chateau_letterpress: {
-    skin: "letterpress",
-    paper: "#F1E4CD",
-    ink: "#463B2E",
-    muted: "#756858",
-    accent: "#92764C",
-    accentSoft: "#CBB995",
-    ticket: "#E8D5B6",
-    ticketInk: "#463B2E",
-    frameWidth: 4,
+    paper: "#FFF8F5",
+    paperAlt: "#F8E8E4",
+    ink: "#754652",
+    muted: "#936F77",
+    accent: "#B9786C",
+    accentSoft: "#E7C6BF",
+    ticket: "#F8E5E1",
+    shadow: "rgba(117,70,82,0.17)",
   },
   luxury_envelope: {
     skin: "envelope",
-    paper: "#FFF8E9",
-    ink: "#503B24",
-    muted: "#806D55",
-    accent: "#B58A48",
-    accentSoft: "#DDC9A2",
-    ticket: "#F7E7CC",
-    ticketInk: "#503B24",
-    frameWidth: 2,
+    paper: "#FBF2E2",
+    paperAlt: "#EEDCC0",
+    ink: "#4E3B27",
+    muted: "#7B6B58",
+    accent: "#B28748",
+    accentSoft: "#D8C29C",
+    ticket: "#F1DFC2",
+    shadow: "rgba(78,59,39,0.18)",
+  },
+  classic_photo: {
+    skin: "classic",
+    paper: "#FFFCF5",
+    paperAlt: "#EEF0EC",
+    ink: "#18364D",
+    muted: "#66737C",
+    accent: "#AA8B50",
+    accentSoft: "#D7C7A3",
+    ticket: "#EFF1EC",
+    shadow: "rgba(24,54,77,0.18)",
   },
   heritage_monogram: {
     skin: "heritage",
-    paper: "#FAF1DF",
-    ink: "#722F3A",
-    muted: "#816267",
-    accent: "#AD8745",
-    accentSoft: "#D5BE91",
-    ticket: "#F1E0CF",
-    ticketInk: "#602832",
-    frameWidth: 2,
-  },
-  african_royal: {
-    skin: "african",
-    paper: "#F5E5C7",
-    ink: "#633923",
-    muted: "#7B604C",
-    accent: "#B0782F",
-    accentSoft: "#D1AA6B",
-    ticket: "#EBD4AD",
-    ticketInk: "#57311F",
-    frameWidth: 3,
+    paper: "#F8EEDC",
+    paperAlt: "#EBDAC2",
+    ink: "#682E38",
+    muted: "#806269",
+    accent: "#A9854B",
+    accentSoft: "#D1B98D",
+    ticket: "#EFDDC8",
+    shadow: "rgba(104,46,56,0.18)",
   },
   minimal_ivory: {
     skin: "minimal",
     paper: "#FFFCF5",
-    ink: "#2E302E",
-    muted: "#72736F",
-    accent: "#B09762",
-    accentSoft: "#D8CDB5",
+    paperAlt: "#F5F1E8",
+    ink: "#292D2B",
+    muted: "#71736F",
+    accent: "#A98F5C",
+    accentSoft: "#D9D0BC",
     ticket: "#F4F0E7",
-    ticketInk: "#2E302E",
-    frameWidth: 1,
+    shadow: "rgba(41,45,43,0.11)",
   },
-  classic_photo: {
-    skin: "classic",
-    paper: "#FFFDF8",
-    ink: "#173653",
-    muted: "#64717D",
-    accent: "#A98A4D",
-    accentSoft: "#D4C49F",
-    ticket: "#F0F1EE",
-    ticketInk: "#173653",
-    frameWidth: 3,
+  african_royal: {
+    skin: "african",
+    paper: "#F2E1C2",
+    paperAlt: "#D9BB88",
+    ink: "#5A321F",
+    muted: "#795D49",
+    accent: "#A76D29",
+    accentSoft: "#C99F63",
+    ticket: "#E6CFA8",
+    shadow: "rgba(90,50,31,0.2)",
+  },
+  chateau_letterpress: {
+    skin: "letterpress",
+    paper: "#EFE2CB",
+    paperAlt: "#E3CFAD",
+    ink: "#44392D",
+    muted: "#746757",
+    accent: "#907249",
+    accentSoft: "#C7B48F",
+    ticket: "#E4D0AF",
+    shadow: "rgba(68,57,45,0.16)",
+  },
+  elegant_gold: {
+    skin: "gold",
+    paper: "#FFF9EC",
+    paperAlt: "#F2E4C7",
+    ink: "#3F3322",
+    muted: "#776A57",
+    accent: "#B58A3C",
+    accentSoft: "#DCC89B",
+    ticket: "#F4E7CE",
+    shadow: "rgba(63,51,34,0.18)",
+  },
+  royal_dark: {
+    skin: "regal",
+    paper: "#081A3B",
+    paperAlt: "#102958",
+    ink: "#FFF9EA",
+    muted: "#D1CAB9",
+    accent: "#D8B45E",
+    accentSoft: "#71613D",
+    ticket: "#102B57",
+    shadow: "rgba(0,0,0,0.4)",
   },
 };
 
-function getV3Theme(template: PremiumWhatsAppTemplate) {
-  return V3_THEMES[template] ?? V3_THEMES.classic_photo;
-}
-
-function v3Copy(language: "sw" | "en") {
+function copy(language: "sw" | "en") {
   return language === "en"
     ? {
         heading: "WEDDING INVITATION",
         weddingOf: "TO THE WEDDING OF",
         date: "DATE",
-        ceremony: "WEDDING CEREMONY",
+        ceremony: "CEREMONY",
         reception: "RECEPTION",
         dress: "DRESS CODE",
-        status: "INVITATION STATUS",
-        verified: "VERIFIED EVENT PASS",
-        passId: "ENTRY PASS ID",
+        status: "STATUS",
+        pass: "PREMIUM EVENT PASS",
+        passId: "PASS ID",
         instruction: "Present this QR code or Pass ID at the entrance.",
         closing: "Your presence will make this celebration complete.",
       }
@@ -211,539 +207,462 @@ function v3Copy(language: "sw" | "en") {
         reception: "UKUMBI WA SHEREHE",
         dress: "RANGI ZA SHEREHE",
         status: "STATUS YA MWALIKO",
-        verified: "VERIFIED EVENT PASS",
-        passId: "PASS ID YA KUINGIA",
+        pass: "PREMIUM EVENT PASS",
+        passId: "PASS ID",
         instruction: "Onyesha QR au Pass ID hii mlangoni kwa uhakiki.",
         closing: "Uwepo wako utakamilisha furaha ya siku hii.",
       };
 }
 
-function v3StatusText(data: PremiumWhatsAppCardData) {
+function statusText(data: PremiumWhatsAppCardData) {
   const count = Number.isFinite(data.allowedGuests)
     ? Math.max(1, Math.floor(data.allowedGuests))
     : 1;
 
   if (data.language === "en") {
-    if (count === 1) return "Single · 1 Person";
-    if (count === 2) return "Double · 2 People";
-    return `Group · ${count} People`;
+    return count === 1 ? "Single · 1 Person" : count === 2 ? "Double · 2 People" : `Group · ${count} People`;
   }
 
-  if (count === 1) return "Single · Mtu 1";
-  if (count === 2) return "Double · Watu 2";
-  return `Group · Watu ${count}`;
+  return count === 1 ? "Single · Mtu 1" : count === 2 ? "Double · Watu 2" : `Group · Watu ${count}`;
 }
 
-function heroSize(value: string, short: number, medium: number, long: number) {
-  if (value.length > 48) return long;
-  if (value.length > 29) return medium;
-  return short;
+function responsiveSize(value: string, large: number, medium: number, small: number) {
+  if (value.length > 48) return small;
+  if (value.length > 28) return medium;
+  return large;
 }
 
-function invitationMessageSize(value: string) {
-  if (value.length > 155) return 25;
-  if (value.length > 90) return 28;
-  return 31;
+function messageSize(value: string) {
+  if (value.length > 420) return 17;
+  if (value.length > 300) return 20;
+  if (value.length > 200) return 23;
+  if (value.length > 120) return 26;
+  return 29;
 }
 
-function V3Frame({ theme }: { theme: V3Theme }) {
-  const doubleFrame =
-    theme.skin === "letterpress" ||
-    theme.skin === "regal" ||
-    theme.skin === "classic";
-
-  return (
-    <>
-      <div
-        style={{
-          position: "absolute",
-          inset: 24,
-          display: "flex",
-          border: `${theme.frameWidth}px solid ${theme.accent}`,
-          opacity: theme.skin === "minimal" ? 0.56 : 0.9,
-        }}
-      />
-      {doubleFrame && (
-        <div
-          style={{
-            position: "absolute",
-            inset: theme.skin === "letterpress" ? 36 : 34,
-            display: "flex",
-            border: `1px solid ${theme.accent}`,
-            opacity: 0.55,
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-function V3CornerOrnaments({ theme }: { theme: V3Theme }) {
-  if (theme.skin === "minimal") return null;
-
-  if (theme.skin === "botanical") {
-    return (
-      <>
-        {[0, 1, 2, 3].map((index) => (
-          <div
-            key={`leaf-left-${index}`}
-            style={{
-              position: "absolute",
-              left: 30 + index * 18,
-              top: 52 + index * 27,
-              width: 28,
-              height: 60,
-              display: "flex",
-              border: `2px solid ${theme.ink}`,
-              borderRadius: "100% 0 100% 0",
-              transform: `rotate(${-36 + index * 15}deg)`,
-              opacity: 0.34,
-            }}
-          />
-        ))}
-        {[0, 1, 2].map((index) => (
-          <div
-            key={`leaf-right-${index}`}
-            style={{
-              position: "absolute",
-              right: 34 + index * 20,
-              bottom: 58 + index * 29,
-              width: 30,
-              height: 64,
-              display: "flex",
-              border: `2px solid ${theme.ink}`,
-              borderRadius: "0 100% 0 100%",
-              transform: `rotate(${-22 + index * 17}deg)`,
-              opacity: 0.3,
-            }}
-          />
-        ))}
-      </>
-    );
-  }
-
-  if (theme.skin === "floral") {
-    return (
-      <>
-        {[0, 1, 2].map((index) => (
-          <div
-            key={`flower-${index}`}
-            style={{
-              position: "absolute",
-              right: 32 + index * 27,
-              top: 34 + index * 23,
-              width: 50 - index * 7,
-              height: 50 - index * 7,
-              display: "flex",
-              border: `2px solid ${theme.accent}`,
-              borderRadius: 99,
-              opacity: 0.4,
-            }}
-          />
-        ))}
-        <div style={{ position: "absolute", left: 28, bottom: 28, width: 130, height: 130, display: "flex", borderTop: `2px solid ${theme.accent}`, borderRadius: 99, transform: "rotate(32deg)", opacity: 0.3 }} />
-      </>
-    );
-  }
-
-  if (theme.skin === "envelope") {
-    return (
-      <>
-        <div style={{ position: "absolute", left: 25, right: 540, top: 25, height: 205, display: "flex", borderBottom: `1px solid ${theme.accent}`, transform: "rotate(21deg)", opacity: 0.24 }} />
-        <div style={{ position: "absolute", left: 540, right: 25, top: 25, height: 205, display: "flex", borderBottom: `1px solid ${theme.accent}`, transform: "rotate(-21deg)", opacity: 0.24 }} />
-      </>
-    );
-  }
-
-  if (theme.skin === "african") {
-    return (
-      <>
-        {[0, 1, 2, 3].map((index) => (
-          <div
-            key={`african-${index}`}
-            style={{
-              position: "absolute",
-              left: 31 + index * 27,
-              top: 31,
-              width: 19,
-              height: 19,
-              display: "flex",
-              border: `2px solid ${theme.accent}`,
-              transform: "rotate(45deg)",
-              opacity: index % 2 === 0 ? 0.8 : 0.38,
-            }}
-          />
-        ))}
-        {[0, 1, 2, 3].map((index) => (
-          <div
-            key={`african-bottom-${index}`}
-            style={{
-              position: "absolute",
-              right: 31 + index * 27,
-              bottom: 31,
-              width: 19,
-              height: 19,
-              display: "flex",
-              border: `2px solid ${theme.accent}`,
-              transform: "rotate(45deg)",
-              opacity: index % 2 === 0 ? 0.8 : 0.38,
-            }}
-          />
-        ))}
-      </>
-    );
-  }
-
-  if (theme.skin === "regal" || theme.skin === "midnight") {
-    return (
-      <>
-        <div style={{ position: "absolute", left: 44, top: 44, width: 82, height: 82, display: "flex", borderTop: `3px solid ${theme.accent}`, borderLeft: `3px solid ${theme.accent}` }} />
-        <div style={{ position: "absolute", right: 44, bottom: 44, width: 82, height: 82, display: "flex", borderRight: `3px solid ${theme.accent}`, borderBottom: `3px solid ${theme.accent}` }} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div style={{ position: "absolute", left: 35, top: 35, width: 42, height: 42, display: "flex", border: `1px solid ${theme.accent}`, transform: "rotate(45deg)", opacity: 0.55 }} />
-      <div style={{ position: "absolute", right: 35, bottom: 35, width: 42, height: 42, display: "flex", border: `1px solid ${theme.accent}`, transform: "rotate(45deg)", opacity: 0.55 }} />
-    </>
-  );
-}
-
-function V3Ornament({ theme, wide = false }: { theme: V3Theme; wide?: boolean }) {
-  const lineWidth = wide ? 138 : 72;
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: lineWidth, height: 1, display: "flex", backgroundColor: theme.accent }} />
-      <div style={{ width: 9, height: 9, display: "flex", margin: "0 13px", border: `2px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
-      <div style={{ width: lineWidth, height: 1, display: "flex", backgroundColor: theme.accent }} />
-    </div>
-  );
-}
-
-function V3BrandHeader({ theme }: { theme: V3Theme }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: 4.5, color: theme.ink }}>
-      <div style={{ width: 40, height: 1, display: "flex", marginRight: 16, backgroundColor: theme.accent }} />
-      SMART EVENT PASS
-      <div style={{ width: 40, height: 1, display: "flex", marginLeft: 16, backgroundColor: theme.accent }} />
-    </div>
-  );
-}
-
-function V3InvitationIntro({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
-  return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ display: "flex", marginTop: 13 }}>
-        <V3Ornament theme={theme} />
-      </div>
-      <div style={{ display: "flex", marginTop: 19, fontFamily: "Arial, sans-serif", fontSize: 41, lineHeight: 1, fontWeight: 900, letterSpacing: 3.5, color: theme.ink, textAlign: "center" }}>{copy.heading}</div>
-      <div style={{ maxWidth: 850, display: "flex", marginTop: 22, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: invitationMessageSize(data.invitationMessage), lineHeight: 1.38, fontStyle: "italic", fontWeight: 400, color: theme.muted, textAlign: "center" }}>{data.invitationMessage}</div>
-    </div>
-  );
-}
-
-function V3GuestHero({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const guestName = data.guestName.trim() || (data.language === "en" ? "Guest" : "Mgeni");
-  return (
-    <div style={{ maxWidth: 880, display: "flex", marginTop: 21, fontFamily: "Georgia, serif", fontSize: heroSize(guestName, 70, 58, 50), lineHeight: 1.02, fontWeight: 700, fontStyle: "italic", letterSpacing: -1.2, color: theme.ink, textAlign: "center" }}>
-      {guestName}
-    </div>
-  );
-}
-
-function V3CoupleHero({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
-  const title = data.title.trim() || (data.language === "en" ? "Our Celebration" : "Sherehe Yetu");
-  return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", marginTop: 25 }}>
-      <V3Ornament theme={theme} wide />
-      <div style={{ display: "flex", marginTop: 19, fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 900, letterSpacing: 4.4, color: theme.accent }}>{copy.weddingOf}</div>
-      <div style={{ maxWidth: 890, display: "flex", marginTop: 13, fontFamily: "Georgia, serif", fontSize: heroSize(title, 82, 70, 58), lineHeight: 0.98, fontWeight: 700, fontStyle: "italic", letterSpacing: -1.8, color: theme.ink, textAlign: "center" }}>{title}</div>
-    </div>
-  );
-}
-
-function V3EventSection({
-  label,
-  value,
-  detail,
-  theme,
-  featured = false,
-}: {
-  label: string;
-  value: string;
-  detail?: string;
-  theme: V3Theme;
-  featured?: boolean;
-}) {
-  return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", padding: featured ? "16px 0 14px" : "12px 0 11px", borderTop: `1px solid ${theme.accentSoft}`, textAlign: "center" }}>
-      <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 900, letterSpacing: 3.3, color: theme.accent }}>{label}</div>
-      <div style={{ maxWidth: 820, display: "flex", marginTop: featured ? 7 : 6, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? 46 : 28, lineHeight: 1.12, fontWeight: 700, color: theme.ink, textAlign: "center" }}>{value}</div>
-      {detail && <div style={{ maxWidth: 820, display: "flex", marginTop: 5, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 23, lineHeight: 1.18, color: theme.muted, textAlign: "center" }}>{detail}</div>}
-    </div>
-  );
-}
-
-function V3StatusBadge({
-  data,
-  theme,
-  width,
-}: {
-  data: PremiumWhatsAppCardData;
-  theme: V3Theme;
-  width: string;
-}) {
-  const copy = v3Copy(data.language);
-  return (
-    <div style={{ width, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "9px 18px", textAlign: "center" }}>
-      <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 900, letterSpacing: 2.8, color: theme.accent }}>{copy.status}</div>
-      <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{v3StatusText(data)}</div>
-    </div>
-  );
-}
-
-function V3Details({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
-  const ceremonyTime = data.ceremonyTime.trim() || data.eventTime.trim();
-  const ceremonyVenue = data.ceremonyVenue.trim();
-  const receptionVenue = data.receptionVenue.trim() || data.venue.trim();
-  const hasCeremony = Boolean(ceremonyTime || ceremonyVenue);
-  const hasReception = Boolean(receptionVenue && receptionVenue !== "-");
-  const hasDressCode = Boolean(data.dressCode.trim());
-
-  return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", marginTop: 23 }}>
-      <V3EventSection label={copy.date} value={data.date || "-"} theme={theme} featured />
-      {hasCeremony && (
-        <V3EventSection
-          label={data.ceremonyTitle.trim() || copy.ceremony}
-          value={ceremonyTime || ceremonyVenue}
-          detail={ceremonyTime ? ceremonyVenue : undefined}
-          theme={theme}
-        />
-      )}
-      {hasReception && <V3EventSection label={copy.reception} value={receptionVenue} theme={theme} />}
-      <div style={{ width: "100%", display: "flex", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
-        {hasDressCode && (
-          <>
-            <div style={{ width: "50%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "9px 18px", textAlign: "center" }}>
-              <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 900, letterSpacing: 2.8, color: theme.accent }}>{copy.dress}</div>
-              <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{data.dressCode}</div>
-            </div>
-            <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
-          </>
-        )}
-        <V3StatusBadge data={data} theme={theme} width={hasDressCode ? "50%" : "100%"} />
-      </div>
-    </div>
-  );
-}
-
-function V3PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
-  const passId = data.eventPassId.trim() || "—";
-  const passSize = passId.length > 18 ? 34 : passId.length > 12 ? 40 : 47;
-
-  return (
-    <div style={{ width: "100%", minHeight: 270, display: "flex", marginTop: 22, border: `2px solid ${theme.accent}`, backgroundColor: theme.ticket, color: theme.ticketInk }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "25px 31px 23px" }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 16, height: 16, display: "flex", marginRight: 15, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
-          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 900, letterSpacing: 2.8, color: theme.accent }}>{copy.verified}</div>
-        </div>
-        <div style={{ display: "flex", marginTop: 18, fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 900, letterSpacing: 2.7, color: theme.muted }}>{copy.passId}</div>
-        <div style={{ display: "flex", marginTop: 5, fontFamily: "Georgia, serif", fontSize: passSize, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ticketInk }}>{passId}</div>
-        <div style={{ maxWidth: 515, display: "flex", marginTop: 15, fontFamily: "Georgia, serif", fontSize: 19, lineHeight: 1.24, fontStyle: "italic", color: theme.muted }}>{copy.instruction}</div>
-      </div>
-      <div style={{ width: 272, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
-        {data.qrCodeDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.qrCodeDataUrl} alt="" width={224} height={224} style={{ width: 224, height: 224, objectFit: "contain" }} />
-        ) : (
-          <div style={{ width: 216, height: 216, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, color: theme.ticketInk, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900 }}>QR</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function V4FloralSprig({
-  color,
-  side,
-}: {
-  color: string;
-  side: "left" | "right";
-}) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        [side]: -22,
-        top: side === "left" ? 70 : 520,
-        width: 150,
-        height: 250,
-        display: "flex",
-        transform: side === "right" ? "scaleX(-1) rotate(-8deg)" : "rotate(-8deg)",
-        opacity: 0.78,
-      }}
-    >
-      <div style={{ position: "absolute", left: 73, top: 4, width: 2, height: 238, display: "flex", backgroundColor: color, transform: "rotate(-15deg)" }} />
-      {[0, 1, 2, 3, 4].map((leaf) => (
-        <div
-          key={leaf}
-          style={{
-            position: "absolute",
-            left: leaf % 2 === 0 ? 38 : 70,
-            top: 25 + leaf * 41,
-            width: 52,
-            height: 27,
-            display: "flex",
-            border: `2px solid ${color}`,
-            borderRadius: leaf % 2 === 0 ? "100% 0 100% 0" : "0 100% 0 100%",
-            transform: `rotate(${leaf % 2 === 0 ? -24 : 30}deg)`,
-            backgroundColor: "rgba(255,255,255,0.08)",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function V4Photo({
-  data,
-  theme,
-}: {
-  data: PremiumWhatsAppCardData;
-  theme: V3Theme;
-}) {
-  const initials = data.title
+function initials(value: string) {
+  return value
     .split(/\s*&\s*|\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join(" & ");
-
-  return (
-    <div style={{ width: 378, height: 1040, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: "28px 12px 22px 18px", display: "flex", border: `1px solid ${theme.accent}`, borderRadius: "190px 190px 42px 42px", transform: "rotate(-2deg)", opacity: 0.55 }} />
-      <div style={{ position: "absolute", inset: "12px 28px 38px 4px", display: "flex", border: `2px solid ${theme.accentSoft}`, borderRadius: "190px 190px 38px 38px", transform: "rotate(2deg)" }} />
-      <div style={{ width: 330, height: 970, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", borderRadius: "165px 165px 34px 34px", backgroundColor: theme.ticket, border: `4px solid ${theme.accent}`, boxShadow: "0 26px 54px rgba(24,20,14,0.22)" }}>
-        {data.coverImageDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.coverImageDataUrl}
-            alt=""
-            width={330}
-            height={970}
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-          />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: theme.ink }}>
-            <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 66, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>{initials || "S & E"}</div>
-            <div style={{ width: 95, height: 1, display: "flex", marginTop: 25, backgroundColor: theme.accent }} />
-            <div style={{ display: "flex", marginTop: 20, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: theme.accent }}>TOGETHER</div>
-          </div>
-        )}
-      </div>
-      <V4FloralSprig color={theme.accent} side="left" />
-      <V4FloralSprig color={theme.accent} side="right" />
-    </div>
-  );
 }
 
-function V4Label({ children, theme }: { children: string; theme: V3Theme }) {
+function Label({ children, theme }: { children: ReactNode; theme: Theme }) {
   return (
-    <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 20, lineHeight: 1, fontWeight: 900, letterSpacing: 3.3, color: theme.accent, textAlign: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        fontFamily: "Arial, sans-serif",
+        fontSize: 15,
+        fontWeight: 800,
+        letterSpacing: 4,
+        color: theme.accent,
+        textAlign: "center",
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function V4Detail({
+function DiamondOrnament({ theme, width = 105 }: { theme: Theme; width?: number }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{ width, height: 1, display: "flex", backgroundColor: theme.accent }} />
+      <div
+        style={{
+          width: 10,
+          height: 10,
+          display: "flex",
+          margin: "0 14px",
+          border: `2px solid ${theme.accent}`,
+          transform: "rotate(45deg)",
+        }}
+      />
+      <div style={{ width, height: 1, display: "flex", backgroundColor: theme.accent }} />
+    </div>
+  );
+}
+
+function BotanicalLeaves({ theme }: { theme: Theme }) {
+  return (
+    <>
+      {[0, 1, 2, 3, 4].map((leaf) => (
+        <div
+          key={`botanical-left-${leaf}`}
+          style={{
+            position: "absolute",
+            left: -18 + leaf * 22,
+            top: 150 + leaf * 45,
+            width: 76,
+            height: 34,
+            display: "flex",
+            borderRadius: leaf % 2 ? "0 100% 0 100%" : "100% 0 100% 0",
+            backgroundColor: leaf % 2 ? "#B9C8AD" : "#D5DECA",
+            border: `1px solid ${theme.ink}`,
+            transform: `rotate(${-35 + leaf * 12}deg)`,
+            opacity: 0.32,
+          }}
+        />
+      ))}
+      {[0, 1, 2, 3].map((leaf) => (
+        <div
+          key={`botanical-right-${leaf}`}
+          style={{
+            position: "absolute",
+            right: -10 + leaf * 23,
+            bottom: 115 + leaf * 48,
+            width: 82,
+            height: 36,
+            display: "flex",
+            borderRadius: leaf % 2 ? "100% 0 100% 0" : "0 100% 0 100%",
+            backgroundColor: leaf % 2 ? "#CDD9C2" : "#AFC0A3",
+            border: `1px solid ${theme.ink}`,
+            transform: `rotate(${20 - leaf * 11}deg)`,
+            opacity: 0.3,
+          }}
+        />
+      ))}
+      <div
+        style={{
+          position: "absolute",
+          right: -180,
+          top: 490,
+          width: 480,
+          height: 480,
+          display: "flex",
+          borderRadius: 999,
+          background: "radial-gradient(circle, rgba(183,200,171,0.34), rgba(183,200,171,0))",
+        }}
+      />
+    </>
+  );
+}
+
+function FloralCorners({ theme }: { theme: Theme }) {
+  return (
+    <>
+      {[
+        { left: -55, top: -45, size: 230, color: "#EBC9C2" },
+        { left: 70, top: 8, size: 135, color: "#F1DAD5" },
+        { right: -65, bottom: -65, size: 250, color: "#E5B9B2" },
+        { right: 90, bottom: 25, size: 125, color: "#F2D6D1" },
+      ].map((flower, index) => (
+        <div
+          key={`flower-${index}`}
+          style={{
+            position: "absolute",
+            ...flower,
+            width: flower.size,
+            height: flower.size,
+            display: "flex",
+            borderRadius: 999,
+            backgroundColor: flower.color,
+            border: `1px solid ${theme.accentSoft}`,
+            boxShadow: `inset 0 0 0 ${Math.round(flower.size / 4)}px rgba(255,255,255,0.3)`,
+            opacity: 0.28,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function AfricanBands({ theme }: { theme: Theme }) {
+  return (
+    <>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 20, height: 32, display: "flex", backgroundColor: theme.ink, opacity: 0.94 }} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 20, height: 32, display: "flex", backgroundColor: theme.ink, opacity: 0.94 }} />
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((item) => (
+        <div
+          key={`african-${item}`}
+          style={{
+            position: "absolute",
+            left: 33 + item * 88,
+            top: 25,
+            width: 20,
+            height: 20,
+            display: "flex",
+            border: `3px solid ${theme.accent}`,
+            transform: "rotate(45deg)",
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
+  if (theme.skin === "botanical") return <BotanicalLeaves theme={theme} />;
+  if (theme.skin === "floral") return <FloralCorners theme={theme} />;
+  if (theme.skin === "african") return <AfricanBands theme={theme} />;
+
+  if (theme.skin === "envelope") {
+    return (
+      <>
+        <div style={{ position: "absolute", left: -100, right: 540, top: -180, height: 510, display: "flex", borderBottom: `2px solid ${theme.accentSoft}`, backgroundColor: theme.paperAlt, transform: "rotate(19deg)", opacity: 0.52 }} />
+        <div style={{ position: "absolute", left: 540, right: -100, top: -180, height: 510, display: "flex", borderBottom: `2px solid ${theme.accentSoft}`, backgroundColor: theme.paperAlt, transform: "rotate(-19deg)", opacity: 0.52 }} />
+        <div style={{ position: "absolute", left: 487, top: 106, width: 106, height: 106, display: "flex", borderRadius: 999, backgroundColor: theme.accent, border: `8px double ${theme.paper}`, boxShadow: `0 12px 24px ${theme.shadow}` }} />
+      </>
+    );
+  }
+
+  if (theme.skin === "heritage") {
+    return (
+      <>
+        <div style={{ position: "absolute", right: -10, top: 290, display: "flex", fontFamily: "Georgia, serif", fontSize: 340, lineHeight: 1, fontWeight: 700, fontStyle: "italic", color: theme.accent, opacity: 0.075 }}>
+          {initials(title) || "S E"}
+        </div>
+        <div style={{ position: "absolute", inset: 34, display: "flex", border: `2px double ${theme.accent}` }} />
+        <div style={{ position: "absolute", inset: 46, display: "flex", border: `1px solid ${theme.accentSoft}` }} />
+      </>
+    );
+  }
+
+  if (theme.skin === "letterpress") {
+    return (
+      <>
+        <div style={{ position: "absolute", inset: 27, display: "flex", border: `5px double ${theme.ink}`, opacity: 0.78 }} />
+        <div style={{ position: "absolute", inset: 43, display: "flex", border: `1px solid ${theme.accent}` }} />
+        {[0, 1, 2, 3, 4, 5].map((dot) => (
+          <div key={dot} style={{ position: "absolute", left: 90 + dot * 178, bottom: 74, width: 5, height: 5, display: "flex", borderRadius: 9, backgroundColor: theme.ink, opacity: 0.35 }} />
+        ))}
+      </>
+    );
+  }
+
+  if (theme.skin === "gold") {
+    return (
+      <>
+        <div style={{ position: "absolute", inset: 24, display: "flex", border: `4px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", inset: 38, display: "flex", border: `1px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", left: 330, top: -250, width: 420, height: 540, display: "flex", border: `2px solid ${theme.accent}`, borderRadius: "210px 210px 0 0", opacity: 0.34 }} />
+      </>
+    );
+  }
+
+  if (theme.skin === "midnight" || theme.skin === "regal") {
+    return (
+      <>
+        <div style={{ position: "absolute", inset: 30, display: "flex", border: `1px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", left: 45, top: 45, width: 110, height: 110, display: "flex", borderTop: `4px solid ${theme.accent}`, borderLeft: `4px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", right: 45, bottom: 45, width: 110, height: 110, display: "flex", borderRight: `4px solid ${theme.accent}`, borderBottom: `4px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", right: -210, top: 300, width: 620, height: 620, display: "flex", borderRadius: 999, border: `1px solid ${theme.accent}`, opacity: 0.12 }} />
+        <div style={{ position: "absolute", right: -140, top: 370, width: 480, height: 480, display: "flex", borderRadius: 999, border: `1px solid ${theme.accent}`, opacity: 0.09 }} />
+      </>
+    );
+  }
+
+  if (theme.skin === "classic") {
+    return (
+      <>
+        <div style={{ position: "absolute", inset: 27, display: "flex", border: `3px solid ${theme.accent}` }} />
+        <div style={{ position: "absolute", inset: 39, display: "flex", border: `1px solid ${theme.accentSoft}` }} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ position: "absolute", left: 54, right: 54, top: 44, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+      <div style={{ position: "absolute", left: 54, right: 54, bottom: 44, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+    </>
+  );
+}
+
+function InvitationTop({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const text = copy(data.language);
+
+  return (
+    <div style={{ width: "100%", minHeight: 325, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "54px 90px 34px", textAlign: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 5, color: theme.muted }}>
+        <div style={{ width: 34, height: 1, display: "flex", marginRight: 14, backgroundColor: theme.accent }} />
+        SMART EVENT PASS
+        <div style={{ width: 34, height: 1, display: "flex", marginLeft: 14, backgroundColor: theme.accent }} />
+      </div>
+      <div style={{ display: "flex", marginTop: 18 }}>
+        <DiamondOrnament theme={theme} width={65} />
+      </div>
+      <div style={{ display: "flex", marginTop: 18, fontFamily: "Georgia, serif", fontSize: 64, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
+        {text.heading}
+      </div>
+      <div
+        style={{
+          maxWidth: 865,
+          display: "flex",
+          marginTop: 22,
+          whiteSpace: "pre-wrap",
+          fontFamily: "Georgia, serif",
+          fontSize: messageSize(data.invitationMessage),
+          lineHeight: 1.34,
+          fontStyle: "italic",
+          color: theme.muted,
+          textAlign: "center",
+        }}
+      >
+        {data.invitationMessage}
+      </div>
+    </div>
+  );
+}
+
+function Portrait({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const isRound = theme.skin === "heritage" || theme.skin === "botanical";
+  const isSquare = theme.skin === "minimal" || theme.skin === "letterpress";
+  const radius = isRound ? "190px 190px 36px 36px" : isSquare ? 8 : 28;
+
+  return (
+    <div style={{ width: 350, height: 420, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", inset: "7px -8px -7px 8px", display: "flex", border: `1px solid ${theme.accent}`, borderRadius: radius, transform: "rotate(2deg)", opacity: 0.65 }} />
+      <div
+        style={{
+          width: 322,
+          height: 394,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          border: `${theme.skin === "classic" || theme.skin === "gold" ? 8 : 3}px solid ${theme.accent}`,
+          borderRadius: radius,
+          backgroundColor: theme.paperAlt,
+          boxShadow: `0 22px 42px ${theme.shadow}`,
+        }}
+      >
+        {data.coverImageDataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={data.coverImageDataUrl} alt="" width={322} height={394} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: theme.ink }}>
+            <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 60, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
+              {initials(data.title) || "S & E"}
+            </div>
+            <div style={{ width: 94, height: 1, display: "flex", marginTop: 22, backgroundColor: theme.accent }} />
+            <div style={{ display: "flex", marginTop: 18, fontFamily: "Arial, sans-serif", fontSize: 12, fontWeight: 800, letterSpacing: 4, color: theme.accent }}>
+              TOGETHER
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Hero({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const text = copy(data.language);
+
+  return (
+    <div style={{ width: 940, height: 485, display: "flex", alignItems: "center", marginTop: 5 }}>
+      <div style={{ width: "40%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Portrait data={data} theme={theme} />
+      </div>
+      <div style={{ width: "60%", height: 392, display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "18px 15px 18px 54px", borderLeft: `1px solid ${theme.accentSoft}` }}>
+        <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 58, 50, 42), lineHeight: 1.04, fontWeight: 700, color: theme.ink }}>
+          {data.guestName}
+        </div>
+        <div style={{ width: 235, height: 1, display: "flex", marginTop: 28, backgroundColor: theme.accent }} />
+        <div style={{ display: "flex", marginTop: 29 }}>
+          <Label theme={theme}>{text.weddingOf}</Label>
+        </div>
+        <div style={{ maxWidth: 500, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 50, 44, 38), lineHeight: 1.04, fontWeight: 700, fontStyle: "italic", color: theme.ink }}>
+          {data.title}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Detail({
   label,
   value,
-  detail,
+  secondary,
   theme,
+  featured = false,
 }: {
   label: string;
   value: string;
-  detail?: string;
-  theme: V3Theme;
+  secondary?: string;
+  theme: Theme;
+  featured?: boolean;
 }) {
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 17, borderTop: `1px solid ${theme.accentSoft}` }}>
-      <V4Label theme={theme}>{label}</V4Label>
-      <div style={{ maxWidth: 530, display: "flex", marginTop: 9, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 27, lineHeight: 1.18, fontWeight: 700, color: theme.ink, textAlign: "center" }}>{value}</div>
-      {detail && <div style={{ maxWidth: 530, display: "flex", marginTop: 6, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.18, color: theme.muted, textAlign: "center" }}>{detail}</div>}
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "7px 18px", textAlign: "center" }}>
+      <Label theme={theme}>{label}</Label>
+      <div style={{ maxWidth: 420, display: "flex", marginTop: 10, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? 43 : 27, lineHeight: 1.15, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+        {value || "—"}
+      </div>
+      {secondary && (
+        <div style={{ maxWidth: 420, display: "flex", marginTop: 6, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 21, lineHeight: 1.2, color: theme.muted, textAlign: "center" }}>
+          {secondary}
+        </div>
+      )}
     </div>
   );
 }
 
-function V4Hero({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
-  const ceremonyTime = data.ceremonyTime.trim() || data.eventTime.trim();
-  const ceremonyVenue = data.ceremonyVenue.trim();
-  const receptionVenue = data.receptionVenue.trim() || data.venue.trim();
-  const guestSize = heroSize(data.guestName, 58, 54, 50);
-  const coupleSize = heroSize(data.title, 76, 70, 64);
+function EventDetails({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const text = copy(data.language);
+  const ceremonyTime = data.ceremonyTime || data.eventTime;
+  const ceremonyVenue = data.ceremonyVenue;
+  const receptionVenue = data.receptionVenue || data.venue;
 
   return (
-    <div style={{ width: "100%", height: 1125, display: "flex", alignItems: "center", padding: "42px 52px 28px" }}>
-      <div style={{ width: "40%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <V4Photo data={data} theme={theme} />
-      </div>
-      <div style={{ width: "60%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "4px 18px 4px 42px", borderLeft: `1px solid ${theme.accentSoft}` }}>
-        <V3BrandHeader theme={theme} />
-        <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 40, lineHeight: 1, fontWeight: 900, letterSpacing: 2.6, color: theme.ink, textAlign: "center" }}>{copy.heading}</div>
-        <div style={{ maxWidth: 525, display: "flex", whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: invitationMessageSize(data.invitationMessage), lineHeight: 1.42, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>{data.invitationMessage}</div>
-        <div style={{ maxWidth: 530, display: "flex", fontFamily: "Georgia, serif", fontSize: guestSize, lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>{data.guestName}</div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <V4Label theme={theme}>{copy.weddingOf}</V4Label>
-          <div style={{ maxWidth: 540, display: "flex", marginTop: 12, fontFamily: "Georgia, serif", fontSize: coupleSize, lineHeight: 0.98, fontWeight: 700, fontStyle: "italic", letterSpacing: -1.4, color: theme.ink, textAlign: "center" }}>{data.title}</div>
+    <div style={{ width: 920, height: 420, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "33px 20px 31px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
+      <Detail label={text.date} value={data.date} theme={theme} featured />
+      <div style={{ width: "100%", display: "flex", alignItems: "stretch" }}>
+        <div style={{ width: "50%", display: "flex" }}>
+          <Detail label={data.ceremonyTitle || text.ceremony} value={ceremonyTime} secondary={ceremonyVenue} theme={theme} />
         </div>
-        <V4Detail label={copy.date} value={data.date || "—"} theme={theme} />
-        {(ceremonyTime || ceremonyVenue) && <V4Detail label={data.ceremonyTitle.trim() || copy.ceremony} value={ceremonyTime || ceremonyVenue} detail={ceremonyTime ? ceremonyVenue : undefined} theme={theme} />}
-        {receptionVenue && receptionVenue !== "-" && <V4Detail label={copy.reception} value={receptionVenue} theme={theme} />}
-        <div style={{ width: "100%", display: "flex", paddingTop: 17, borderTop: `1px solid ${theme.accentSoft}` }}>
-          <div style={{ width: "50%", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 10px", textAlign: "center" }}>
-            <V4Label theme={theme}>{copy.dress}</V4Label>
-            <div style={{ display: "flex", marginTop: 9, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{data.dressCode || "—"}</div>
-          </div>
-          <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
-          <div style={{ width: "50%", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 10px", textAlign: "center" }}>
-            <V4Label theme={theme}>{copy.status}</V4Label>
-            <div style={{ display: "flex", marginTop: 9, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700, color: theme.ink }}>{v3StatusText(data)}</div>
-          </div>
+        <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+        <div style={{ width: "50%", display: "flex" }}>
+          <Detail label={text.reception} value={receptionVenue} theme={theme} />
+        </div>
+      </div>
+      <div style={{ width: "72%", display: "flex", paddingTop: 16, borderTop: `1px solid ${theme.accentSoft}` }}>
+        <div style={{ width: "50%", display: "flex" }}>
+          <Detail label={text.dress} value={data.dressCode || "—"} theme={theme} />
+        </div>
+        <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+        <div style={{ width: "50%", display: "flex" }}>
+          <Detail label={text.status} value={statusText(data)} theme={theme} />
         </div>
       </div>
     </div>
   );
 }
 
-function V4Pass({ data, theme }: { data: PremiumWhatsAppCardData; theme: V3Theme }) {
-  const copy = v3Copy(data.language);
+function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const text = copy(data.language);
+  const passId = data.eventPassId || "—";
+
   return (
-    <div style={{ width: 956, height: 500, position: "relative", display: "flex", overflow: "hidden", border: `2px solid ${theme.accent}`, borderRadius: 28, backgroundColor: theme.ticket, color: theme.ticketInk, boxShadow: "0 18px 42px rgba(24,20,14,0.12)" }}>
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 14, display: "flex", backgroundColor: theme.accent }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "48px 48px 42px 62px" }}>
+    <div style={{ width: 930, height: 375, position: "relative", display: "flex", overflow: "hidden", marginTop: 28, border: `2px solid ${theme.accent}`, borderRadius: theme.skin === "letterpress" ? 4 : 26, backgroundColor: theme.ticket, color: theme.ink, boxShadow: `0 20px 42px ${theme.shadow}` }}>
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 12, display: "flex", backgroundColor: theme.accent }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "36px 38px 32px 50px" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 20, height: 20, display: "flex", marginRight: 16, borderRadius: 99, backgroundColor: theme.accent }} />
-          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 22, fontWeight: 900, letterSpacing: 3.2, color: theme.accent }}>{copy.verified}</div>
+          <div style={{ width: 13, height: 13, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
+          <Label theme={theme}>{text.pass}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 38, fontFamily: "Arial, sans-serif", fontSize: 20, fontWeight: 900, letterSpacing: 3.2, color: theme.muted }}>{copy.passId}</div>
-        <div style={{ display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: data.eventPassId.length > 16 ? 46 : 58, lineHeight: 1, fontWeight: 700, letterSpacing: 1.5 }}>{data.eventPassId || "—"}</div>
-        <div style={{ maxWidth: 540, display: "flex", marginTop: 30, fontFamily: "Georgia, serif", fontSize: 27, lineHeight: 1.35, fontStyle: "italic", color: theme.muted }}>{copy.instruction}</div>
+        <div style={{ display: "flex", marginTop: 27 }}>
+          <Label theme={theme}>{text.passId}</Label>
+        </div>
+        <div style={{ display: "flex", marginTop: 8, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 44 : 55, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+          {passId}
+        </div>
+        <div style={{ maxWidth: 520, display: "flex", marginTop: 23, fontFamily: "Georgia, serif", fontSize: 21, lineHeight: 1.3, fontStyle: "italic", color: theme.muted }}>
+          {text.instruction}
+        </div>
       </div>
-      <div style={{ width: 350, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
+      <div style={{ width: 310, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.qrCodeDataUrl} alt="" width={270} height={270} style={{ width: 270, height: 270, objectFit: "contain" }} />
+          <img src={data.qrCodeDataUrl} alt="" width={265} height={265} style={{ width: 265, height: 265, objectFit: "contain" }} />
         ) : (
-          <div style={{ width: 270, height: 270, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 30, fontWeight: 900 }}>QR</div>
+          <div style={{ width: 235, height: 235, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 28, fontWeight: 900, color: theme.ink }}>
+            QR
+          </div>
         )}
       </div>
     </div>
@@ -757,37 +676,48 @@ export default function PremiumWhatsAppCard({
   data: PremiumWhatsAppCardData;
   template: PremiumWhatsAppTemplate;
 }): ReactElement {
-  const theme = getV3Theme(template);
+  const theme = THEMES[template] ?? THEMES.classic_photo;
+  const text = copy(data.language);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
-      <V3Frame theme={theme} />
-      <V3CornerOrnaments theme={theme} />
-      <V4Hero data={data} theme={theme} />
-      <V4Pass data={data} theme={theme} />
+      <TemplateAtmosphere theme={theme} title={data.title} />
+      <InvitationTop data={data} theme={theme} />
+      <Hero data={data} theme={theme} />
+      <EventDetails data={data} theme={theme} />
+      <PassTicket data={data} theme={theme} />
+      <div style={{ width: 620, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 24 }}>
+        <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+        <div style={{ maxWidth: 430, display: "flex", margin: "0 22px", fontFamily: "Georgia, serif", fontSize: 18, lineHeight: 1.2, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>
+          {text.closing}
+        </div>
+        <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+      </div>
     </div>
   );
 }
 
 export function CompactHorizontalCard({ data }: { data: PremiumWhatsAppCardData }): ReactElement {
-  const copy = v3Copy(data.language);
+  const theme = THEMES.emerald_botanical_halo;
+  const text = copy(data.language);
+
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", overflow: "hidden", padding: 26, backgroundColor: "#FFF9EC", color: "#183B32", border: "10px solid #174C3C" }}>
-      <div style={{ width: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: "1px solid #B99752" }}>
-        <V3Ornament theme={V3_THEMES.emerald_botanical_halo} />
+    <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", overflow: "hidden", padding: 26, backgroundColor: theme.paper, color: theme.ink, border: `10px solid ${theme.ink}` }}>
+      <div style={{ width: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${theme.accent}` }}>
+        <DiamondOrnament theme={theme} width={38} />
         <div style={{ display: "flex", marginTop: 18, fontFamily: "Arial, sans-serif", fontSize: 12, fontWeight: 900, letterSpacing: 2.2 }}>SMART EVENT PASS</div>
-        <div style={{ display: "flex", marginTop: 13, fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: "#715F43" }}>{copy.verified}</div>
+        <div style={{ display: "flex", marginTop: 13, fontFamily: "Georgia, serif", fontSize: 20, fontStyle: "italic", color: theme.muted }}>{text.pass}</div>
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
-        <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 11, fontWeight: 900, letterSpacing: 2.4, color: "#A17E3C" }}>{copy.weddingOf}</div>
+        <Label theme={theme}>{text.weddingOf}</Label>
         <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: 38, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>{data.title}</div>
-        <div style={{ display: "flex", marginTop: 13, fontFamily: "Georgia, serif", fontSize: 23, color: "#715F43" }}>{data.guestName}</div>
-        <div style={{ display: "flex", marginTop: 17, paddingTop: 13, borderTop: "1px solid #B99752", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 700 }}>
-          {data.date} · {data.eventTime || data.venue} · {v3StatusText(data)}
+        <div style={{ display: "flex", marginTop: 13, fontFamily: "Georgia, serif", fontSize: 23, color: theme.muted }}>{data.guestName}</div>
+        <div style={{ display: "flex", marginTop: 17, paddingTop: 13, borderTop: `1px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 700 }}>
+          {data.date} · {data.eventTime || data.venue} · {statusText(data)}
         </div>
         <div style={{ display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700 }}>{data.eventPassId || "—"}</div>
       </div>
-      <div style={{ width: 205, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", borderLeft: "2px dashed #B99752" }}>
+      <div style={{ width: 205, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", borderLeft: `2px dashed ${theme.accent}` }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={data.qrCodeDataUrl} alt="" width={166} height={166} style={{ width: 166, height: 166, objectFit: "contain" }} />

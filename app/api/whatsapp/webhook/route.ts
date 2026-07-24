@@ -34,6 +34,33 @@ type WhatsAppStatusRecord = {
   errors?: WhatsAppStatusError[];
 };
 
+type WhatsAppRsvpAction =
+  | "accepted"
+  | "declined";
+
+type WhatsAppIncomingMessage = {
+  id?: string;
+  type?: string;
+
+  context?: {
+    id?: string;
+  };
+
+  button?: {
+    payload?: string;
+    text?: string;
+  };
+
+  interactive?: {
+    type?: string;
+
+    button_reply?: {
+      id?: string;
+      title?: string;
+    };
+  };
+};
+
 type WhatsAppWebhookPayload = {
   object?: string;
 
@@ -46,10 +73,29 @@ type WhatsAppWebhookPayload = {
       value?: {
         messaging_product?: string;
         statuses?: WhatsAppStatusRecord[];
+        messages?: WhatsAppIncomingMessage[];
       };
     }>;
   }>;
 };
+
+function getRsvpAction(
+  message: WhatsAppIncomingMessage
+): WhatsAppRsvpAction | null {
+  const action =
+    message.button?.payload ??
+    message.interactive
+      ?.button_reply?.id;
+
+  if (
+    action === "accepted" ||
+    action === "declined"
+  ) {
+    return action;
+  }
+
+  return null;
+}
 
 function verifyWebhookSignature(
   rawBody: string,
@@ -232,8 +278,8 @@ export async function GET(
 }
 
 /*
- * Meta hutuma POST request kila
- * message status inapobadilika.
+ * Meta hutuma POST request kwa delivery
+ * statuses na majibu ya interactive messages.
  */
 export async function POST(
   request: Request
@@ -356,6 +402,9 @@ export async function POST(
     const statusRecords:
       WhatsAppStatusRecord[] = [];
 
+    const incomingMessages:
+      WhatsAppIncomingMessage[] = [];
+
     for (
       const entry of
         payload.entry ?? []
@@ -377,7 +426,138 @@ export async function POST(
               ?.statuses ?? []
           )
         );
+
+        incomingMessages.push(
+          ...(
+            change.value
+              ?.messages ?? []
+          )
+        );
       }
+    }
+
+    let rsvpUpdates = 0;
+
+    for (
+      const message of
+        incomingMessages
+    ) {
+      const rsvpAction =
+        getRsvpAction(message);
+
+      const originalMessageId =
+        message.context?.id;
+
+      if (
+        !rsvpAction ||
+        !originalMessageId
+      ) {
+        continue;
+      }
+
+      const {
+        data: messageLog,
+        error: messageLogError,
+      } = await supabase
+        .from(
+          "whatsapp_message_logs"
+        )
+        .select(
+          "invitation_id"
+        )
+        .eq(
+          "message_id",
+          originalMessageId
+        )
+        .maybeSingle();
+
+      if (
+        messageLogError ||
+        !messageLog
+      ) {
+        console.error(
+          "WhatsApp RSVP has no matching invitation log:",
+          {
+            originalMessageId,
+            action: rsvpAction,
+            error:
+              messageLogError
+                ?.message,
+          }
+        );
+
+        continue;
+      }
+
+      const {
+        data: invitation,
+        error: invitationError,
+      } = await supabase
+        .from("invitations")
+        .select(
+          "invitation_token"
+        )
+        .eq(
+          "id",
+          messageLog.invitation_id
+        )
+        .maybeSingle();
+
+      if (
+        invitationError ||
+        !invitation
+      ) {
+        console.error(
+          "WhatsApp RSVP invitation lookup failed:",
+          {
+            originalMessageId,
+            action: rsvpAction,
+            error:
+              invitationError
+                ?.message,
+          }
+        );
+
+        continue;
+      }
+
+      const {
+        data: rsvpResult,
+        error: rsvpError,
+      } = await supabase.rpc(
+        "update_public_rsvp",
+        {
+          token_input:
+            invitation.invitation_token,
+          rsvp_input:
+            rsvpAction,
+        }
+      );
+
+      const firstResult =
+        Array.isArray(rsvpResult)
+          ? rsvpResult[0]
+          : rsvpResult;
+
+      if (
+        rsvpError ||
+        !firstResult?.success
+      ) {
+        console.error(
+          "WhatsApp RSVP update failed:",
+          {
+            originalMessageId,
+            action: rsvpAction,
+            error:
+              rsvpError?.message ??
+              firstResult?.message,
+          }
+        );
+
+        continue;
+      }
+
+      rsvpUpdates += 1;
     }
 
     for (
@@ -509,6 +689,7 @@ export async function POST(
         success: true,
         processed:
           statusRecords.length,
+        rsvpUpdates,
       },
       {
         status: 200,

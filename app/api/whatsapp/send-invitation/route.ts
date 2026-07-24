@@ -30,6 +30,7 @@ type EventRecord = {
   event_date: string | null;
   event_time: string | null;
   venue: string | null;
+  reception_map_url: string | null;
   language: string | null;
 };
 
@@ -442,6 +443,7 @@ export async function POST(
           event_date,
           event_time,
           venue,
+          reception_map_url,
           language
         )
       `)
@@ -510,6 +512,19 @@ export async function POST(
           success: false,
           message:
             "Mgeni hana namba ya simu.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (!event.reception_map_url?.trim()) {
+      return Response.json(
+        {
+          success: false,
+          message:
+            "Event haina Google Maps URL ya reception.",
         },
         {
           status: 400,
@@ -687,6 +702,9 @@ export async function POST(
               1,
 
             invitationToken,
+
+            locationUrl:
+              event.reception_map_url.trim(),
 
             cardImageUrl,
           }
