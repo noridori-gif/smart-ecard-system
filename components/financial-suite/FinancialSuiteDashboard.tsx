@@ -4,6 +4,7 @@ import Link from "next/link";
 import FinancialSummaryCards from "./FinancialSummaryCards";
 import PledgeForm from "./PledgeForm";
 import RecordPaymentDialog from "./RecordPaymentDialog";
+import OrganiserAccessPanel from "./OrganiserAccessPanel";
 import {
   cancelPledge, createPledge, exportPledges, getFinancialSuite, recordPayment,
   updatePledge, downloadPledgeTemplate, type FinancialPledge, type PledgeInput,
@@ -55,6 +56,7 @@ export default function FinancialSuiteDashboard({ params }: { params: Promise<{ 
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
     {data && <FinancialSummaryCards summary={data.summary} />}
+    <OrganiserAccessPanel eventId={eventId} />
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b p-4 sm:flex-row"><label className="sr-only" htmlFor="pledge-search">Search contributors</label><input id="pledge-search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search by name or phone..." className="flex-1 rounded-xl border px-3 py-2" /><select aria-label="Filter by status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="rounded-xl border px-3 py-2"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></div>
       {!visible.length ? <div className="p-10 text-center text-slate-500">No pledges match this view.</div> :
