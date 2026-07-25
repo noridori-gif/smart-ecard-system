@@ -185,6 +185,13 @@ export default function EventsPage() {
                             Guests
                           </Link>
 
+                          <Link
+                            href={`/events/${event.id}/contributions`}
+                            className="rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-200"
+                          >
+                            Michango &amp; Ahadi
+                          </Link>
+
                           <button
                             type="button"
                             disabled={isDeleting}

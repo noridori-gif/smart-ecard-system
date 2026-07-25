@@ -1,0 +1,114 @@
+import * as XLSX from "xlsx";
+import { supabase } from "@/lib/supabase";
+import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
+
+export type PledgeStatus = "pledged" | "partial" | "completed" | "cancelled";
+export type FinancialPledge = {
+  id: number; event_id: number; guest_id: number | null; full_name: string; phone: string;
+  normalized_phone: string; email: string | null; pledged_amount: string; currency_code: string;
+  notes: string | null; total_paid: string; balance: string; calculated_status: PledgeStatus;
+  payment_count: number; last_payment_at: string | null; cancelled_at: string | null;
+  cancellation_reason: string | null; created_at: string; updated_at: string;
+};
+export type FinanceSummary = {
+  total_pledged: string; total_collected: string; remaining_balance: string;
+  active_pledge_count: number; pledged_count: number; partial_count: number;
+  completed_count: number; cancelled_count: number; completion_percentage: string;
+};
+export type PledgePayment = {
+  id: number; pledge_id: number; receipt_number: string; amount: string; payment_date: string;
+  payment_method: string; payment_reference: string | null; provider: string | null;
+  notes: string | null; created_at: string; voided_at: string | null; void_reason: string | null;
+};
+export type PledgeInput = {
+  eventId: number; guestId?: number | null; fullName: string; phone: string;
+  email?: string; pledgedAmount: string; notes?: string;
+};
+
+export async function getFinancialSuite(eventId: number) {
+  const [eventResult, pledgeResult, summaryResult, guestsResult] = await Promise.all([
+    supabase.from("events").select("id,title,event_date,language").eq("id", eventId).single(),
+    supabase.from("event_pledge_financial_summary").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
+    supabase.rpc("get_event_finance_summary", { target_event_id: eventId }).single(),
+    supabase.from("guests").select("id,full_name,phone,email").eq("event_id", eventId).order("full_name"),
+  ]);
+  const error = eventResult.error || pledgeResult.error || summaryResult.error || guestsResult.error;
+  if (error) throw new Error(error.message);
+  return {
+    event: eventResult.data as { id: number; title: string; event_date: string; language: "sw" | "en" },
+    pledges: (pledgeResult.data ?? []) as FinancialPledge[],
+    summary: summaryResult.data as unknown as FinanceSummary,
+    guests: (guestsResult.data ?? []) as { id: number; full_name: string; phone: string | null; email: string | null }[],
+  };
+}
+
+export async function createPledge(input: PledgeInput) {
+  const normalizedPhone = normalizeTanzanianPhone(input.phone);
+  const { data: duplicate } = await supabase.from("event_pledges").select("id,full_name")
+    .eq("event_id", input.eventId).eq("normalized_phone", normalizedPhone).is("cancelled_at", null).limit(1);
+  if (duplicate?.length) throw new Error(`Possible duplicate: ${duplicate[0].full_name} already uses this phone.`);
+  const { error } = await supabase.from("event_pledges").insert({
+    event_id: input.eventId, guest_id: input.guestId || null, full_name: input.fullName.trim(),
+    phone: input.phone.trim(), normalized_phone: normalizedPhone, email: input.email?.trim() || null,
+    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePledge(id: number, input: PledgeInput, paid: string) {
+  if (BigInt(input.pledgedAmount) < BigInt(String(paid).split(".")[0])) {
+    throw new Error("Pledged amount cannot be lower than the amount already paid.");
+  }
+  const { error } = await supabase.from("event_pledges").update({
+    guest_id: input.guestId || null, full_name: input.fullName.trim(), phone: input.phone.trim(),
+    normalized_phone: normalizeTanzanianPhone(input.phone), email: input.email?.trim() || null,
+    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
+  }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function recordPayment(pledgeId: number, values: {
+  amount: string; date: string; method: string; reference?: string; provider?: string; notes?: string;
+}) {
+  const { data, error } = await supabase.rpc("record_pledge_payment", {
+    target_pledge_id: pledgeId, payment_amount: values.amount, paid_on: values.date,
+    method: values.method, reference: values.reference || null,
+    payment_provider: values.provider || null, payment_notes: values.notes || null,
+  });
+  if (error) throw new Error(error.message);
+  return (Array.isArray(data) ? data[0] : data) as FinancialPledge;
+}
+
+export async function cancelPledge(id: number, reason: string) {
+  const { error } = await supabase.rpc("cancel_event_pledge", { target_pledge_id: id, reason });
+  if (error) throw new Error(error.message);
+}
+export async function getPayments(pledgeId: number) {
+  const { data, error } = await supabase.from("pledge_payments").select("*")
+    .eq("pledge_id", pledgeId).order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as PledgePayment[];
+}
+export async function voidPayment(id: number, reason: string) {
+  const { error } = await supabase.rpc("void_pledge_payment", { target_payment_id: id, reason });
+  if (error) throw new Error(error.message);
+}
+
+export function exportPledges(eventTitle: string, pledges: FinancialPledge[]) {
+  const rows = pledges.map((p) => ({
+    "Full Name": p.full_name, Phone: p.phone, Email: p.email ?? "",
+    "Pledged Amount": p.pledged_amount, "Total Paid": p.total_paid, Balance: p.balance,
+    Status: p.calculated_status, "Payment Count": p.payment_count,
+    "Last Payment Date": p.last_payment_at ?? "", Notes: p.notes ?? "",
+  }));
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), "Pledges");
+  XLSX.writeFile(book, `${eventTitle.replace(/\W+/g, "_")}_Contributions.xlsx`);
+}
+
+export const PLEDGE_IMPORT_HEADERS = ["Full Name", "Phone", "Email", "Pledged Amount", "Notes"] as const;
+export function downloadPledgeTemplate() {
+  const sheet = XLSX.utils.aoa_to_sheet([[...PLEDGE_IMPORT_HEADERS], ["Example Contributor", "0712345678", "", "100000", ""]]);
+  const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, "Pledges");
+  XLSX.writeFile(book, "Smart_Event_Pass_Pledge_Import.xlsx");
+}
