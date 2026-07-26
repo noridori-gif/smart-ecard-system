@@ -9,6 +9,7 @@ import PaymentHistoryDialog from "./PaymentHistoryDialog";
 import AutomationAndClosingPanel from "./AutomationAndClosingPanel";
 import ReceiptDialog from "./ReceiptDialog";
 import FinancialImportWizard from "./FinancialImportWizard";
+import BudgetDeadlineEditor from "./BudgetDeadlineEditor";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -70,6 +71,7 @@ export default function FinancialSuiteDashboard({ params }: { params: Promise<{ 
     </div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700">{notice}</div>}
+    {data && <BudgetDeadlineEditor eventId={eventId} summary={data.summary} onSaved={load}/>}
     {data && <FinancialSummaryCards summary={data.summary} />}
     <OrganiserAccessPanel eventId={eventId} />
     {data&&<AutomationAndClosingPanel eventId={eventId} eventDate={data.event.event_date} pledges={data.pledges}/>}

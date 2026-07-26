@@ -14,7 +14,11 @@ export type FinanceSummary = {
   total_pledged: string; total_collected: string; remaining_balance: string;
   active_pledge_count: number; pledged_count: number; partial_count: number;
   completed_count: number; cancelled_count: number; completion_percentage: string;
+  total_contributors: number; budget_amount: string | null; contribution_deadline: string | null;
+  budget_progress_percentage: string | null; remaining_to_budget: string | null;
+  days_remaining: number | null; deadline_status: string;
 };
+export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline">;
 export type PledgePayment = {
   id: number; pledge_id: number; receipt_number: string; amount: string; currency_code?: string; payment_date: string;
   payment_method: string; payment_reference: string | null; provider: string | null;
@@ -53,6 +57,14 @@ export async function createPledge(input: PledgeInput) {
     pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
   });
   if (error) throw new Error(error.message);
+}
+
+export async function saveFinanceTarget(eventId:number,target:FinanceTarget) {
+  const budget=target.budget_amount?.trim()||null;
+  if(budget!==null&&(!/^\d+(\.\d{1,2})?$/.test(budget)||Number(budget)<=0))throw new Error("Budget must be greater than zero with at most two decimal places.");
+  if(target.contribution_deadline&&!/^\d{4}-\d{2}-\d{2}$/.test(target.contribution_deadline))throw new Error("Enter a valid contribution deadline.");
+  const {error}=await supabase.from("event_finance_targets").upsert({event_id:eventId,budget_amount:budget,contribution_deadline:target.contribution_deadline||null},{onConflict:"event_id"});
+  if(error)throw new Error(error.message);
 }
 
 export async function updatePledge(id: number, input: PledgeInput, paid: string) {

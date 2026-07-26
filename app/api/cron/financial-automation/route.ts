@@ -13,7 +13,7 @@ export async function GET(request:Request){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL;const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
   if(!url||!key)return Response.json({error:"Financial automation is not configured."},{status:503,headers:{"Cache-Control":"no-store"}});
   const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-  const {data:settings,error}=await db.from("event_finance_automation_settings").select("*,events(id,title,event_date,language)");
+  const {data:settings,error}=await db.from("event_finance_automation_settings").select("*,events(id,title,event_date,language),event_finance_targets(contribution_deadline)");
   if(error)return Response.json({error:"Automation settings could not be loaded."},{status:500,headers:{"Cache-Control":"no-store"}});
   const summary={events:0,eligible:0,sent:0,failed:0,skipped:0,dailySent:0};
   for(const setting of settings??[]){
@@ -21,7 +21,9 @@ export async function GET(request:Request){
     try{
       if(setting.reminders_enabled&&setting.reminder_frequency!=="manual"&&(!setting.next_reminder_at||new Date(setting.next_reminder_at)<=new Date())){
         const eventPassed=new Date(`${event.event_date}T23:59:59`)<new Date();
-        if(!(eventPassed&&setting.stop_after_event_date&&!setting.allow_after_event_date)){
+        const target=Array.isArray(setting.event_finance_targets)?setting.event_finance_targets[0]:setting.event_finance_targets;
+        const deadlinePassed=target?.contribution_deadline&&new Date(`${target.contribution_deadline}T23:59:59`)<new Date();
+        if(!(deadlinePassed&&!setting.allow_after_deadline)&&!(eventPassed&&setting.stop_after_event_date&&!setting.allow_after_event_date)){
           const {data:pledges}=await db.from("event_pledge_financial_summary").select("*").eq("event_id",event.id).neq("calculated_status","cancelled").gt("balance",0);
           for(const pledge of pledges??[]){
             if(!/^255[67]\d{8}$/.test(pledge.normalized_phone)){summary.skipped++;continue;}
