@@ -19,6 +19,10 @@ export function generateOrganiserToken() {
   return randomBytes(32).toString("base64url");
 }
 
+export function generateReceiptToken() {
+  return randomBytes(32).toString("base64url");
+}
+
 export function safeTokenShape(token: string) {
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return false;
   const expected = Buffer.from("A".repeat(43));

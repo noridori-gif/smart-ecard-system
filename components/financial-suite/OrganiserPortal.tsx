@@ -2,6 +2,9 @@
 import { useMemo, useState } from "react";
 import FinancialSummaryCards from "./FinancialSummaryCards";
 import RecordPaymentDialog from "./RecordPaymentDialog";
+import PaymentHistoryDialog from "./PaymentHistoryDialog";
+import ReceiptDialog from "./ReceiptDialog";
+import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { buildPledgeMessage, formatTzs, type PledgeMessageType } from "@/services/pledgeMessageService";
 import type { FinanceSummary, FinancialPledge, PledgeInput, PledgePayment } from "@/services/financialSuiteService";
 
@@ -19,6 +22,7 @@ export default function OrganiserPortal({ token, initialData }: { token: string;
   const [data, setData] = useState(initialData); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all");
   const [selected, setSelected] = useState<FinancialPledge | null>(null); const [dialog, setDialog] = useState<"create"|"edit"|"payment"|"history"|"reminder"|null>(null);
   const [history, setHistory] = useState<PledgePayment[]>([]); const [error, setError] = useState(""); const [notice, setNotice] = useState("");
+  const [newReceipt,setNewReceipt]=useState<{receipt:FinanceReceipt;verificationUrl:string}|null>(null);
   const visible = useMemo(() => data.pledges.filter((p) => (status === "all" || p.calculated_status === status) && `${p.full_name} ${p.phone}`.toLowerCase().includes(query.toLowerCase())), [data, query, status]);
   async function refresh(message?: string) {
     const next = await request(token, { action: "refresh" }); if (next.access_status !== "active") throw new Error("This access link is no longer active.");
@@ -44,10 +48,11 @@ export default function OrganiserPortal({ token, initialData }: { token: string;
     <footer className="p-6 text-center text-sm text-slate-500">Managed securely by Smart Event Pass</footer>
     {dialog && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true"><div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6"><h2 className="mb-4 text-xl font-bold">{dialog === "create" ? "Create pledge" : dialog === "edit" ? "Edit contributor" : dialog === "payment" ? "Record payment" : dialog === "history" ? "Payment history" : "Reminder preview"}</h2>
       {(dialog === "create" || dialog === "edit") && <PortalDetailsForm pledge={selected} onSave={saveDetails} onClose={() => setDialog(null)} />}
-      {dialog === "payment" && selected && <RecordPaymentDialog pledge={selected} onClose={() => setDialog(null)} onSave={async (values) => { const result = await request(token, { action: "record_payment", pledgeId: selected.id, ...values }); setDialog(null); await refresh(`Payment recorded. Receipt ${result.receipt_number}.`); }} />}
-      {dialog === "history" && <div className="space-y-3">{!history.length ? <p className="text-slate-500">No payments recorded.</p> : history.map((p) => <div key={p.id} className="rounded-xl border p-3"><div className="flex justify-between"><b>{formatTzs(p.amount)}</b><span className={p.voided_at ? "text-red-700" : "text-emerald-700"}>{p.voided_at ? "Voided" : p.receipt_number}</span></div><p className="text-sm text-slate-500">{p.payment_date} · {p.payment_method}</p></div>)}<button onClick={() => setDialog(null)} className="rounded-xl border px-4 py-2">Close</button></div>}
+      {dialog === "payment" && selected && <RecordPaymentDialog pledge={selected} onClose={() => setDialog(null)} onSave={async (values) => { const result = await request(token, { action: "record_payment", pledgeId: selected.id, ...values });const issued=await request(token,{action:"issue_receipt",pledgeId:selected.id,receiptNumber:result.receipt_number}); setDialog(null);setNewReceipt(issued); await refresh(`Payment recorded. Receipt ${result.receipt_number}.`); }} />}
+      {dialog === "history" && <PaymentHistoryDialog payments={history} language={data.event.language} issueReceipt={async(receiptNumber)=>request(token,{action:"issue_receipt",pledgeId:selected?.id,receiptNumber})} onClose={()=>setDialog(null)}/>}
       {dialog === "reminder" && selected && <ReminderPreview pledge={selected} event={data.event} onClose={() => setDialog(null)} />}
     </div></div>}
+    {newReceipt&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><ReceiptDialog {...newReceipt} language={data.event.language} onClose={()=>setNewReceipt(null)}/></div></div>}
   </main>;
 }
 

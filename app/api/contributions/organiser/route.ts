@@ -1,5 +1,5 @@
 import {
-  checkPortalRateLimit, hashOrganiserToken, noStoreHeaders,
+  checkPortalRateLimit, generateReceiptToken, hashOrganiserToken, noStoreHeaders,
   publicFinanceClient, safeTokenShape, sameOrigin,
 } from "@/lib/financePortalServer";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
@@ -8,6 +8,7 @@ type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
   fullName?: unknown; phone?: unknown; email?: unknown; pledgedAmount?: unknown; notes?: unknown;
   amount?: unknown; date?: unknown; method?: unknown; reference?: unknown; provider?: unknown;
+  receiptNumber?: unknown;
 };
 function text(value: unknown, max = 500) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function safeError(message: string) {
@@ -64,6 +65,19 @@ export async function POST(request: Request) {
     if (action === "payment_history") {
       const { data, error } = await client.rpc("organiser_payment_history", { supplied_token_hash, target_pledge_id: pledgeId });
       if (error) throw error; return Response.json({ payments: data }, { headers: noStoreHeaders });
+    }
+    if (action === "issue_receipt") {
+      const receiptNumber = text(body?.receiptNumber, 40);
+      if (!/^SEP-PAY-\d{4}-\d{6,}$/.test(receiptNumber)) throw new Error("Receipt not found");
+      const rawReceiptToken = generateReceiptToken();
+      const { data, error } = await client.rpc("organiser_issue_receipt_verification", {
+        supplied_organiser_token_hash: supplied_token_hash,
+        target_receipt_number: receiptNumber,
+        supplied_receipt_token_hash: hashOrganiserToken(rawReceiptToken),
+      });
+      if (error) throw error;
+      const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+      return Response.json({ receipt: data, verificationUrl: `${origin}/r/${rawReceiptToken}` }, { status: 201, headers: noStoreHeaders });
     }
     return Response.json({ error: "Unsupported action." }, { status: 400, headers: noStoreHeaders });
   } catch (error) {

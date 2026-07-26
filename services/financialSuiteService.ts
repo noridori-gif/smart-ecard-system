@@ -16,7 +16,7 @@ export type FinanceSummary = {
   completed_count: number; cancelled_count: number; completion_percentage: string;
 };
 export type PledgePayment = {
-  id: number; pledge_id: number; receipt_number: string; amount: string; payment_date: string;
+  id: number; pledge_id: number; receipt_number: string; amount: string; currency_code?: string; payment_date: string;
   payment_method: string; payment_reference: string | null; provider: string | null;
   notes: string | null; created_at: string; voided_at: string | null; void_reason: string | null;
 };
@@ -70,13 +70,11 @@ export async function updatePledge(id: number, input: PledgeInput, paid: string)
 export async function recordPayment(pledgeId: number, values: {
   amount: string; date: string; method: string; reference?: string; provider?: string; notes?: string;
 }) {
-  const { data, error } = await supabase.rpc("record_pledge_payment", {
-    target_pledge_id: pledgeId, payment_amount: values.amount, paid_on: values.date,
-    method: values.method, reference: values.reference || null,
-    payment_provider: values.provider || null, payment_notes: values.notes || null,
-  });
-  if (error) throw new Error(error.message);
-  return (Array.isArray(data) ? data[0] : data) as FinancialPledge;
+  const {data:session}=await supabase.auth.getSession();
+  if(!session.session?.access_token)throw new Error("Your session has expired.");
+  const response=await fetch("/api/contributions/payments",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.session.access_token}`},body:JSON.stringify({pledgeId,...values})});
+  const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Payment could not be recorded.");
+  return payload as {pledge:FinancialPledge;receipt:import("@/services/receiptMessageService").FinanceReceipt;verificationUrl:string};
 }
 
 export async function cancelPledge(id: number, reason: string) {
