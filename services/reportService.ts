@@ -126,6 +126,7 @@ export async function getReportEvents(): Promise<
       event_time,
       venue
     `)
+    .is("archived_at", null)
     .order(
       "event_date",
       {

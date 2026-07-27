@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import GuestImportPanel from "@/components/guest-import/GuestImportPanel";
 import { supabase } from "@/lib/supabase";
@@ -91,15 +91,7 @@ export default function GuestsPage() {
   const [notification, setNotification] =
     useState<NotificationState>(null);
 
-  useEffect(() => {
-    loadPageData();
-  }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedEventId, selectedStatus]);
-
-  async function loadPageData() {
+  const loadPageData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -132,6 +124,7 @@ export default function GuestsPage() {
           supabase
             .from("events")
             .select("id, title")
+            .is("archived_at", null)
             .order("event_date", {
               ascending: false,
             }),
@@ -171,7 +164,12 @@ export default function GuestsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadPageData(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadPageData]);
 
   function showNotification(
     message: string,
@@ -510,11 +508,10 @@ export default function GuestsPage() {
               id="guest-search"
               type="search"
               value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(
-                  event.target.value
-                )
-              }
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Jina, simu, email au Event Pass ID..."
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             />
@@ -531,11 +528,10 @@ export default function GuestsPage() {
             <select
               id="event-filter"
               value={selectedEventId}
-              onChange={(event) =>
-                setSelectedEventId(
-                  event.target.value
-                )
-              }
+              onChange={(event) => {
+                setSelectedEventId(event.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
               <option value="all">
@@ -566,11 +562,10 @@ export default function GuestsPage() {
             <select
               id="status-filter"
               value={selectedStatus}
-              onChange={(event) =>
-                setSelectedStatus(
-                  event.target.value
-                )
-              }
+              onChange={(event) => {
+                setSelectedStatus(event.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
             >
               <option value="all">

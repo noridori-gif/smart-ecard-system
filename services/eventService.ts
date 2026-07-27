@@ -90,6 +90,7 @@ export type Event = {
   theme_accent_color: string;
 
   created_at?: string;
+  archived_at?: string | null;
 };
 
 export type NewEvent = {
@@ -539,15 +540,21 @@ export async function createEvent(
   return data as Event;
 }
 
-export async function getEvents(): Promise<
+export async function getEvents(archived = false): Promise<
   Event[]
 > {
+  let query = supabase
+    .from("events")
+    .select("*");
+
+  query = archived
+    ? query.not("archived_at", "is", null)
+    : query.is("archived_at", null);
+
   const {
     data,
     error,
-  } = await supabase
-    .from("events")
-    .select("*")
+  } = await query
     .order(
       "event_date",
       {
@@ -769,28 +776,40 @@ export async function updateEvent(
   return data as Event;
 }
 
-export async function deleteEvent(
-  id: number
-) {
-  if (!Number.isInteger(id)) {
-    throw new Error(
-      "Event ID si sahihi."
-    );
-  }
+export type EventDeletionPreview = {
+  eventId: number; eventTitle: string; guests: number; invitations: number; pledges: number;
+  validPayments: number; voidedPayments: number; receipts: number; committeeLinks: number;
+  reminderHistory: number; automationDeliveries: number; wishes: number; guestImportHistory: number;
+  financeTargets: number; whatsappMessageLogs: number; financeAuditLogs: number;
+  financeAutomationSettings: number;
+};
 
-  const {
-    error,
-  } = await supabase
-    .from("events")
-    .delete()
-    .eq(
-      "id",
-      id
-    );
+async function eventLifecycleRequest(id: number, body: Record<string, unknown>) {
+  if (!Number.isInteger(id)) throw new Error("Event ID si sahihi.");
+  const { data } = await supabase.auth.getSession();
+  if (!data.session?.access_token) throw new Error("Your session has expired.");
+  const response = await fetch(`/api/events/${id}/lifecycle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "The event action could not be completed.");
+  return payload;
+}
 
-  if (error) {
-    throw new Error(
-      error.message
-    );
-  }
+export async function archiveEvent(id: number) {
+  return eventLifecycleRequest(id, { action: "archive" });
+}
+
+export async function restoreEvent(id: number) {
+  return eventLifecycleRequest(id, { action: "restore" });
+}
+
+export async function previewPermanentEventDeletion(id: number): Promise<EventDeletionPreview> {
+  return eventLifecycleRequest(id, { action: "preview_delete" }) as Promise<EventDeletionPreview>;
+}
+
+export async function deleteEventPermanently(id: number, eventTitle: string) {
+  return eventLifecycleRequest(id, { action: "delete", eventTitle, secondConfirmation: true });
 }

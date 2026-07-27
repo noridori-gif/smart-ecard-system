@@ -1,30 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  deleteEvent,
+  archiveEvent,
   getEvents,
+  restoreEvent,
   type Event,
 } from "@/services/eventService";
+import { getCurrentUserProfile } from "@/services/profileService";
+import EventPermanentDeleteDialog from "@/components/events/EventPermanentDeleteDialog";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [deletingEventId, setDeletingEventId] =
+  const [workingEventId, setWorkingEventId] =
     useState<number | null>(null);
+  const [archivedView, setArchivedView] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [permanentDeleteEvent, setPermanentDeleteEvent] = useState<Event | null>(null);
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  async function loadEvents() {
+  const loadEvents = useCallback(async () => {
     try {
       setIsLoading(true);
       setErrorMessage("");
 
-      const data = await getEvents();
+      const [data, profile] = await Promise.all([getEvents(archivedView), getCurrentUserProfile()]);
       setEvents(data);
+      setIsAdmin(profile?.role === "admin");
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -34,46 +41,29 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [archivedView]);
 
   useEffect(() => {
-    loadEvents();
-  }, []);
+    const timer = window.setTimeout(() => void loadEvents(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadEvents]);
 
-  async function handleDeleteEvent(
-    eventId: number,
-    eventTitle: string
-  ) {
-    const confirmed = window.confirm(
-      `Una uhakika unataka kufuta event "${eventTitle}"?\n\nGuests na invitations zote za event hii pia zitafutika. Kitendo hiki hakiwezi kurudishwa.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  async function handleArchive(event: Event) {
     try {
-      setDeletingEventId(eventId);
+      setWorkingEventId(event.id);
       setErrorMessage("");
       setSuccessMessage("");
-
-      await deleteEvent(eventId);
-
-      setEvents((currentEvents) =>
-        currentEvents.filter((event) => event.id !== eventId)
-      );
-
-      setSuccessMessage(
-        `Event "${eventTitle}" imefutwa vizuri.`
-      );
+      if (archivedView) await restoreEvent(event.id); else await archiveEvent(event.id);
+      setEvents((currentEvents) => currentEvents.filter((item) => item.id !== event.id));
+      setSuccessMessage(`Event "${event.title}" ${archivedView ? "restored" : "archived"} successfully.`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Event haikuweza kufutwa."
+          : "The event action could not be completed."
       );
     } finally {
-      setDeletingEventId(null);
+      setWorkingEventId(null);
     }
   }
 
@@ -96,6 +86,10 @@ export default function EventsPage() {
         >
           + New Event
         </Link>
+      </div>
+      <div className="mt-5 flex gap-2" role="tablist" aria-label="Event views">
+        <button onClick={() => setArchivedView(false)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${!archivedView ? "bg-blue-700 text-white" : "border bg-white"}`}>Active Events</button>
+        <button onClick={() => setArchivedView(true)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${archivedView ? "bg-slate-800 text-white" : "border bg-white"}`}>Archived Events</button>
       </div>
 
       {successMessage && (
@@ -141,8 +135,7 @@ export default function EventsPage() {
 
               <tbody className="divide-y divide-gray-200">
                 {events.map((event) => {
-                  const isDeleting =
-                    deletingEventId === event.id;
+                  const isWorking = workingEventId === event.id;
 
                   return (
                     <tr
@@ -192,21 +185,12 @@ export default function EventsPage() {
                             Michango &amp; Ahadi
                           </Link>
 
-                          <button
-                            type="button"
-                            disabled={isDeleting}
-                            onClick={() =>
-                              handleDeleteEvent(
-                                event.id,
-                                event.title
-                              )
-                            }
-                            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isDeleting
-                              ? "Deleting..."
-                              : "Delete"}
-                          </button>
+                          {(!archivedView || isAdmin) && <button type="button" disabled={isWorking} onClick={() => void handleArchive(event)}
+                            className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+                            {isWorking ? "Working…" : archivedView ? "Restore" : "Archive Event"}
+                          </button>}
+                          {isAdmin && <button type="button" onClick={() => setPermanentDeleteEvent(event)}
+                            className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800">Delete Permanently</button>}
                         </div>
                       </td>
                     </tr>
@@ -217,6 +201,11 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+      {permanentDeleteEvent && <EventPermanentDeleteDialog event={permanentDeleteEvent} onClose={() => setPermanentDeleteEvent(null)} onDeleted={() => {
+        setEvents((current) => current.filter((event) => event.id !== permanentDeleteEvent.id));
+        setSuccessMessage(`Event "${permanentDeleteEvent.title}" was permanently deleted.`);
+        setPermanentDeleteEvent(null);
+      }} />}
     </section>
   );
 }

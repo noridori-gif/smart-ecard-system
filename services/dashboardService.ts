@@ -46,7 +46,8 @@ export async function getDashboardStats(
     .select("*", {
       count: "exact",
       head: true,
-    });
+    })
+    .is("archived_at", null);
 
   let totalGuestsQuery = supabase
     .from("guests")

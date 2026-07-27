@@ -104,6 +104,43 @@ export async function voidPayment(id: number, reason: string) {
   if (error) throw new Error(error.message);
 }
 
+export type ContributionCleanupPreview = {
+  totalContributors: number;
+  contributorsWithPayments: number;
+  contributorsWithoutPayments: number;
+  guestsCanBeRemoved: number;
+  guestsMustBePreserved: number;
+  receiptsRemainValid: number;
+};
+
+async function bulkContributionRequest(eventId: number, body: Record<string, unknown>) {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session?.access_token) throw new Error("Your session has expired.");
+  const response = await fetch(`/api/contributions/bulk/${eventId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "The bulk action could not be completed.");
+  return payload;
+}
+
+export async function previewContributionCleanup(eventId: number, removeLinkedGuests: boolean) {
+  return bulkContributionRequest(eventId, {
+    action: "preview", removeLinkedGuests,
+  }) as Promise<ContributionCleanupPreview>;
+}
+
+export async function runContributionCleanup(eventId: number, input: {
+  action: "cancel_all" | "delete_contributions" | "delete_contributions_and_guests";
+  reason: string; confirmation?: string; removeLinkedGuests?: boolean;
+}) {
+  return bulkContributionRequest(eventId, input) as Promise<{
+    deletedPledges: number; cancelledPledges: number; deletedGuests: number;
+  }>;
+}
+
 export function exportPledges(eventTitle: string, pledges: FinancialPledge[]) {
   const rows = pledges.map((p) => ({
     "Full Name": p.full_name, Phone: p.phone, Email: p.email ?? "",

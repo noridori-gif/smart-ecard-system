@@ -181,6 +181,7 @@ export async function getDashboardEvents(): Promise<
       event_time,
       venue
     `)
+    .is("archived_at", null)
     .order("event_date", {
       ascending: true,
     });
