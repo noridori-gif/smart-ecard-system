@@ -28,7 +28,7 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
     includeGuests: false, createInitialPayments: true, skipDuplicates: true,
   });
   const unresolvedNames = useMemo(() => preview?.rows.filter((row) =>
-    row.duplicateType === "name" && !row.nameDuplicateAction) ?? [], [preview]);
+    ["name", "file_name"].includes(row.duplicateType ?? "") && !row.nameDuplicateAction) ?? [], [preview]);
 
   async function call(action: "preview" | "import", importRows = rows) {
     const response = await fetch(`/api/contributions/import/${eventId}`, {
@@ -100,7 +100,7 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
         <tbody className="divide-y">{preview.rows.map((row) => <tr key={row.rowNumber} className={!row.valid ? "bg-red-50" : row.duplicateType ? "bg-amber-50" : ""}>
           <td className="p-2">{row.rowNumber}</td><td className="p-2 font-semibold">{row.fullName || "—"}</td><td className="p-2">{row.phone || "—"}</td>
           <td className="p-2">{row.pledgedAmount}</td><td className="p-2">{row.paidAmount}</td><td className="p-2">{row.guestAction}</td>
-          <td className="p-2">{row.errors.join(" ") || (row.duplicateType === "name" ? <span>Possible name match: {row.duplicateName}. <button onClick={() => void resolveName(row.rowNumber, "skip")} className="font-bold text-amber-800 underline">Skip</button>{" / "}<button onClick={() => void resolveName(row.rowNumber, "create")} className="font-bold text-emerald-700 underline">Create separately</button></span> : row.duplicateType ? `Duplicate ${row.duplicateType.replace("_", " ")}: ${row.duplicateName ?? ""}` : "Ready")}</td>
+          <td className="p-2">{row.errors.join(" ") || (["name", "file_name"].includes(row.duplicateType ?? "") ? <span>Possible name match: {row.duplicateName}. <button onClick={() => void resolveName(row.rowNumber, "skip")} className="font-bold text-amber-800 underline">Skip</button>{" / "}<button onClick={() => void resolveName(row.rowNumber, "create")} className="font-bold text-emerald-700 underline">Create separately</button></span> : row.duplicateType ? `Duplicate ${row.duplicateType.replace("_", " ")}: ${row.duplicateName ?? ""}` : "Ready")}</td>
         </tr>)}</tbody>
       </table>
     </div>

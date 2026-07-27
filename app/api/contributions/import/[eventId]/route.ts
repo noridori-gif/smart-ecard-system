@@ -70,6 +70,7 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     const pledgePhones = new Map<string, PledgeMatch>(pledgeRows.flatMap((pledge) =>
       pledge.normalized_phone ? [[pledge.normalized_phone, pledge] as const] : []));
     const seenPhones = new Set<string>();
+    const seenPhoneLessNames = new Set<string>();
     const previewRows = rows.map((row) => {
       const errors: string[] = [];
       const phone = normalizedPhone(row.phone);
@@ -79,21 +80,30 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
       if (!moneyPattern.test(row.pledgedAmount) || Number(row.pledgedAmount) <= 0) errors.push("Pledged Amount must be greater than zero.");
       if (!moneyPattern.test(row.paidAmount) || Number(row.paidAmount) < 0) errors.push("Paid Amount is invalid.");
       if (Number(row.paidAmount) > Number(row.pledgedAmount)) errors.push("Paid Amount cannot exceed Pledged Amount.");
-      let duplicateType: "phone" | "name" | "file_phone" | null = null;
+      let duplicateType: "phone" | "name" | "file_phone" | "file_name" | null = null;
       let duplicateName: string | null = null;
       if (phone && seenPhones.has(phone)) { duplicateType = "file_phone"; duplicateName = "another Excel row"; }
       else if (phone && pledgePhones.has(phone)) { duplicateType = "phone"; duplicateName = pledgePhones.get(phone)?.full_name ?? null; }
+      else if (!phone && seenPhoneLessNames.has(cleanName(row.fullName))) {
+        duplicateType = "file_name"; duplicateName = "another Excel row";
+      }
       else if (!phone && ((options.includeGuests && guestNames.has(cleanName(row.fullName))) || pledgeRows.some((p) => cleanName(p.full_name) === cleanName(row.fullName)))) {
         duplicateType = "name"; duplicateName = (options.includeGuests ? guestNames.get(cleanName(row.fullName))?.full_name : null) ?? row.fullName;
       }
       if (phone) seenPhones.add(phone);
+      else if (row.fullName) seenPhoneLessNames.add(cleanName(row.fullName));
       const linkedGuest = phone ? guestPhones.get(phone) : undefined;
       return {
         ...row, valid: errors.length === 0, errors, duplicateType, duplicateName,
         guestAction: options.includeGuests ? (linkedGuest ? "link" : "create") : "none",
       };
     });
-    const actionable = previewRows.filter((row) => row.valid && !["phone", "file_phone"].includes(row.duplicateType ?? "") && !(row.duplicateType === "name" && !row.nameDuplicateAction));
+    const actionable = previewRows.filter((row) =>
+      row.valid
+      && !["phone", "file_phone"].includes(row.duplicateType ?? "")
+      && !(["name", "file_name"].includes(row.duplicateType ?? "") && !row.nameDuplicateAction)
+      && row.nameDuplicateAction !== "skip"
+    );
     return response({ rows: previewRows, totals: {
       totalRows: previewRows.length, validRows: previewRows.filter((r) => r.valid).length,
       invalidRows: previewRows.filter((r) => !r.valid).length,

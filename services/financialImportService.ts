@@ -21,7 +21,7 @@ export type FinancialImportOptions = {
 export type FinancialImportPreviewRow = FinancialImportRow & {
   valid: boolean;
   errors: string[];
-  duplicateType: "phone" | "name" | "file_phone" | null;
+  duplicateType: "phone" | "name" | "file_phone" | "file_name" | null;
   duplicateName: string | null;
   guestAction: "create" | "link" | "none";
 };
@@ -70,10 +70,19 @@ export async function readFinancialImportFile(file: File): Promise<FinancialImpo
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error("The Excel workbook has no readable worksheet.");
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "", raw: false });
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false });
+  const headerRowIndex = matrix.findIndex((row) => row.some((value) => text(value) !== ""));
+  const firstPopulatedRow = matrix[headerRowIndex];
+  if (!firstPopulatedRow) throw new Error("The Excel worksheet is empty.");
+  const suppliedHeaders = new Set(firstPopulatedRow.map((value) => header(text(value))).filter(Boolean));
+  const missingHeaders = FINANCIAL_IMPORT_HEADERS.filter((name) => !suppliedHeaders.has(header(name)));
+  if (missingHeaders.length) throw new Error(`Missing required column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
+  type WorksheetRow = Record<string, unknown> & { __rowNum__?: number };
+  const rows = XLSX.utils.sheet_to_json<WorksheetRow>(sheet, { defval: "", raw: false, range: headerRowIndex })
+    .filter((row) => Object.values(row).some((value) => text(value) !== ""));
   if (rows.length > 2_000) throw new Error("A single import is limited to 2,000 rows.");
   return rows.map((row, index) => ({
-    rowNumber: index + 2,
+    rowNumber: typeof row.__rowNum__ === "number" ? row.__rowNum__ + 1 : headerRowIndex + index + 2,
     fullName: text(cell(row, "Full Name")),
     phone: text(cell(row, "Phone")),
     email: text(cell(row, "Email")).toLowerCase(),
@@ -81,7 +90,7 @@ export async function readFinancialImportFile(file: File): Promise<FinancialImpo
     pledgedAmount: money(cell(row, "Pledged Amount")),
     paidAmount: money(cell(row, "Paid Amount")) || "0",
     notes: text(cell(row, "Notes")),
-  })).filter((row) => Object.values(row).some((value) => typeof value === "string" && value !== "" && value !== "0"));
+  }));
 }
 
 export function downloadFinancialImportTemplate() {
