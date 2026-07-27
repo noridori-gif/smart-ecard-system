@@ -3,12 +3,15 @@ import {
   publicFinanceClient, safeTokenShape, sameOrigin,
 } from "@/lib/financePortalServer";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
+import { createClient } from "@supabase/supabase-js";
+import { previewFinancialReminders, sendFinancialReminders, type FinancialChannel } from "@/services/financialNotificationEngine";
 
 type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
   fullName?: unknown; phone?: unknown; email?: unknown; pledgedAmount?: unknown; notes?: unknown;
   amount?: unknown; date?: unknown; method?: unknown; reference?: unknown; provider?: unknown;
   receiptNumber?: unknown;
+  channel?: unknown; confirmed?: unknown;
 };
 function text(value: unknown, max = 500) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function safeError(message: string) {
@@ -41,6 +44,20 @@ export async function POST(request: Request) {
     }
     const pledgeId = Number(body?.pledgeId);
     if (!Number.isInteger(pledgeId) || pledgeId <= 0) throw new Error("Pledge not found");
+    if (action === "reminder_preview" || action === "send_reminder") {
+      const channel = text(body?.channel, 20) as FinancialChannel;
+      if (channel !== "sms" && channel !== "whatsapp") throw new Error("Unsupported channel");
+      const { data: portal, error: portalError } = await client.rpc("get_organiser_finance_portal", { supplied_token_hash });
+      if (portalError || portal?.access_status !== "active" || portal.permissions?.send_reminders !== true) throw new Error("Access denied");
+      if (!Array.isArray(portal.pledges) || !portal.pledges.some((pledge: { id?: number }) => pledge.id === pledgeId)) throw new Error("Pledge not found");
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceKey) throw new Error("Provider configuration unavailable");
+      const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      const preview = await previewFinancialReminders(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId });
+      if (action === "reminder_preview") return Response.json(preview, { headers: noStoreHeaders });
+      if (body?.confirmed !== true) throw new Error("Confirmation required");
+      return Response.json(await sendFinancialReminders(db, preview, { type: "organiser_link" }), { headers: noStoreHeaders });
+    }
     if (action === "edit_pledge") {
       const phone = text(body?.phone, 30);
       const { data, error } = await client.rpc("organiser_update_pledge", {

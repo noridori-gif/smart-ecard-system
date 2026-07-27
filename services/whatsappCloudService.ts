@@ -405,3 +405,48 @@ export async function sendWhatsAppInvitationTemplate({
     acceptanceStatus,
   };
 }
+
+export type FinancialWhatsAppTemplateInput = {
+  phoneNumber: string;
+  language: "sw" | "en";
+  templateKind: "reminder" | "daily_summary";
+  parameters: string[];
+};
+
+export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemplateInput) {
+  const accessToken = getRequiredEnvironmentVariable("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = getRequiredEnvironmentVariable("WHATSAPP_PHONE_NUMBER_ID");
+  const suffix = input.language === "en" ? "EN" : "SW";
+  const variableName = input.templateKind === "reminder"
+    ? `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_${suffix}`
+    : `WHATSAPP_DAILY_SUMMARY_TEMPLATE_${suffix}`;
+  const templateName = getRequiredEnvironmentVariable(variableName);
+  const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
+  const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
+  const response = await fetch(`https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: recipientPhone,
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: input.language === "en" ? "en_US" : "sw" },
+        components: [{
+          type: "body",
+          parameters: input.parameters.map((parameter) => ({ type: "text", text: parameter })),
+        }],
+      },
+    }),
+    cache: "no-store",
+  });
+  const responseData = await response.json() as WhatsAppApiResponse;
+  if (!response.ok || responseData.error) {
+    throw new Error(`WhatsApp Cloud API: ${getMetaApiError(responseData)}`);
+  }
+  const messageId = responseData.messages?.[0]?.id;
+  if (!messageId) throw new Error("WhatsApp Cloud API did not return a message ID.");
+  return { success: true as const, messageId, recipientPhone, acceptanceStatus: responseData.messages?.[0]?.message_status || "accepted" };
+}

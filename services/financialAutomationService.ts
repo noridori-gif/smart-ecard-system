@@ -14,6 +14,11 @@ export type AutomationSettings = {
 export type TrendPoint={date:string;amount:number;transactions:number};
 export type FinanceTargetReport={budget:number|null;deadline:string|null;remaining:number|null;progress:number|null;daysRemaining:number|null;deadlineStatus:string};
 export type DailySummary={date:string;amount:number;transactions:number;contributors:number;totalContributors:number;totalPledged:number;totalCollected:number;outstanding:number;percentage:number;target:FinanceTargetReport};
+export type ReminderChannel="sms"|"whatsapp";
+export type ReminderPreviewRow={pledgeId:number;contributor:string;phone:string|null;pledgedAmount:string;totalPaid:string;balance:string;channel:ReminderChannel;message:string;eligible:boolean;skippedReason:string|null;lastReminderAt:string|null;cooldownUntil:string|null};
+export type ReminderPreview={rows:ReminderPreviewRow[];eligible:number;skipped:number;skippedReasons:Record<string,number>;estimatedMessages:number;provider:Record<ReminderChannel,{configured:boolean;message:string}>};
+export type ReminderHistoryRow={id:number;pledge_id:number;channel:ReminderChannel;reminder_type:string;created_at:string;sent_at:string|null;delivery_status:string;retry_count:number;next_retry_at:string|null;error_message:string|null;event_pledges:{full_name:string}|Array<{full_name:string}>|null};
+export type AuthoritativeDailySummary={event:{id:number;title:string;language:"sw"|"en"};summary:{date:string;dailyCollected:string;transactionCount:number;contributorsCount:number;totalPledged:string;totalCollected:string;outstandingBalance:string;collectionPercentage:string;outstandingContributors:number;completedPledges:number;topContributor:{name:string;amount:string}|null};message:string;provider:Record<ReminderChannel,{configured:boolean;message:string}>};
 export type ClosingReport={
   event:{id:number;title:string;event_type:string;event_date:string;venue:string};
   guestStats:{totalGuests:number;totalInvitations:number;viewed:number;accepted:number;maybe:number;declined:number;checkedIn:number};
@@ -72,3 +77,14 @@ export function exportClosingWorkbook(report:ClosingReport){
   add("Guest and RSVP Statistics",Object.entries(report.guestStats).map(([Metric,Value])=>({Metric,Value})));
   XLSX.writeFile(book,`${report.event.title.replace(/\W+/g,"_")}_Financial_Closing.xlsx`);
 }
+
+async function notificationRequest(eventId:number,body:Record<string,unknown>){
+  const {data}=await supabase.auth.getSession();if(!data.session?.access_token)throw new Error("Your session has expired.");
+  const response=await fetch(`/api/contributions/reminders/${eventId}`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify(body)});
+  const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Financial notification request failed.");return payload;
+}
+export function previewReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"preview",channels,pledgeId}) as Promise<ReminderPreview>;}
+export function sendReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
+export async function getReminderHistory(eventId:number){const result=await notificationRequest(eventId,{action:"history"});return (result.reminders??[]) as ReminderHistoryRow[];}
+export function previewDailySummary(eventId:number,date:string){return notificationRequest(eventId,{action:"daily_preview",date}) as Promise<AuthoritativeDailySummary>;}
+export function sendDailySummaryNow(eventId:number,date:string,channels:ReminderChannel[]){return notificationRequest(eventId,{action:"daily_send",date,channels,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}

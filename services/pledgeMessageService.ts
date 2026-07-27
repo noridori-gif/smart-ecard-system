@@ -47,7 +47,7 @@ export function buildPledgeMessage(
     if (type === "completed_thank_you") {
       return `Hello ${name},\n\nThank you very much for completing your pledge of ${pledge} towards ${values.eventTitle}.\n\nYour contribution has been received in full.\nWe deeply appreciate your support.\n\nSmart Event Pass`;
     }
-    return `Hello ${name},\n\nThis is a reminder about your pledge of ${pledge} towards ${values.eventTitle}.\n\nAmount received: ${paid}\nBalance: ${balance}\n\nThank you for your support.\nSmart Event Pass`;
+    return `Hello ${name},\n\nThis is a friendly reminder about your contribution pledge for ${values.eventTitle}.\n\nTotal pledge: ${pledge}\nAmount received: ${paid}\nOutstanding balance: ${balance}\n\nThank you for your support.\nSmart Event Pass`;
   }
 
   if (type === "partial_thank_you") {
@@ -56,5 +56,5 @@ export function buildPledgeMessage(
   if (type === "completed_thank_you") {
     return `Habari ${name},\n\nAsante sana kwa kukamilisha ahadi yako ya ${pledge} kwa ajili ya ${values.eventTitle}.\n\nMchango wako umepokelewa kikamilifu.\nMungu akubariki.\n\nSmart Event Pass`;
   }
-  return `Habari ${name},\n\nUnakumbushwa kuhusu ahadi yako ya ${pledge} kwa ajili ya ${values.eventTitle}.\n\nKiasi kilichopokelewa: ${paid}\nSalio: ${balance}\n\nAsante kwa ushirikiano wako.\nSmart Event Pass`;
+  return `Habari ${name},\n\nTunapenda kukukumbusha kuhusu ahadi yako kwa ajili ya ${values.eventTitle}.\n\nJumla ya ahadi: ${pledge}\nKiasi kilichopokelewa: ${paid}\nSalio: ${balance}\n\nAsante kwa ushirikiano wako.\nSmart Event Pass`;
 }

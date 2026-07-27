@@ -8,14 +8,36 @@ It is not enabled automatically. Configure these server-only environment variabl
 
 - `FINANCIAL_AUTOMATION_CRON_SECRET`: a strong random secret used as the Bearer token.
 - `SUPABASE_SERVICE_ROLE_KEY`: Supabase server credential. Never prefix it with `NEXT_PUBLIC_`.
+- `BEEM_API_KEY`, `BEEM_SECRET_KEY`, `BEEM_SENDER_NAME`: BEEM Africa SMS credentials and approved sender.
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`: Meta WhatsApp Cloud API server credentials.
+- `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_SW`, `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_EN`: approved pledge-reminder template names.
+- `WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW`, `WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN`: approved daily-summary template names.
+- `WHATSAPP_GRAPH_API_VERSION`: optional Meta Graph version (defaults to `v23.0`).
 
 Example request:
 
-```text
-Authorization: Bearer <FINANCIAL_AUTOMATION_CRON_SECRET>
+```bash
+curl --fail --request GET \
+  --header "Authorization: Bearer $FINANCIAL_AUTOMATION_CRON_SECRET" \
+  https://your-app.example/api/cron/financial-automation
 ```
 
-The endpoint uses daily idempotency keys, continues after individual failures, records every
-accepted attempt, and returns only aggregate counts. Configure a Vercel Cron schedule separately
-after testing in staging. WhatsApp automation remains disabled until an approved financial
-message template is configured; those attempts are recorded as failed rather than reported sent.
+Run the endpoint every 5–15 minutes so configured UTC summary times and retry windows are handled
+promptly. Configure the Vercel Cron schedule separately after staging verification; deployment does
+not automatically enable scheduled sending.
+
+The endpoint uses cooldown-window and daily idempotency keys, processes recipients and events
+independently, retries transient reminder failures at most three times, and returns aggregate counts
+only. It never returns names, phone numbers, messages, provider errors, or credentials. WhatsApp
+uses approved templates only; missing templates remain visible in preview/configuration state and
+are never reported as successful delivery. Meta webhook status is authoritative for WhatsApp
+`delivered` and `read`.
+
+Approved financial reminder templates must accept body variables in this order: contributor name,
+event title, total pledge, total received, outstanding balance. Daily-summary templates must accept:
+event title, collected today, transaction count, contributors today, total pledged, total collected,
+outstanding balance, collection percentage, contributors with balances, completed pledges, and top
+contributor. Keep the Swahili and English templates structurally aligned with these variables.
+
+All variables above are server-only. Never expose the cron secret, service-role key, provider keys,
+or WhatsApp access token through `NEXT_PUBLIC_` variables, browser code, logs, or API responses.

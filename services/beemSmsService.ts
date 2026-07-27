@@ -1,6 +1,7 @@
 type BeemSmsRequest = {
   phoneNumber: string;
   message: string;
+  maxAttempts?: number;
 };
 
 export type BeemSmsErrorDetails = {
@@ -146,6 +147,7 @@ async function sleep(ms: number) {
 export async function sendBeemSms({
   phoneNumber,
   message,
+  maxAttempts = 3,
 }: BeemSmsRequest): Promise<BeemSmsResult> {
   const normalizedPhone = normalizeBeemPhoneNumber(phoneNumber);
 
@@ -171,9 +173,9 @@ export async function sendBeemSms({
     message: message.trim(),
   };
 
-  const maxAttempts = 3;
+  const boundedAttempts = Math.min(Math.max(Math.trunc(maxAttempts), 1), 3);
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+  for (let attempt = 1; attempt <= boundedAttempts; attempt += 1) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
@@ -212,7 +214,7 @@ export async function sendBeemSms({
       const statusCode = response.status;
 
       if (statusCode === 429 || statusCode >= 500) {
-        if (attempt < maxAttempts) {
+        if (attempt < boundedAttempts) {
           await sleep(600 * attempt);
           continue;
         }
@@ -253,7 +255,7 @@ export async function sendBeemSms({
       clearTimeout(timeoutId);
 
       if (error instanceof Error && error.name === "AbortError") {
-        if (attempt < maxAttempts) {
+        if (attempt < boundedAttempts) {
           await sleep(600 * attempt);
           continue;
         }
@@ -264,7 +266,7 @@ export async function sendBeemSms({
         );
       }
 
-      if (attempt < maxAttempts) {
+      if (attempt < boundedAttempts) {
         await sleep(600 * attempt);
         continue;
       }

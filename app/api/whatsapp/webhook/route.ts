@@ -663,6 +663,41 @@ export async function POST(
         .select("id")
         .maybeSingle();
 
+      const financialUpdate = {
+        delivery_status: status,
+        sent_at: status === "sent" ? statusTime : undefined,
+        error_message: status === "failed" ? getFailureMessage(statusRecord.errors) : null,
+        next_retry_at: status === "failed" ? undefined : null,
+      };
+      const [{ data: updatedReminder, error: reminderStatusError }, { error: summaryStatusError }] = await Promise.all([
+        supabase.from("pledge_reminders").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp").select("id,event_id,pledge_id,retry_count").maybeSingle(),
+        supabase.from("finance_automation_delivery_logs").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp"),
+      ]);
+      if (status === "failed" && updatedReminder) {
+        const transient = statusRecord.errors?.some((item) => [130429, 131000, 131016].includes(item.code ?? 0)) ?? false;
+        if (transient && updatedReminder.retry_count < 3) {
+          await supabase.from("pledge_reminders").update({
+            next_retry_at: new Date(Date.now() + 15 * 60_000 * 2 ** Math.max(updatedReminder.retry_count - 1, 0)).toISOString(),
+            failure_type: "provider",
+          }).eq("id", updatedReminder.id);
+        }
+        await supabase.from("finance_audit_logs").insert({
+          event_id: updatedReminder.event_id,
+          pledge_id: updatedReminder.pledge_id,
+          actor_type: "system",
+          action: "reminder_failed",
+          metadata: { channel: "whatsapp", reminder_id: updatedReminder.id, source: "meta_webhook" },
+        });
+      }
+      if (reminderStatusError || summaryStatusError) {
+        console.error("Financial WhatsApp status update failed:", {
+          messageId,
+          status,
+          reminderError: reminderStatusError?.message,
+          summaryError: summaryStatusError?.message,
+        });
+      }
+
       if (updateError) {
         console.error(
           "WhatsApp status update error:",
