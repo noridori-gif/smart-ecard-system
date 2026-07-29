@@ -9,6 +9,7 @@ export type FinancialPledge = {
   notes: string | null; total_paid: string; balance: string; calculated_status: PledgeStatus;
   payment_count: number; last_payment_at: string | null; cancelled_at: string | null;
   cancellation_reason: string | null; created_at: string; updated_at: string;
+  payment_row_count: number; has_protected_financial_history: boolean;
 };
 export type FinanceSummary = {
   total_pledged: string; total_collected: string; remaining_balance: string;
@@ -96,6 +97,19 @@ export async function recordPayment(pledgeId: number, values: {
 export async function cancelPledge(id: number, reason: string) {
   const { error } = await supabase.rpc("cancel_event_pledge", { target_pledge_id: id, reason });
   if (error) throw new Error(error.message);
+}
+export async function restorePledge(id: number) {
+  const { data, error } = await supabase.rpc("restore_event_pledge", { target_pledge_id: id });
+  if (error) throw new Error(error.message);
+  return data as FinancialPledge;
+}
+export async function permanentlyDeletePledge(id: number, confirmation: string) {
+  const { data, error } = await supabase.rpc("permanently_delete_event_pledge", {
+    target_pledge_id: id,
+    expected_confirmation: confirmation,
+  });
+  if (error) throw new Error(error.message);
+  return data as { deleted: boolean; pledge_id: number };
 }
 export async function getPayments(pledgeId: number) {
   const { data, error } = await supabase.from("pledge_payments").select("*")
