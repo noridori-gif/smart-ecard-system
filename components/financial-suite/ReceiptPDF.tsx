@@ -8,6 +8,7 @@ const s = StyleSheet.create({
   row:{flexDirection:"row",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#e2e8f0",paddingVertical:9},
   label:{color:"#64748b"}, value:{fontWeight:700,maxWidth:"60%",textAlign:"right"}, section:{marginTop:24},
   qr:{width:105,height:105,marginTop:20,alignSelf:"center"}, verify:{textAlign:"center",fontSize:8,color:"#64748b",marginTop:7},
+  voided:{marginTop:18,borderTopWidth:4,borderBottomWidth:4,borderColor:"#b91c1c",padding:10,textAlign:"center",fontSize:28,fontWeight:700,color:"#b91c1c",letterSpacing:6},
   footer:{position:"absolute",bottom:30,left:42,right:42,textAlign:"center",fontSize:8,color:"#64748b"}
 });
 export default function ReceiptPDF({ receipt, verificationUrl, qrDataUrl }: { receipt: FinanceReceipt; verificationUrl: string; qrDataUrl: string }) {
@@ -19,5 +20,5 @@ export default function ReceiptPDF({ receipt, verificationUrl, qrDataUrl }: { re
     ...(receipt.payment_reference?[["Payment Reference",receipt.payment_reference]]:[]),["Recorded By",receipt.recorded_by],
     ["Payment Status",receipt.payment_status === "voided" ? "Voided" : "Valid"],
   ];
-  return <Document title={`Receipt ${receipt.receipt_number}`} author="Smart Event Pass"><Page size="A4" style={s.page}><View style={s.header}><Text style={s.brand}>SMART EVENT PASS</Text><Text style={s.title}>Contribution Receipt</Text><Text style={s.receipt}>{receipt.receipt_number}</Text></View><View style={s.section}>{rows.map(([label,value])=><View key={label} style={s.row}><Text style={s.label}>{label}</Text><Text style={s.value}>{value}</Text></View>)}</View>{qrDataUrl&&<Image src={qrDataUrl} style={s.qr} aria-label="Receipt verification QR code"/>}<Text style={s.verify}>Verify: {verificationUrl}</Text><Text style={s.footer}>Generated {new Date().toLocaleString()} · Smart Event Pass</Text></Page></Document>;
+  return <Document title={`Receipt ${receipt.receipt_number}`} author="Smart Event Pass"><Page size="A4" style={s.page}><View style={s.header}><Text style={s.brand}>SMART EVENT PASS</Text><Text style={s.title}>Contribution Receipt</Text><Text style={s.receipt}>{receipt.receipt_number}</Text></View>{receipt.payment_status==="voided"&&<Text style={s.voided}>VOIDED</Text>}<View style={s.section}>{rows.map(([label,value])=><View key={label} style={s.row}><Text style={s.label}>{label}</Text><Text style={s.value}>{value}</Text></View>)}</View>{qrDataUrl&&<Image src={qrDataUrl} style={s.qr} aria-label="Receipt verification QR code"/>}<Text style={s.verify}>Verify: {verificationUrl}</Text><Text style={s.footer}>Generated {new Date().toLocaleString()} · Smart Event Pass</Text></Page></Document>;
 }

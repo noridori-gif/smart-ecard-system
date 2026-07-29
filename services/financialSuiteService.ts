@@ -118,8 +118,13 @@ export async function getPayments(pledgeId: number) {
   return (data ?? []) as PledgePayment[];
 }
 export async function voidPayment(id: number, reason: string) {
-  const { error } = await supabase.rpc("void_pledge_payment", { target_payment_id: id, reason });
+  if (reason.trim().length < 3) throw new Error("A clear void reason is required.");
+  const { data, error } = await supabase.rpc("void_pledge_payment", {
+    target_payment_id: id,
+    void_reason: reason.trim(),
+  });
   if (error) throw new Error(error.message);
+  return data as FinancialPledge;
 }
 export async function correctPayment(id: number, values: PaymentCorrectionInput) {
   const { data, error } = await supabase.rpc("correct_pledge_payment", {
