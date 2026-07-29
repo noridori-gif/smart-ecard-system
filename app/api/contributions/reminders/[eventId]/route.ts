@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
 import {
   authenticatedFinanceClient, bearerToken, checkPortalRateLimit, noStoreHeaders, sameOrigin,
 } from "@/lib/financePortalServer";
@@ -8,7 +9,7 @@ import {
 } from "@/services/financialNotificationEngine";
 
 function reply(data: unknown, status = 200) {
-  return Response.json(data, { status, headers: noStoreHeaders });
+  return NextResponse.json(data, { status, headers: noStoreHeaders });
 }
 function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -22,6 +23,7 @@ function requestedChannels(value: unknown): FinancialChannel[] {
 }
 
 export async function POST(request: Request, context: { params: Promise<{ eventId: string }> }) {
+ try {
   if (!sameOrigin(request)) return reply({ error: "Request not allowed." }, 403);
   if (!checkPortalRateLimit(request, "financial-reminders", 20)) return reply({ error: "Too many requests. Try again shortly." }, 429);
   const token = bearerToken(request);
@@ -64,7 +66,12 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
       return reply(await sendFinancialReminders(db, freshPreview, { type: "authenticated_user", userId: auth.user.id }));
     }
     return reply({ error: "Unsupported action." }, 400);
-  } catch {
-    return reply({ error: "The financial notification request could not be completed." }, 400);
+  } catch (error) {
+    console.error("Financial reminder action failed:", error);
+    return reply({ success: false, error: error instanceof Error ? error.message : "The financial notification request could not be completed." }, 500);
   }
+ } catch (error) {
+  console.error("Financial reminder request failed:", error);
+  return reply({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
+ }
 }

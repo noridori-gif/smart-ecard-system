@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { saveFinanceTarget, type FinanceSummary } from "@/services/financialSuiteService";
+import { normalizeNumericInput, saveFinanceTarget, type FinanceSummary } from "@/services/financialSuiteService";
 
 export default function BudgetDeadlineEditor({eventId,summary,onSaved}:{eventId:number;summary:FinanceSummary;onSaved:()=>Promise<void>}) {
-  const [budget,setBudget]=useState(summary.budget_amount??"");const [deadline,setDeadline]=useState(summary.contribution_deadline??"");
+  const [budget,setBudget]=useState(normalizeNumericInput(summary.budget_amount));const [deadline,setDeadline]=useState(summary.contribution_deadline??"");
   const [busy,setBusy]=useState(false);const [error,setError]=useState("");
   return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <div><h2 className="text-xl font-bold">Budget &amp; Deadline</h2><p className="text-sm text-slate-600">Set the collection target and the last contribution date for this event.</p></div>

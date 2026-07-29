@@ -11,15 +11,28 @@ export type FinancialPledge = {
   cancellation_reason: string | null; created_at: string; updated_at: string;
   payment_row_count: number; has_protected_financial_history: boolean;
 };
+export type NumericInput = string | number | null | undefined;
 export type FinanceSummary = {
   total_pledged: string; total_collected: string; remaining_balance: string;
   active_pledge_count: number; pledged_count: number; partial_count: number;
   completed_count: number; cancelled_count: number; completion_percentage: string;
-  total_contributors: number; budget_amount: string | null; contribution_deadline: string | null;
+  total_contributors: number; budget_amount: string | number | null; contribution_deadline: string | null;
   budget_progress_percentage: string | null; remaining_to_budget: string | null;
   days_remaining: number | null; deadline_status: string;
 };
 export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline">;
+
+export function normalizeNumericInput(value: NumericInput): string {
+  return value === null || value === undefined ? "" : String(value).trim();
+}
+
+export function parseOptionalAmount(value: NumericInput): number | null {
+  const normalized = normalizeNumericInput(value).replace(/,/g, "");
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) throw new Error("Enter a valid amount.");
+  return amount;
+}
 export type PledgePayment = {
   id: number; pledge_id: number; receipt_number: string; amount: string; currency_code?: string; payment_date: string;
   payment_method: string; payment_reference: string | null; provider: string | null;
@@ -65,8 +78,10 @@ export async function createPledge(input: PledgeInput) {
 }
 
 export async function saveFinanceTarget(eventId:number,target:FinanceTarget) {
-  const budget=target.budget_amount?.trim()||null;
-  if(budget!==null&&(!/^\d+(\.\d{1,2})?$/.test(budget)||Number(budget)<=0))throw new Error("Budget must be greater than zero with at most two decimal places.");
+  const normalizedBudget=normalizeNumericInput(target.budget_amount).replace(/,/g,"");
+  const parsedBudget=parseOptionalAmount(target.budget_amount);
+  const budget=parsedBudget===null?null:normalizedBudget;
+  if(budget!==null&&(!/^\d+(\.\d{1,2})?$/.test(budget)||parsedBudget===0))throw new Error("Budget must be greater than zero with at most two decimal places.");
   if(target.contribution_deadline&&!/^\d{4}-\d{2}-\d{2}$/.test(target.contribution_deadline))throw new Error("Enter a valid contribution deadline.");
   const {error}=await supabase.from("event_finance_targets").upsert({event_id:eventId,budget_amount:budget,contribution_deadline:target.contribution_deadline||null},{onConflict:"event_id"});
   if(error)throw new Error(error.message);

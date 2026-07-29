@@ -78,10 +78,16 @@ export function exportClosingWorkbook(report:ClosingReport){
   XLSX.writeFile(book,`${report.event.title.replace(/\W+/g,"_")}_Financial_Closing.xlsx`);
 }
 
+async function safeJson(response:Response):Promise<Record<string,unknown>>{
+  const text=await response.text();
+  if(!text)return {};
+  try{return JSON.parse(text) as Record<string,unknown>;}
+  catch{throw new Error(`The reminder service returned an invalid response (${response.status}).`);}
+}
 async function notificationRequest(eventId:number,body:Record<string,unknown>){
   const {data}=await supabase.auth.getSession();if(!data.session?.access_token)throw new Error("Your session has expired.");
   const response=await fetch(`/api/contributions/reminders/${eventId}`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify(body)});
-  const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Financial notification request failed.");return payload;
+  const payload=await safeJson(response);if(!response.ok)throw new Error(typeof payload.error==="string"?payload.error:"Financial notification request failed.");return payload;
 }
 export function previewReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"preview",channels,pledgeId}) as Promise<ReminderPreview>;}
 export function sendReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
