@@ -54,6 +54,24 @@ export async function POST(request: Request) {
         outstanding:[...active].filter(pledge=>Number(pledge.balance)>0).sort((a,b)=>Number(b.balance)-Number(a.balance)).slice(0,5).map(pledge=>({name:pledge.full_name,amount:pledge.balance})),
       }, { headers: noStoreHeaders });
     }
+    if (action === "message_statuses") {
+      const { data: portal, error: portalError } = await client.rpc("get_organiser_finance_portal", { supplied_token_hash });
+      if (portalError || portal?.access_status !== "active"
+        || (portal.permissions?.send_reminders !== true && portal.permissions?.send_thank_you !== true)) throw new Error("Access denied");
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceKey) throw new Error("Message status is unavailable");
+      const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      const allowedTypes = [
+        ...(portal.permissions.send_reminders === true ? ["pledge_reminder"] : []),
+        ...(portal.permissions.send_thank_you === true ? ["pledge_thank_you"] : []),
+      ];
+      const { data: rows, error: statusError } = await db.from("pledge_reminders")
+        .select("pledge_id,reminder_type,channel,delivery_status,created_at")
+        .eq("event_id", Number(portal.event.id)).in("reminder_type", allowedTypes)
+        .order("created_at", { ascending: false }).limit(500);
+      if (statusError) throw statusError;
+      return Response.json({ statuses: rows ?? [] }, { headers: noStoreHeaders });
+    }
     if (action === "create_pledge") {
       const phone = text(body?.phone, 30); const amount = text(body?.pledgedAmount, 30);
       if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) throw new Error("Invalid amount");
