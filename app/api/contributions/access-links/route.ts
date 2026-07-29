@@ -5,7 +5,7 @@ import {
 
 const permissionNames = [
   "view_pledges", "create_pledges", "edit_contributors", "record_payments",
-  "view_payment_history", "send_reminders", "search",
+  "view_payment_history", "send_reminders", "search", "send_thank_you", "view_reports",
 ] as const;
 
 async function clientFor(request: Request) {

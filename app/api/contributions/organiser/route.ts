@@ -4,7 +4,7 @@ import {
 } from "@/lib/financePortalServer";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
 import { createClient } from "@supabase/supabase-js";
-import { previewFinancialReminders, sendFinancialReminders, type FinancialChannel } from "@/services/financialNotificationEngine";
+import { previewFinancialReminders, previewPledgeThankYous, sendFinancialReminders, sendPledgeThankYous, type FinancialChannel } from "@/services/financialNotificationEngine";
 
 type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
@@ -32,6 +32,28 @@ export async function POST(request: Request) {
       if (error) throw error;
       return Response.json(data, { headers: noStoreHeaders });
     }
+    if (action === "portal_report") {
+      const { data: portal, error: portalError } = await client.rpc("get_organiser_finance_portal", { supplied_token_hash });
+      if (portalError || portal?.access_status !== "active" || portal.permissions?.view_reports !== true) throw new Error("Access denied");
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !serviceKey) throw new Error("Report configuration unavailable");
+      const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      const { data: payments, error: paymentError } = await db.from("pledge_payments")
+        .select("amount,payment_date,voided_at,event_pledges!inner(event_id)")
+        .eq("event_pledges.event_id", Number(portal.event.id));
+      if (paymentError) throw paymentError;
+      const valid=(payments??[]).filter(payment=>!payment.voided_at);
+      const trendMap=new Map<string,{amount:number;transactions:number}>();
+      valid.forEach(payment=>{const current=trendMap.get(payment.payment_date)??{amount:0,transactions:0};current.amount+=Number(payment.amount);current.transactions+=1;trendMap.set(payment.payment_date,current);});
+      const pledges=(portal.pledges??[]) as Array<{full_name:string;total_paid:string;balance:string;calculated_status:string}>;
+      const active=pledges.filter(pledge=>pledge.calculated_status!=="cancelled");
+      return Response.json({
+        validTransactions:valid.length,
+        trend:[...trendMap].sort().map(([date,value])=>({date,...value})),
+        topContributors:[...active].sort((a,b)=>Number(b.total_paid)-Number(a.total_paid)).slice(0,5).map(pledge=>({name:pledge.full_name,amount:pledge.total_paid})),
+        outstanding:[...active].filter(pledge=>Number(pledge.balance)>0).sort((a,b)=>Number(b.balance)-Number(a.balance)).slice(0,5).map(pledge=>({name:pledge.full_name,amount:pledge.balance})),
+      }, { headers: noStoreHeaders });
+    }
     if (action === "create_pledge") {
       const phone = text(body?.phone, 30); const amount = text(body?.pledgedAmount, 30);
       if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) throw new Error("Invalid amount");
@@ -44,19 +66,29 @@ export async function POST(request: Request) {
     }
     const pledgeId = Number(body?.pledgeId);
     if (!Number.isInteger(pledgeId) || pledgeId <= 0) throw new Error("Pledge not found");
-    if (action === "reminder_preview" || action === "send_reminder") {
+    if (action === "reminder_preview" || action === "send_reminder" || action === "thank_you_preview" || action === "thank_you_send") {
       const channel = text(body?.channel, 20) as FinancialChannel;
       if (channel !== "sms" && channel !== "whatsapp") throw new Error("Unsupported channel");
       const { data: portal, error: portalError } = await client.rpc("get_organiser_finance_portal", { supplied_token_hash });
-      if (portalError || portal?.access_status !== "active" || portal.permissions?.send_reminders !== true) throw new Error("Access denied");
+      const thankYouAction = action === "thank_you_preview" || action === "thank_you_send";
+      const requiredPermission = thankYouAction ? "send_thank_you" : "send_reminders";
+      if (portalError || portal?.access_status !== "active" || portal.permissions?.[requiredPermission] !== true) throw new Error("Access denied");
       if (!Array.isArray(portal.pledges) || !portal.pledges.some((pledge: { id?: number }) => pledge.id === pledgeId)) throw new Error("Pledge not found");
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (!url || !serviceKey) throw new Error("Provider configuration unavailable");
       const db = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      const { data: accessLink } = await db.from("event_finance_access_links").select("id").eq("token_hash", supplied_token_hash).eq("event_id", Number(portal.event.id)).single();
+      if (!accessLink) throw new Error("Access denied");
+      if (thankYouAction) {
+        const preview = await previewPledgeThankYous(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId });
+        if (action === "thank_you_preview") return Response.json(preview, { headers: noStoreHeaders });
+        if (body?.confirmed !== true) throw new Error("Confirmation required");
+        return Response.json(await sendPledgeThankYous(db, preview, { type: "organiser_link", linkId: accessLink.id }), { headers: noStoreHeaders });
+      }
       const preview = await previewFinancialReminders(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId });
       if (action === "reminder_preview") return Response.json(preview, { headers: noStoreHeaders });
       if (body?.confirmed !== true) throw new Error("Confirmation required");
-      return Response.json(await sendFinancialReminders(db, preview, { type: "organiser_link" }), { headers: noStoreHeaders });
+      return Response.json(await sendFinancialReminders(db, preview, { type: "organiser_link", linkId: accessLink.id }), { headers: noStoreHeaders });
     }
     if (action === "edit_pledge") {
       const phone = text(body?.phone, 30);

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 const permissionLabels = {
   view_pledges: "View pledges", create_pledges: "Create pledges",
   edit_contributors: "Edit contributor details", record_payments: "Record payments",
-  view_payment_history: "View payment history", send_reminders: "Preview reminders", search: "Search and filter",
+  view_payment_history: "View payment history", send_reminders: "Send pledge reminders", send_thank_you: "Send completed thank-you messages", view_reports: "View financial reports", search: "Search and filter",
 };
 type Permissions = Record<keyof typeof permissionLabels, boolean>;
 type AccessLink = { id: string; label: string | null; permissions: Permissions; expires_at: string | null; revoked_at: string | null; created_at: string; last_used_at: string | null };

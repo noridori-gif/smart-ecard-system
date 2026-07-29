@@ -245,7 +245,7 @@ export async function sendFinancialReminders(db: SupabaseClient, preview: Remind
   return aggregate;
 }
 
-export async function sendPledgeThankYous(db:SupabaseClient,preview:ThankYouPreview,actor:{type:"authenticated_user";userId:string|null}):Promise<SendAggregate>{
+export async function sendPledgeThankYous(db:SupabaseClient,preview:ThankYouPreview,actor:{type:"authenticated_user"|"organiser_link";userId?:string|null;linkId?:string|null}):Promise<SendAggregate>{
   const aggregate:SendAggregate={queued:0,sent:0,failed:0,skipped:preview.skipped,errors:[]};
   for(const row of preview.rows){
     if(!row.eligible||!row.phone)continue;
@@ -262,7 +262,7 @@ export async function sendPledgeThankYous(db:SupabaseClient,preview:ThankYouPrev
     }
     if(!log){aggregate.skipped+=1;continue;}
     aggregate.queued+=1;
-    await db.from("finance_audit_logs").insert({event_id:preview.event.id,pledge_id:row.pledgeId,actor_type:actor.type,actor_user_id:actor.userId,action:"pledge_thank_you_requested",metadata:{channel:row.channel,reminder_id:log.id,completion_fingerprint:row.completionFingerprint}});
+    await db.from("finance_audit_logs").insert({event_id:preview.event.id,pledge_id:row.pledgeId,actor_type:actor.type,actor_user_id:actor.userId??null,organiser_access_link_id:actor.linkId??null,action:"pledge_thank_you_requested",metadata:{channel:row.channel,reminder_id:log.id,completion_fingerprint:row.completionFingerprint}});
     const pledge={id:row.pledgeId,event_id:preview.event.id,full_name:row.contributor,normalized_phone:row.phone,pledged_amount:row.pledgedAmount,total_paid:row.totalPaid,balance:row.balance,calculated_status:"completed"} as PledgeRow;
     const delivery=await deliverReminder(db,log as Parameters<typeof deliverReminder>[1],preview.event,pledge,actor);
     aggregate[delivery.status]+=1;if(delivery.error)aggregate.errors.push(delivery.error);
