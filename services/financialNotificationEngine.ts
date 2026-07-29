@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService";
 import { buildPledgeMessage, formatTzs } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
+import { getFinancialWhatsAppTemplate } from "@/lib/financialWhatsAppConfig";
 
 export type FinancialChannel = "sms" | "whatsapp";
 export type ReminderSkipReason =
@@ -45,14 +46,11 @@ export function financialProviderStatus(channel: FinancialChannel, language: "sw
     const configured = Boolean(process.env.BEEM_API_KEY && process.env.BEEM_SECRET_KEY && process.env.BEEM_SENDER_NAME);
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
   }
-  const templates = Boolean(templateKind === "reminder"
-    ? (language === "en" ? process.env.WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_EN : process.env.WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_SW)
-    : templateKind === "pledge_thank_you"
-      ? process.env.WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME
-      : (language === "en" ? process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN : process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW));
-  const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && templates);
+  const template = getFinancialWhatsAppTemplate(templateKind, language);
+  const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && template.configured);
   const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : "daily summary";
-  return { configured, message: configured ? `Approved WhatsApp ${label} template configured.` : `Approved WhatsApp ${label} template is not configured.` };
+  const languageLabel = language === "sw" ? "Swahili" : "English";
+  return { configured, message: configured ? `Approved ${languageLabel} WhatsApp ${label} template configured.` : `The approved ${languageLabel} WhatsApp ${label} template is not configured.` };
 }
 function windowKey(pledgeId: number, channel: FinancialChannel, cooldownHours: number, now: Date) {
   const windowNumber = Math.floor(now.getTime() / (Math.max(1, cooldownHours) * 3_600_000));
@@ -79,7 +77,7 @@ function skipReason(input: {
 }
 
 export async function previewFinancialReminders(db: SupabaseClient, input: {
-  eventId: number; requestedChannels: FinancialChannel[]; pledgeId?: number; scheduled?: boolean; now?: Date;
+  eventId: number; requestedChannels: FinancialChannel[]; pledgeId?: number; scheduled?: boolean; now?: Date; language?: "sw" | "en";
 }): Promise<ReminderPreview> {
   const now = input.now ?? new Date();
   const [{ data: event, error: eventError }, { data: setting, error: settingError }] = await Promise.all([
@@ -104,6 +102,8 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
   const { data: history } = pledgeIds.length
     ? await db.from("pledge_reminders").select("pledge_id,channel,created_at,idempotency_key").in("pledge_id", pledgeIds).order("created_at", { ascending: false })
     : { data: [] };
+  const language = input.language ?? (event.language === "en" ? "en" : "sw");
+  const effectiveEvent = { ...event, language } as EventRow;
   const rows: ReminderPreviewRow[] = [];
   for (const pledge of pledges) {
     for (const channel of input.requestedChannels) {
@@ -111,7 +111,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
       const matching = (history ?? []).filter((item) => item.pledge_id === pledge.id && item.channel === channel);
       const lastReminderAt = matching[0]?.created_at ?? null;
       const reason = skipReason({
-        event: event as EventRow, setting: effectiveSetting, pledge, channel,
+        event: effectiveEvent, setting: effectiveSetting, pledge, channel,
         scheduled: input.scheduled === true, recentAt: lastReminderAt,
         duplicate: matching.some((item) => item.idempotency_key === key), now,
       });
@@ -121,7 +121,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
         channel, eligible: !reason, skippedReason: reason, lastReminderAt,
         cooldownUntil: lastReminderAt ? new Date(new Date(lastReminderAt).getTime() + Number(effectiveSetting.reminder_cooldown_hours) * 3_600_000).toISOString() : null,
         idempotencyKey: key,
-        message: buildPledgeMessage("pledge_reminder", event.language === "en" ? "en" : "sw", {
+        message: buildPledgeMessage("pledge_reminder", language, {
           guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
           totalPaid: pledge.total_paid, balance: pledge.balance,
         }),
@@ -131,10 +131,10 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
   const skippedReasons: Partial<Record<ReminderSkipReason, number>> = {};
   rows.forEach((row) => { if (row.skippedReason) skippedReasons[row.skippedReason] = (skippedReasons[row.skippedReason] ?? 0) + 1; });
   return {
-    event: event as EventRow, rows, eligible: rows.filter((row) => row.eligible).length,
+    event: effectiveEvent, rows, eligible: rows.filter((row) => row.eligible).length,
     skipped: rows.filter((row) => !row.eligible).length, skippedReasons,
     estimatedMessages: rows.filter((row) => row.eligible).length,
-    provider: { sms: financialProviderStatus("sms", event.language === "en" ? "en" : "sw"), whatsapp: financialProviderStatus("whatsapp", event.language === "en" ? "en" : "sw") },
+    provider: { sms: financialProviderStatus("sms", language), whatsapp: financialProviderStatus("whatsapp", language) },
   };
 }
 
@@ -154,7 +154,7 @@ function completionFingerprint(pledge:PledgeRow){
   return `${pledge.id}:${pledge.pledged_amount}:${pledge.total_paid}:${pledge.balance}`;
 }
 
-export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number}):Promise<ThankYouPreview>{
+export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number;language?:"sw"|"en"}):Promise<ThankYouPreview>{
   const {data:event,error:eventError}=await db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single();
   if(eventError||!event)throw new Error("Event could not be loaded.");
   let query=db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id",input.eventId);
@@ -162,7 +162,7 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
   const {data,error}=await query;if(error)throw new Error("Completed contributors could not be loaded.");
   const pledges=(data??[]) as PledgeRow[];const ids=pledges.map(item=>item.id);
   const {data:logs}=ids.length?await db.from("pledge_reminders").select("pledge_id,channel,idempotency_key,delivery_status").eq("reminder_type","pledge_thank_you").in("pledge_id",ids):{data:[]};
-  const language=event.language==="en"?"en":"sw";const rows:ThankYouPreview["rows"]=[];
+  const language=input.language??(event.language==="en"?"en":"sw");const rows:ThankYouPreview["rows"]=[];
   for(const pledge of pledges){
     const fingerprint=completionFingerprint(pledge);
     for(const channel of input.requestedChannels){
@@ -174,7 +174,7 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
       rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message:buildPledgeMessage("pledge_thank_you",language,{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance}),eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key});
     }
   }
-  return {event:event as EventRow,rows,completed:new Set(rows.filter(row=>row.skippedReason!=="not_completed"&&row.skippedReason!=="cancelled").map(row=>row.pledgeId)).size,eligible:rows.filter(row=>row.eligible).length,alreadyThanked:rows.filter(row=>row.skippedReason==="already_thanked").length,missingPhone:rows.filter(row=>row.skippedReason==="missing_phone").length,invalidPhone:rows.filter(row=>row.skippedReason==="invalid_phone").length,skipped:rows.filter(row=>!row.eligible).length,provider:{sms:financialProviderStatus("sms",language,"pledge_thank_you"),whatsapp:financialProviderStatus("whatsapp",language,"pledge_thank_you")}};
+  return {event:{...event,language} as EventRow,rows,completed:new Set(rows.filter(row=>row.skippedReason!=="not_completed"&&row.skippedReason!=="cancelled").map(row=>row.pledgeId)).size,eligible:rows.filter(row=>row.eligible).length,alreadyThanked:rows.filter(row=>row.skippedReason==="already_thanked").length,missingPhone:rows.filter(row=>row.skippedReason==="missing_phone").length,invalidPhone:rows.filter(row=>row.skippedReason==="invalid_phone").length,skipped:rows.filter(row=>!row.eligible).length,provider:{sms:financialProviderStatus("sms",language,"pledge_thank_you"),whatsapp:financialProviderStatus("whatsapp",language,"pledge_thank_you")}};
 }
 
 function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: string; retry: boolean } {

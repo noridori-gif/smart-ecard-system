@@ -1,3 +1,8 @@
+import {
+  getFinancialWhatsAppTemplate,
+  type FinancialWhatsAppTemplateKind,
+} from "@/lib/financialWhatsAppConfig";
+
 type WhatsAppLanguageCode =
   | "sw"
   | "en_US";
@@ -409,20 +414,18 @@ export async function sendWhatsAppInvitationTemplate({
 export type FinancialWhatsAppTemplateInput = {
   phoneNumber: string;
   language: "sw" | "en";
-  templateKind: "reminder" | "daily_summary" | "pledge_thank_you";
+  templateKind: FinancialWhatsAppTemplateKind;
   parameters: string[];
 };
 
 export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemplateInput) {
   const accessToken = getRequiredEnvironmentVariable("WHATSAPP_ACCESS_TOKEN");
   const phoneNumberId = getRequiredEnvironmentVariable("WHATSAPP_PHONE_NUMBER_ID");
-  const suffix = input.language === "en" ? "EN" : "SW";
-  const variableName = input.templateKind === "reminder"
-    ? `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_${suffix}`
-    : input.templateKind === "pledge_thank_you"
-      ? "WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME"
-      : `WHATSAPP_DAILY_SUMMARY_TEMPLATE_${suffix}`;
-  const templateName = getRequiredEnvironmentVariable(variableName);
+  const template = getFinancialWhatsAppTemplate(input.templateKind, input.language);
+  if (!template.templateName) {
+    const languageLabel = input.language === "sw" ? "Swahili" : "English";
+    throw new Error(`The approved ${languageLabel} WhatsApp ${input.templateKind.replaceAll("_", " ")} template is not configured.`);
+  }
   const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
   const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
   const response = await fetch(`https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`, {
@@ -434,8 +437,8 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
       to: recipientPhone,
       type: "template",
       template: {
-        name: templateName,
-        language: { code: input.templateKind === "pledge_thank_you" ? (process.env.WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_LANGUAGE?.trim() || (input.language === "en" ? "en_US" : "sw")) : (input.language === "en" ? "en_US" : "sw") },
+        name: template.templateName,
+        language: { code: template.languageCode },
         components: [{
           type: "body",
           parameters: input.parameters.map((parameter) => ({ type: "text", text: parameter })),

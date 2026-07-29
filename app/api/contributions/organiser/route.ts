@@ -4,14 +4,15 @@ import {
 } from "@/lib/financePortalServer";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
 import { createClient } from "@supabase/supabase-js";
-import { previewFinancialReminders, previewPledgeThankYous, sendFinancialReminders, sendPledgeThankYous, type FinancialChannel } from "@/services/financialNotificationEngine";
+import { financialProviderStatus, previewFinancialReminders, previewPledgeThankYous, sendFinancialReminders, sendPledgeThankYous, type FinancialChannel } from "@/services/financialNotificationEngine";
+import { getFinancialWhatsAppReadiness } from "@/lib/financialWhatsAppConfig";
 
 type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
   fullName?: unknown; phone?: unknown; email?: unknown; pledgedAmount?: unknown; notes?: unknown;
   amount?: unknown; date?: unknown; method?: unknown; reference?: unknown; provider?: unknown;
   receiptNumber?: unknown;
-  channel?: unknown; confirmed?: unknown;
+  channel?: unknown; confirmed?: unknown; language?: unknown;
 };
 function text(value: unknown, max = 500) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function safeError(message: string) {
@@ -70,7 +71,24 @@ export async function POST(request: Request) {
         .eq("event_id", Number(portal.event.id)).in("reminder_type", allowedTypes)
         .order("created_at", { ascending: false }).limit(500);
       if (statusError) throw statusError;
-      return Response.json({ statuses: rows ?? [] }, { headers: noStoreHeaders });
+      const requestedLanguage = text(body?.language, 2);
+      const language = requestedLanguage === "sw" || requestedLanguage === "en"
+        ? requestedLanguage
+        : portal.event.language === "sw" ? "sw" : "en";
+      return Response.json({
+        statuses: rows ?? [],
+        provider: {
+          reminder: {
+            sms: financialProviderStatus("sms", language, "reminder"),
+            whatsapp: financialProviderStatus("whatsapp", language, "reminder"),
+          },
+          thank_you: {
+            sms: financialProviderStatus("sms", language, "pledge_thank_you"),
+            whatsapp: financialProviderStatus("whatsapp", language, "pledge_thank_you"),
+          },
+        },
+        readiness: getFinancialWhatsAppReadiness(),
+      }, { headers: noStoreHeaders });
     }
     if (action === "create_pledge") {
       const phone = text(body?.phone, 30); const amount = text(body?.pledgedAmount, 30);
@@ -89,6 +107,10 @@ export async function POST(request: Request) {
       if (channel !== "sms" && channel !== "whatsapp") throw new Error("Unsupported channel");
       const { data: portal, error: portalError } = await client.rpc("get_organiser_finance_portal", { supplied_token_hash });
       const thankYouAction = action === "thank_you_preview" || action === "thank_you_send";
+      const requestedLanguage = text(body?.language, 2);
+      const language = requestedLanguage === "sw" || requestedLanguage === "en"
+        ? requestedLanguage
+        : portal.event.language === "sw" ? "sw" : "en";
       const requiredPermission = thankYouAction ? "send_thank_you" : "send_reminders";
       if (portalError || portal?.access_status !== "active" || portal.permissions?.[requiredPermission] !== true) throw new Error("Access denied");
       if (!Array.isArray(portal.pledges) || !portal.pledges.some((pledge: { id?: number }) => pledge.id === pledgeId)) throw new Error("Pledge not found");
@@ -98,12 +120,12 @@ export async function POST(request: Request) {
       const { data: accessLink } = await db.from("event_finance_access_links").select("id").eq("token_hash", supplied_token_hash).eq("event_id", Number(portal.event.id)).single();
       if (!accessLink) throw new Error("Access denied");
       if (thankYouAction) {
-        const preview = await previewPledgeThankYous(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId });
+        const preview = await previewPledgeThankYous(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId, language });
         if (action === "thank_you_preview") return Response.json(preview, { headers: noStoreHeaders });
         if (body?.confirmed !== true) throw new Error("Confirmation required");
         return Response.json(await sendPledgeThankYous(db, preview, { type: "organiser_link", linkId: accessLink.id }), { headers: noStoreHeaders });
       }
-      const preview = await previewFinancialReminders(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId });
+      const preview = await previewFinancialReminders(db, { eventId: Number(portal.event.id), requestedChannels: [channel], pledgeId, language });
       if (action === "reminder_preview") return Response.json(preview, { headers: noStoreHeaders });
       if (body?.confirmed !== true) throw new Error("Confirmation required");
       return Response.json(await sendFinancialReminders(db, preview, { type: "organiser_link", linkId: accessLink.id }), { headers: noStoreHeaders });

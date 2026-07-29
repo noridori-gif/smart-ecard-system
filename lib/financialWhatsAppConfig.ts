@@ -1,0 +1,65 @@
+import "server-only";
+
+export type FinancialMessageLanguage = "sw" | "en";
+export type FinancialWhatsAppTemplateKind =
+  | "reminder"
+  | "daily_summary"
+  | "pledge_thank_you";
+
+type TemplateConfig = {
+  configured: boolean;
+  languageCode: string;
+  templateName: string | null;
+};
+
+function value(name: string) {
+  return process.env[name]?.trim() || null;
+}
+
+export function getFinancialWhatsAppTemplate(
+  kind: FinancialWhatsAppTemplateKind,
+  language: FinancialMessageLanguage
+): TemplateConfig {
+  const suffix = language === "sw" ? "SW" : "EN";
+  if (kind === "pledge_thank_you") {
+    const templateName =
+      value(`WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_${suffix}`) ??
+      (language === "sw"
+        ? value("WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME")
+        : null);
+    const languageCode =
+      value(`WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_LANGUAGE_${suffix}`) ??
+      (language === "sw"
+        ? value("WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_LANGUAGE")
+        : null) ??
+      (language === "sw" ? "sw" : "en_US");
+    return { configured: Boolean(templateName), languageCode, templateName };
+  }
+
+  const prefix =
+    kind === "reminder"
+      ? "WHATSAPP_FINANCIAL_REMINDER_TEMPLATE"
+      : "WHATSAPP_DAILY_SUMMARY_TEMPLATE";
+  const templateName = value(`${prefix}_${suffix}`);
+  return {
+    configured: Boolean(templateName),
+    languageCode: language === "sw" ? "sw" : "en_US",
+    templateName,
+  };
+}
+
+export function getFinancialWhatsAppReadiness() {
+  const reminderSw = getFinancialWhatsAppTemplate("reminder", "sw");
+  const reminderEn = getFinancialWhatsAppTemplate("reminder", "en");
+  const thankYouSw = getFinancialWhatsAppTemplate("pledge_thank_you", "sw");
+  const thankYouEn = getFinancialWhatsAppTemplate("pledge_thank_you", "en");
+  return {
+    whatsappConfigured: Boolean(
+      value("WHATSAPP_ACCESS_TOKEN") && value("WHATSAPP_PHONE_NUMBER_ID")
+    ),
+    thankYouSwConfigured: thankYouSw.configured,
+    thankYouEnConfigured: thankYouEn.configured,
+    reminderSwConfigured: reminderSw.configured,
+    reminderEnConfigured: reminderEn.configured,
+  };
+}

@@ -11,6 +11,8 @@ It is not enabled automatically. Configure these server-only environment variabl
 - `BEEM_API_KEY`, `BEEM_SECRET_KEY`, `BEEM_SENDER_NAME`: BEEM Africa SMS credentials and approved sender.
 - `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`: Meta WhatsApp Cloud API server credentials.
 - `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_SW`, `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_EN`: approved pledge-reminder template names.
+- `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_SW`, `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_EN`: exact approved Meta template names for completed-pledge thank-you messages.
+- `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_LANGUAGE_SW=sw`, `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_LANGUAGE_EN=en_US`: exact language codes approved with those Meta templates.
 - `WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW`, `WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN`: approved daily-summary template names.
 - `WHATSAPP_GRAPH_API_VERSION`: optional Meta Graph version (defaults to `v23.0`).
 
@@ -38,6 +40,13 @@ event title, total pledge, total received, outstanding balance. Daily-summary te
 event title, collected today, transaction count, contributors today, total pledged, total collected,
 outstanding balance, collection percentage, contributors with balances, completed pledges, and top
 contributor. Keep the Swahili and English templates structurally aligned with these variables.
+
+The canonical completed-pledge configuration is `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_SW`
+and `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_EN`. Each value must be the exact Meta template name
+(for example, `financial_pledge_thank_you`), not a message body, display label, or Meta status.
+During the transition, `WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME` and
+`WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_LANGUAGE` remain supported as Swahili-only aliases. New
+deployments must use the canonical language-specific names.
 
 All variables above are server-only. Never expose the cron secret, service-role key, provider keys,
 or WhatsApp access token through `NEXT_PUBLIC_` variables, browser code, logs, or API responses.
