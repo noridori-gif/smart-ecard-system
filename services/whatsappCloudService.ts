@@ -409,7 +409,7 @@ export async function sendWhatsAppInvitationTemplate({
 export type FinancialWhatsAppTemplateInput = {
   phoneNumber: string;
   language: "sw" | "en";
-  templateKind: "reminder" | "daily_summary";
+  templateKind: "reminder" | "daily_summary" | "pledge_thank_you";
   parameters: string[];
 };
 
@@ -419,7 +419,9 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
   const suffix = input.language === "en" ? "EN" : "SW";
   const variableName = input.templateKind === "reminder"
     ? `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_${suffix}`
-    : `WHATSAPP_DAILY_SUMMARY_TEMPLATE_${suffix}`;
+    : input.templateKind === "pledge_thank_you"
+      ? "WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME"
+      : `WHATSAPP_DAILY_SUMMARY_TEMPLATE_${suffix}`;
   const templateName = getRequiredEnvironmentVariable(variableName);
   const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
   const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
@@ -433,7 +435,7 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
       type: "template",
       template: {
         name: templateName,
-        language: { code: input.language === "en" ? "en_US" : "sw" },
+        language: { code: input.templateKind === "pledge_thank_you" ? (process.env.WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_LANGUAGE?.trim() || (input.language === "en" ? "en_US" : "sw")) : (input.language === "en" ? "en_US" : "sw") },
         components: [{
           type: "body",
           parameters: input.parameters.map((parameter) => ({ type: "text", text: parameter })),

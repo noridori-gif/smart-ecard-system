@@ -1,6 +1,7 @@
 export type PledgeMessageLanguage = "sw" | "en";
 export type PledgeMessageType =
   | "pledge_reminder"
+  | "pledge_thank_you"
   | "partial_thank_you"
   | "completed_thank_you";
 
@@ -44,8 +45,8 @@ export function buildPledgeMessage(
     if (type === "partial_thank_you") {
       return `Hello ${name},\n\nThank you for your contribution of ${payment} towards ${values.eventTitle}.\n\nTotal received: ${paid}\nYour pledge balance: ${balance}\n\nWe truly appreciate your contribution.\nSmart Event Pass`;
     }
-    if (type === "completed_thank_you") {
-      return `Hello ${name},\n\nThank you very much for completing your pledge of ${pledge} towards ${values.eventTitle}.\n\nYour contribution has been received in full.\nWe deeply appreciate your support.\n\nSmart Event Pass`;
+    if (type === "completed_thank_you" || type === "pledge_thank_you") {
+      return `Hello ${name},\n\nThank you for completing your contribution pledge for\n${values.eventTitle}.\n\nTotal pledged: ${pledge}\nTotal received: ${paid}\nBalance: ${balance}\n\nWe sincerely appreciate your support and contribution.\n\nSmart Event Pass`;
     }
     return `Hello ${name},\n\nThis is a friendly reminder about your contribution pledge for ${values.eventTitle}.\n\nTotal pledge: ${pledge}\nAmount received: ${paid}\nOutstanding balance: ${balance}\n\nThank you for your support.\nSmart Event Pass`;
   }
@@ -53,8 +54,8 @@ export function buildPledgeMessage(
   if (type === "partial_thank_you") {
     return `Habari ${name},\n\nAsante kwa mchango wako wa ${payment} kwa ajili ya ${values.eventTitle}.\n\nJumla iliyopokelewa: ${paid}\nSalio la ahadi yako: ${balance}\n\nTunathamini sana mchango wako.\nSmart Event Pass`;
   }
-  if (type === "completed_thank_you") {
-    return `Habari ${name},\n\nAsante sana kwa kukamilisha ahadi yako ya ${pledge} kwa ajili ya ${values.eventTitle}.\n\nMchango wako umepokelewa kikamilifu.\nMungu akubariki.\n\nSmart Event Pass`;
+  if (type === "completed_thank_you" || type === "pledge_thank_you") {
+    return `Habari ${name},\n\nAsante sana kwa kukamilisha ahadi yako ya mchango kwa ajili ya\n${values.eventTitle}.\n\nJumla ya ahadi: ${pledge}\nJumla iliyopokelewa: ${paid}\nSalio: ${balance}\n\nTunathamini sana ushirikiano na mchango wako.\n\nSmart Event Pass`;
   }
   return `Habari ${name},\n\nTunapenda kukukumbusha kuhusu ahadi yako kwa ajili ya ${values.eventTitle}.\n\nJumla ya ahadi: ${pledge}\nKiasi kilichopokelewa: ${paid}\nSalio: ${balance}\n\nAsante kwa ushirikiano wako.\nSmart Event Pass`;
 }

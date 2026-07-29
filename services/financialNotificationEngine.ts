@@ -40,16 +40,18 @@ export type SendAggregate = { queued: number; sent: number; failed: number; skip
 function channels(value: "sms" | "whatsapp" | "both"): FinancialChannel[] {
   return value === "both" ? ["sms", "whatsapp"] : [value];
 }
-export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" = "reminder") {
+export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_thank_you" = "reminder") {
   if (channel === "sms") {
     const configured = Boolean(process.env.BEEM_API_KEY && process.env.BEEM_SECRET_KEY && process.env.BEEM_SENDER_NAME);
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
   }
   const templates = Boolean(templateKind === "reminder"
     ? (language === "en" ? process.env.WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_EN : process.env.WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_SW)
-    : (language === "en" ? process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN : process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW));
+    : templateKind === "pledge_thank_you"
+      ? process.env.WHATSAPP_PLEDGE_THANK_YOU_TEMPLATE_NAME
+      : (language === "en" ? process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN : process.env.WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW));
   const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && templates);
-  const label = templateKind === "reminder" ? "financial reminder" : "daily summary";
+  const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : "daily summary";
   return { configured, message: configured ? `Approved WhatsApp ${label} template configured.` : `Approved WhatsApp ${label} template is not configured.` };
 }
 function windowKey(pledgeId: number, channel: FinancialChannel, cooldownHours: number, now: Date) {
@@ -136,6 +138,45 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
   };
 }
 
+export type ThankYouSkipReason = "cancelled" | "not_completed" | "missing_phone" | "invalid_phone" | "already_thanked" | "archived";
+export type ThankYouPreview = {
+  event: EventRow;
+  rows: Array<{
+    pledgeId:number;contributor:string;phone:string|null;pledgedAmount:string;totalPaid:string;balance:string;
+    channel:FinancialChannel;message:string;eligible:boolean;skippedReason:ThankYouSkipReason|null;
+    deliveryStatus:string|null;completionFingerprint:string;idempotencyKey:string;
+  }>;
+  completed:number;eligible:number;alreadyThanked:number;missingPhone:number;invalidPhone:number;skipped:number;
+  provider:{sms:{configured:boolean;message:string};whatsapp:{configured:boolean;message:string}};
+};
+
+function completionFingerprint(pledge:PledgeRow){
+  return `${pledge.id}:${pledge.pledged_amount}:${pledge.total_paid}:${pledge.balance}`;
+}
+
+export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number}):Promise<ThankYouPreview>{
+  const {data:event,error:eventError}=await db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single();
+  if(eventError||!event)throw new Error("Event could not be loaded.");
+  let query=db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id",input.eventId);
+  if(input.pledgeId)query=query.eq("id",input.pledgeId);
+  const {data,error}=await query;if(error)throw new Error("Completed contributors could not be loaded.");
+  const pledges=(data??[]) as PledgeRow[];const ids=pledges.map(item=>item.id);
+  const {data:logs}=ids.length?await db.from("pledge_reminders").select("pledge_id,channel,idempotency_key,delivery_status").eq("reminder_type","pledge_thank_you").in("pledge_id",ids):{data:[]};
+  const language=event.language==="en"?"en":"sw";const rows:ThankYouPreview["rows"]=[];
+  for(const pledge of pledges){
+    const fingerprint=completionFingerprint(pledge);
+    for(const channel of input.requestedChannels){
+      const key=`pledge-thank-you:${fingerprint}:${channel}`;
+      const existing=(logs??[]).find(item=>item.idempotency_key===key);
+      const successful=existing&&["sent","delivered","read"].includes(existing.delivery_status);
+      let reason:ThankYouSkipReason|null=null;
+      if(event.archived_at)reason="archived";else if(pledge.calculated_status==="cancelled")reason="cancelled";else if(Number(pledge.balance)!==0||Number(pledge.total_paid)<Number(pledge.pledged_amount))reason="not_completed";else if(!pledge.normalized_phone)reason="missing_phone";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="invalid_phone";else if(successful)reason="already_thanked";
+      rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message:buildPledgeMessage("pledge_thank_you",language,{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance}),eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key});
+    }
+  }
+  return {event:event as EventRow,rows,completed:new Set(rows.filter(row=>row.skippedReason!=="not_completed"&&row.skippedReason!=="cancelled").map(row=>row.pledgeId)).size,eligible:rows.filter(row=>row.eligible).length,alreadyThanked:rows.filter(row=>row.skippedReason==="already_thanked").length,missingPhone:rows.filter(row=>row.skippedReason==="missing_phone").length,invalidPhone:rows.filter(row=>row.skippedReason==="invalid_phone").length,skipped:rows.filter(row=>!row.eligible).length,provider:{sms:financialProviderStatus("sms",language,"pledge_thank_you"),whatsapp:financialProviderStatus("whatsapp",language,"pledge_thank_you")}};
+}
+
 function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: string; retry: boolean } {
   const message = error instanceof Error ? error.message : "Provider request failed.";
   const configuration = /environment|configured|configuration|template/i.test(message);
@@ -145,7 +186,7 @@ function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: 
 
 async function deliverReminder(db: SupabaseClient, reminder: {
   id: number; pledge_id: number; event_id: number; channel: FinancialChannel; recipient_phone: string;
-  message_body: string; retry_count: number;
+  message_body: string; retry_count: number; reminder_type?: string;
 }, event: EventRow, pledge: PledgeRow, actor: { type: "system" | "authenticated_user" | "organiser_link"; userId?: string | null; linkId?: string | null }) {
   const attempt = reminder.retry_count + 1;
   await db.from("pledge_reminders").update({ delivery_status: "processing", retry_count: attempt, last_attempt_at: new Date().toISOString(), next_retry_at: null }).eq("id", reminder.id);
@@ -162,7 +203,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
     } else {
       const result = await sendFinancialWhatsAppTemplate({
         phoneNumber: reminder.recipient_phone, language: event.language === "en" ? "en" : "sw",
-        templateKind: "reminder",
+        templateKind: reminder.reminder_type === "pledge_thank_you" ? "pledge_thank_you" : "reminder",
         parameters: [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)],
       });
       providerMessageId = result.messageId;
@@ -200,6 +241,31 @@ export async function sendFinancialReminders(db: SupabaseClient, preview: Remind
     const delivery = await deliverReminder(db, inserted as Parameters<typeof deliverReminder>[1], preview.event, pledge, actor);
     aggregate[delivery.status] += 1;
     if (delivery.error) aggregate.errors.push(delivery.error);
+  }
+  return aggregate;
+}
+
+export async function sendPledgeThankYous(db:SupabaseClient,preview:ThankYouPreview,actor:{type:"authenticated_user";userId:string|null}):Promise<SendAggregate>{
+  const aggregate:SendAggregate={queued:0,sent:0,failed:0,skipped:preview.skipped,errors:[]};
+  for(const row of preview.rows){
+    if(!row.eligible||!row.phone)continue;
+    const provider=preview.provider[row.channel];
+    if(!provider.configured){aggregate.skipped+=1;aggregate.errors.push(provider.message);continue;}
+    const existing=await db.from("pledge_reminders").select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").eq("idempotency_key",row.idempotencyKey).maybeSingle();
+    let log=existing.data;
+    if(log){
+      const updated=await db.from("pledge_reminders").update({delivery_status:"queued",error_message:null,next_retry_at:null,message_body:row.message,recipient_phone:row.phone}).eq("id",log.id).select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").single();
+      log=updated.data;
+    }else{
+      const inserted=await db.from("pledge_reminders").insert({pledge_id:row.pledgeId,event_id:preview.event.id,reminder_type:"pledge_thank_you",channel:row.channel,recipient_phone:row.phone,message_body:row.message,delivery_status:"queued",idempotency_key:row.idempotencyKey,requested_by:actor.userId}).select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").maybeSingle();
+      log=inserted.data;
+    }
+    if(!log){aggregate.skipped+=1;continue;}
+    aggregate.queued+=1;
+    await db.from("finance_audit_logs").insert({event_id:preview.event.id,pledge_id:row.pledgeId,actor_type:actor.type,actor_user_id:actor.userId,action:"pledge_thank_you_requested",metadata:{channel:row.channel,reminder_id:log.id,completion_fingerprint:row.completionFingerprint}});
+    const pledge={id:row.pledgeId,event_id:preview.event.id,full_name:row.contributor,normalized_phone:row.phone,pledged_amount:row.pledgedAmount,total_paid:row.totalPaid,balance:row.balance,calculated_status:"completed"} as PledgeRow;
+    const delivery=await deliverReminder(db,log as Parameters<typeof deliverReminder>[1],preview.event,pledge,actor);
+    aggregate[delivery.status]+=1;if(delivery.error)aggregate.errors.push(delivery.error);
   }
   return aggregate;
 }

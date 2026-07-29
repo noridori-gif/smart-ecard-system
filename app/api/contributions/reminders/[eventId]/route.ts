@@ -4,8 +4,8 @@ import {
   authenticatedFinanceClient, bearerToken, checkPortalRateLimit, noStoreHeaders, sameOrigin,
 } from "@/lib/financePortalServer";
 import {
-  getDailyFinancialSummary, previewFinancialReminders, sendDailyFinancialSummary,
-  sendFinancialReminders, type FinancialChannel,
+  getDailyFinancialSummary, previewFinancialReminders, previewPledgeThankYous, sendDailyFinancialSummary,
+  sendFinancialReminders, sendPledgeThankYous, type FinancialChannel,
 } from "@/services/financialNotificationEngine";
 
 function reply(data: unknown, status = 200) {
@@ -54,6 +54,19 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     if (body?.action === "daily_send") {
       if (body.confirmed !== true || channels.length === 0) return reply({ error: "Explicit confirmation and a channel are required." }, 400);
       return reply(await sendDailyFinancialSummary(db, { eventId, date, requestedChannels: channels, requireEnabled: false }));
+    }
+    if (body?.action === "thank_you_preview") {
+      if (channels.length === 0) return reply({ error: "Choose at least one channel." }, 400);
+      const pledgeId = body?.pledgeId == null ? undefined : Number(body.pledgeId);
+      if (pledgeId !== undefined && (!Number.isInteger(pledgeId) || pledgeId <= 0)) return reply({ error: "Invalid pledge." }, 400);
+      return reply(await previewPledgeThankYous(authClient, { eventId, requestedChannels: channels, pledgeId }));
+    }
+    if (body?.action === "thank_you_send") {
+      if (body.confirmed !== true || channels.length === 0) return reply({ error: "Explicit confirmation and a channel are required." }, 400);
+      const pledgeId = body?.pledgeId == null ? undefined : Number(body.pledgeId);
+      if (pledgeId !== undefined && (!Number.isInteger(pledgeId) || pledgeId <= 0)) return reply({ error: "Invalid pledge." }, 400);
+      const preview = await previewPledgeThankYous(db, { eventId, requestedChannels: channels, pledgeId });
+      return reply(await sendPledgeThankYous(db, preview, { type: "authenticated_user", userId: auth.user.id }));
     }
     if (channels.length === 0) return reply({ error: "Choose at least one channel." }, 400);
     const pledgeId = body?.pledgeId == null ? undefined : Number(body.pledgeId);
