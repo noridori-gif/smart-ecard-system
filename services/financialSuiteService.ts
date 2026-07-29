@@ -28,6 +28,10 @@ export type PledgeInput = {
   eventId: number; guestId?: number | null; fullName: string; phone: string;
   email?: string; pledgedAmount: string; notes?: string;
 };
+export type PaymentCorrectionInput = {
+  amount: string; date: string; method: string; reference: string;
+  provider: string; notes: string; reason: string;
+};
 
 export async function getFinancialSuite(eventId: number) {
   const [eventResult, pledgeResult, summaryResult, guestsResult] = await Promise.all([
@@ -102,6 +106,20 @@ export async function getPayments(pledgeId: number) {
 export async function voidPayment(id: number, reason: string) {
   const { error } = await supabase.rpc("void_pledge_payment", { target_payment_id: id, reason });
   if (error) throw new Error(error.message);
+}
+export async function correctPayment(id: number, values: PaymentCorrectionInput) {
+  const { data, error } = await supabase.rpc("correct_pledge_payment", {
+    target_payment_id: id,
+    corrected_amount: values.amount,
+    corrected_payment_date: values.date,
+    corrected_method: values.method,
+    corrected_reference: values.reference,
+    corrected_provider: values.provider,
+    corrected_notes: values.notes,
+    correction_reason: values.reason,
+  });
+  if (error) throw new Error(error.message);
+  return data as FinancialPledge;
 }
 
 export type ContributionCleanupPreview = {
