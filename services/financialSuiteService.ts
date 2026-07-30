@@ -25,8 +25,8 @@ export type FinanceSummary = {
 export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline">;
 export type FinancialGuest = {
   id: number; full_name: string; phone: string | null; email: string | null;
-  allowed_guests: number;
-  invitations: Array<{ id: number; invitation_status: string; rsvp_status: string; viewed_at: string | null }> | { id: number; invitation_status: string; rsvp_status: string; viewed_at: string | null } | null;
+  allowed_guests: number; event_pass_id: string | null; status: string; checked_in_at: string | null;
+  invitations: Array<{ id: number; invitation_token: string; invitation_status: string; rsvp_status: string; viewed_at: string | null }> | { id: number; invitation_token: string; invitation_status: string; rsvp_status: string; viewed_at: string | null } | null;
 };
 
 export function normalizeNumericInput(value: NumericInput): string {
@@ -56,15 +56,15 @@ export type PaymentCorrectionInput = {
 
 export async function getFinancialSuite(eventId: number) {
   const [eventResult, pledgeResult, summaryResult, guestsResult] = await Promise.all([
-    supabase.from("events").select("id,title,event_date,language").eq("id", eventId).single(),
+    supabase.from("events").select("id,title,event_date,language,invitation_template").eq("id", eventId).single(),
     supabase.from("event_pledge_financial_summary").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
     supabase.rpc("get_event_finance_summary", { target_event_id: eventId }).single(),
-    supabase.from("guests").select("id,full_name,phone,email,allowed_guests,invitations(id,invitation_status,rsvp_status,viewed_at)").eq("event_id", eventId).order("full_name"),
+    supabase.from("guests").select("id,full_name,phone,email,allowed_guests,event_pass_id,status,checked_in_at,invitations(id,invitation_token,invitation_status,rsvp_status,viewed_at)").eq("event_id", eventId).order("full_name"),
   ]);
   const error = eventResult.error || pledgeResult.error || summaryResult.error || guestsResult.error;
   if (error) throw new Error(error.message);
   return {
-    event: eventResult.data as { id: number; title: string; event_date: string; language: "sw" | "en" },
+    event: eventResult.data as { id: number; title: string; event_date: string; language: "sw" | "en"; invitation_template: string },
     pledges: (pledgeResult.data ?? []) as FinancialPledge[],
     summary: summaryResult.data as unknown as FinanceSummary,
     guests: (guestsResult.data ?? []) as unknown as FinancialGuest[],

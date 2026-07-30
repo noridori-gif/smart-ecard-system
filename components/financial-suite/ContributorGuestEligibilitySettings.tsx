@@ -34,7 +34,8 @@ export default function ContributorGuestEligibilitySettings({ eventId, onSaved }
       setNotice("Contributor guest eligibility settings saved.");
       await onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Settings could not be saved.");
+      console.error("Contributor guest synchronization settings error:", err);
+      setError("Guest synchronization could not be completed. Please try again or contact the administrator.");
     } finally { setBusy(false); }
   }
 

@@ -13,6 +13,7 @@ import FinancialPaymentsTab from "./tabs/FinancialPaymentsTab";
 import FinancialRemindersTab from "./tabs/FinancialRemindersTab";
 import FinancialReportsTab from "./tabs/FinancialReportsTab";
 import ContributorEligibilityDashboard from "./tabs/ContributorEligibilityDashboard";
+import InvitationEligibilityQueue from "./tabs/InvitationEligibilityQueue";
 import ReceiptDialog from "./ReceiptDialog";
 import FinancialImportWizard from "./FinancialImportWizard";
 import ContributorGuestEligibilitySettings from "./ContributorGuestEligibilitySettings";
@@ -289,6 +290,18 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             setMode("pledge");
           }}
           onUnlink={unlinkGuest}
+        />
+      )}
+
+      {activeTab === "invitation_queue" && (
+        <InvitationEligibilityQueue
+          eventId={eventId}
+          eventTitle={data.event.title}
+          language={data.event.language}
+          template={data.event.invitation_template}
+          pledges={data.pledges}
+          guests={data.guests}
+          onRefresh={load}
         />
       )}
 

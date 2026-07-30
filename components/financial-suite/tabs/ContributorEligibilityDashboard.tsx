@@ -55,7 +55,10 @@ export default function ContributorEligibilityDashboard({
   ] as const;
   async function recalculate(pledge: FinancialPledge) {
     try { setBusyId(pledge.id); setError(""); await recalculateContributorGuest(pledge.id); await onRefresh(); }
-    catch (err) { setError(err instanceof Error ? err.message : "Eligibility could not be recalculated."); }
+    catch (err) {
+      console.error("Contributor guest eligibility recalculation error:", err);
+      setError("Guest synchronization could not be completed. Please try again or contact the administrator.");
+    }
     finally { setBusyId(null); }
   }
 

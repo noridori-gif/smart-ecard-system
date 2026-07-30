@@ -6,6 +6,7 @@ const labels: Record<FinancialTab, string> = {
   overview: "Overview",
   contributors: "Contributors",
   eligibility: "Eligibility",
+  invitation_queue: "Invitation Queue",
   payments: "Payments",
   reminders: "Reminders",
   reports: "Reports",
