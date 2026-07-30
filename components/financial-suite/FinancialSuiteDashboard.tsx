@@ -12,8 +12,10 @@ import PaymentHistoryDialog from "./PaymentHistoryDialog";
 import FinancialPaymentsTab from "./tabs/FinancialPaymentsTab";
 import FinancialRemindersTab from "./tabs/FinancialRemindersTab";
 import FinancialReportsTab from "./tabs/FinancialReportsTab";
+import ContributorEligibilityDashboard from "./tabs/ContributorEligibilityDashboard";
 import ReceiptDialog from "./ReceiptDialog";
 import FinancialImportWizard from "./FinancialImportWizard";
+import ContributorGuestEligibilitySettings from "./ContributorGuestEligibilitySettings";
 import BudgetDeadlineEditor from "./BudgetDeadlineEditor";
 import ContributionBulkActionsDialog from "./ContributionBulkActionsDialog";
 import FinancialReminderDialog from "./FinancialReminderDialog";
@@ -28,6 +30,7 @@ import {
 import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsWorkspace";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
+import { getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 import {
   cancelPledge, correctPayment, createPledge, exportPledges, getFinancialSuite, getPayments, recordPayment,
   updatePledge, downloadPledgeTemplate, permanentlyDeletePledge, restorePledge, type FinancialPledge, type PledgeInput,
@@ -40,6 +43,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const validEventId = Number.isSafeInteger(eventId) && eventId > 0;
   const router=useRouter();const pathname=usePathname();const activeTab=initialTab;
   const [data, setData] = useState<Awaited<ReturnType<typeof getFinancialSuite>> | null>(null);
+  const [eligibilitySettings, setEligibilitySettings] = useState<ContributorGuestSettings | null>(null);
   const [loading, setLoading] = useState(true); const [error, setError] = useState("");
   const [notice, setNotice] = useState(""); const [mode, setMode] = useState<"pledge" | "payment" | "history" | "correct-payment" | "void-payment" | "import" | "bulk" | "reminder" | null>(null);
   const [selected, setSelected] = useState<FinancialPledge | null>(null);
@@ -55,7 +59,11 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       setLoading(false);
       return;
     }
-    try { setLoading(true); setError(""); setData(await getFinancialSuite(eventId)); }
+    try {
+      setLoading(true); setError("");
+      const [suite, settings] = await Promise.all([getFinancialSuite(eventId), getContributorGuestSettings(eventId)]);
+      setData(suite); setEligibilitySettings(settings);
+    }
     catch (err) { setError(err instanceof Error ? err.message : "Financial data could not be loaded."); }
     finally { setLoading(false); }
   }, [eventId, validEventId]);
@@ -131,6 +139,15 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     const {data}=await createClient().auth.getSession(); if(!data.session?.access_token)throw new Error("Your session has expired.");
     const response=await fetch("/api/contributions/receipts",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify({receiptNumber})});
     const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Receipt could not be issued.");return payload;
+  }
+  async function unlinkGuest(pledge: FinancialPledge) {
+    if (!window.confirm(`Unlink ${pledge.full_name} from the current guest? The guest and invitation will be preserved.`)) return;
+    await updatePledge(pledge.id, {
+      eventId: pledge.event_id, guestId: null, fullName: pledge.full_name, phone: pledge.phone,
+      email: pledge.email ?? undefined, pledgedAmount: pledge.pledged_amount, notes: pledge.notes ?? undefined,
+    }, pledge.total_paid);
+    setNotice("Guest link removed. Guest and invitation records were preserved.");
+    await load();
   }
   function changeTab(tab:FinancialTab){router.push(`${pathname}?tab=${tab}`,{scroll:false});}
   if (loading) {
@@ -260,6 +277,21 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
         />
       )}
 
+      {activeTab === "eligibility" && eligibilitySettings && (
+        <ContributorEligibilityDashboard
+          eventId={eventId}
+          pledges={data.pledges}
+          guests={data.guests}
+          settings={eligibilitySettings}
+          onRefresh={load}
+          onEdit={(pledge) => {
+            setSelected(pledge);
+            setMode("pledge");
+          }}
+          onUnlink={unlinkGuest}
+        />
+      )}
+
       {activeTab === "payments" && (
         <TabSection
           title="Payments"
@@ -310,6 +342,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       {activeTab === "settings" && (
         <div className="space-y-6 [&>section]:border-[#e7e1d7] [&>section]:shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
           <BudgetDeadlineEditor eventId={eventId} summary={data.summary} onSaved={load} />
+          <ContributorGuestEligibilitySettings eventId={eventId} onSaved={load} />
           <OrganiserAccessPanel eventId={eventId} />
           <section className={`p-5 ${financialDesktop.card}`}>
             <h2 className="text-xl font-bold">Notification provider readiness</h2>

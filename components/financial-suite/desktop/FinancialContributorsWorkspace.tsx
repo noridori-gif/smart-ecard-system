@@ -150,6 +150,7 @@ export function FinancialContributorsWorkspace({
                     <tr key={pledge.id} className="transition-colors hover:bg-[#fcfbf8]">
                       <td className="px-5 py-4 font-semibold text-slate-950">
                         {pledge.full_name}
+                        <GuestLinkBadge pledge={pledge} />
                       </td>
                       <td className="whitespace-nowrap px-5 py-4 font-medium tabular-nums text-slate-600">
                         {pledge.phone}
@@ -196,6 +197,7 @@ export function FinancialContributorsWorkspace({
                       <p className="mt-1 whitespace-nowrap text-sm tabular-nums text-slate-500">
                         {pledge.phone}
                       </p>
+                      <GuestLinkBadge pledge={pledge} />
                     </div>
                     <FinancialStatusBadge
                       status={pledge.calculated_status}
@@ -262,6 +264,17 @@ export function FinancialContributorsWorkspace({
       </section>
     </div>
   );
+}
+
+function GuestLinkBadge({ pledge }: { pledge: FinancialPledge }) {
+  const status = pledge.guest_eligibility_status ?? (pledge.guest_id ? "single" : "not_linked");
+  const labels: Record<string, string> = {
+    not_linked: "Not linked", below_minimum: "Below guest minimum", pending_guest: "Pending guest",
+    single: "Single Guest", double: "Double Guest", needs_review: "Needs review", sync_failed: "Sync failed",
+  };
+  const tone = status === "double" || status === "single" ? "bg-emerald-50 text-emerald-700"
+    : status === "needs_review" || status === "sync_failed" ? "bg-amber-50 text-amber-800" : "bg-stone-100 text-slate-600";
+  return <span title="Financial contributor guest relationship" className={`mt-1.5 block w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${tone}`}>{labels[status] ?? "Not linked"}</span>;
 }
 
 function Amount({ value, accent = false }: { value: string; accent?: boolean }) {

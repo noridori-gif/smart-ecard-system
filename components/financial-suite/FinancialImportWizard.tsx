@@ -23,12 +23,14 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
   const [preview, setPreview] = useState<FinancialImportPreview | null>(null);
   const [result, setResult] = useState<FinancialImportResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [options, setOptions] = useState<FinancialImportOptions>({
     includeGuests: false, createInitialPayments: true, skipDuplicates: true,
   });
   const unresolvedNames = useMemo(() => preview?.rows.filter((row) =>
     ["name", "file_name"].includes(row.duplicateType ?? "") && !row.nameDuplicateAction) ?? [], [preview]);
+  const needsReview = preview?.totals.needsReview ?? 0;
 
   async function call(action: "preview" | "import", importRows = rows) {
     const response = await fetch(`/api/contributions/import/${eventId}`, {
@@ -41,7 +43,7 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
     return payload;
   }
   async function chooseFile(selected: File | null) {
-    setError(""); setPreview(null); setResult(null); setFile(selected);
+    setError(""); setPreview(null); setResult(null); setConfirmed(false); setFile(selected);
     if (!selected) { setRows([]); return; }
     try { setBusy(true); setRows(await readFinancialImportFile(selected)); }
     catch (err) { setRows([]); setError(err instanceof Error ? err.message : "Excel file could not be read."); }
@@ -80,7 +82,8 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
     <fieldset className="space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
       <legend className="font-bold">Import options</legend>
       <label className="flex gap-2"><input type="radio" checked={!options.includeGuests} onChange={() => { setOptions({ ...options, includeGuests: false }); setPreview(null); }} />Import into Contributions only</label>
-      <label className="flex gap-2"><input type="radio" checked={options.includeGuests} onChange={() => { setOptions({ ...options, includeGuests: true }); setPreview(null); }} />Import into Contributions and Guest List</label>
+      <label className="flex gap-2"><input type="radio" checked={options.includeGuests} onChange={() => { setOptions({ ...options, includeGuests: true }); setPreview(null); }} />Create or update Guests from imported contributors</label>
+      {options.includeGuests && <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">Guest records are derived from validated contributor rows. Guest-only Excel columns are not required.</p>}
       <label className="flex gap-2"><input type="checkbox" checked={options.createInitialPayments} onChange={(e) => { setOptions({ ...options, createInitialPayments: e.target.checked }); setPreview(null); }} />Create initial payments from Paid Amount</label>
       <label className="flex gap-2"><input type="checkbox" checked={options.skipDuplicates} onChange={(e) => { setOptions({ ...options, skipDuplicates: e.target.checked }); setPreview(null); }} />Skip duplicates</label>
       <label className="flex gap-2"><input type="checkbox" checked readOnly />Preview before import (required)</label>
@@ -91,20 +94,27 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
         ["Total rows", stats.totalRows], ["Valid rows", stats.validRows], ["Invalid rows", stats.invalidRows],
         ["Possible duplicates", stats.possibleDuplicates], ["Guests to create", stats.guestsToCreate],
         ["Guests to link", stats.guestsToLink], ["Pledges to create", stats.pledgesToCreate],
+        ["Single guests", stats.singleGuests], ["Double guests", stats.doubleGuests],
+        ["Below minimum", stats.belowMinimum], ["Needs review", stats.needsReview],
         ["Initial payments", stats.initialPaymentsToRecord], ["Total pledged", formatTzs(stats.totalPledged)],
         ["Total already paid", formatTzs(stats.totalAlreadyPaid)],
       ].map(([label, value]) => <div key={String(label)} className="rounded-lg border p-3"><span className="block text-xs text-slate-500">{label}</span><b>{value}</b></div>)}
     </div>
     <div className="max-h-64 overflow-auto rounded-xl border">
-      <table className="w-full min-w-[700px] text-left text-xs"><thead className="sticky top-0 bg-slate-100"><tr>{["Row","Name","Phone","Pledged","Paid","Guest","Validation"].map((item) => <th key={item} className="p-2">{item}</th>)}</tr></thead>
+      <table className="w-full min-w-[1180px] text-left text-xs"><thead className="sticky top-0 bg-slate-100"><tr>{["Row","Contributor","Phone","Pledged","Paid","Basis amount","Guest result","Card type","Allowed","Existing match","Action","Warning / Error"].map((item) => <th key={item} className="p-2">{item}</th>)}</tr></thead>
         <tbody className="divide-y">{preview.rows.map((row) => <tr key={row.rowNumber} className={!row.valid ? "bg-red-50" : row.duplicateType ? "bg-amber-50" : ""}>
           <td className="p-2">{row.rowNumber}</td><td className="p-2 font-semibold">{row.fullName || "—"}</td><td className="p-2">{row.phone || "—"}</td>
-          <td className="p-2">{row.pledgedAmount}</td><td className="p-2">{row.paidAmount}</td><td className="p-2">{row.guestAction}</td>
-          <td className="p-2">{row.errors.join(" ") || (["name", "file_name"].includes(row.duplicateType ?? "") ? <span>Possible name match: {row.duplicateName}. <button onClick={() => void resolveName(row.rowNumber, "skip")} className="font-bold text-amber-800 underline">Skip</button>{" / "}<button onClick={() => void resolveName(row.rowNumber, "create")} className="font-bold text-emerald-700 underline">Create separately</button></span> : row.duplicateType ? `Duplicate ${row.duplicateType.replace("_", " ")}: ${row.duplicateName ?? ""}` : "Ready")}</td>
+          <td className="p-2">{row.pledgedAmount}</td><td className="p-2">{row.paidAmount}</td><td className="p-2">{formatTzs(row.basisAmount)}</td>
+          <td className="p-2 font-medium">{row.guestResult}</td><td className="p-2">{row.cardType}</td><td className="p-2">{row.allowedGuests ?? "—"}</td>
+          <td className="p-2">{row.existingGuestMatch ?? "—"}</td><td className="p-2 capitalize">{row.guestAction}</td>
+          <td className="p-2">{row.errors.join(" ") || (row.cardType === "Needs review"
+            ? `Ambiguous guest matches: ${row.guestCandidates.map((candidate) => `${candidate.fullName} (${candidate.phone ?? "no phone"})`).join(", ")}`
+            : ["name", "file_name"].includes(row.duplicateType ?? "") ? <span>Possible name match: {row.duplicateName}. <button onClick={() => void resolveName(row.rowNumber, "skip")} className="font-bold text-amber-800 underline">Skip</button>{" / "}<button onClick={() => void resolveName(row.rowNumber, "create")} className="font-bold text-emerald-700 underline">Create separately</button></span> : row.duplicateType ? `Duplicate ${row.duplicateType.replace("_", " ")}: ${row.duplicateName ?? ""}` : "Ready")}</td>
         </tr>)}</tbody>
       </table>
     </div>
-    <button disabled={busy || stats.validRows === 0 || unresolvedNames.length > 0} onClick={() => void runImport()} className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Importing..." : unresolvedNames.length ? `Resolve ${unresolvedNames.length} name warning(s)` : "Import contributions"}</button></>}
+    <label className="flex min-h-11 items-center gap-2 rounded-xl border p-3 text-sm font-semibold"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm this contributor and guest classification preview.</label>
+    <button disabled={busy || !confirmed || stats.validRows === 0 || unresolvedNames.length > 0 || needsReview > 0} onClick={() => void runImport()} className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Importing..." : needsReview ? `Resolve ${needsReview} ambiguous guest match(es)` : unresolvedNames.length ? `Resolve ${unresolvedNames.length} name warning(s)` : "Import contributions"}</button></>}
     </>}
     {result && <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 text-center"><div className="rounded-xl bg-emerald-50 p-4"><b className="text-2xl text-emerald-700">{result.importedRows}</b><span className="block text-sm">Imported rows</span></div><div className="rounded-xl bg-slate-100 p-4"><b className="text-2xl">{result.skippedRows}</b><span className="block text-sm">Skipped rows</span></div><div className="rounded-xl bg-amber-50 p-4"><b className="text-2xl text-amber-700">{result.duplicateRows}</b><span className="block text-sm">Duplicate rows</span></div><div className="rounded-xl bg-red-50 p-4"><b className="text-2xl text-red-700">{result.failedRows.length}</b><span className="block text-sm">Failed rows</span></div></div>

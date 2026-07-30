@@ -53,20 +53,21 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   }));
 
   if (body.action === "preview") {
-    const [{ data: guests, error: guestError }, { data: pledges, error: pledgeError }] = await Promise.all([
-      client.from("guests").select("id,full_name,phone").eq("event_id", eventId),
-      client.from("event_pledges").select("id,full_name,normalized_phone").eq("event_id", eventId).is("cancelled_at", null),
+    const [{ data: guests, error: guestError }, { data: pledges, error: pledgeError }, { data: setting, error: settingError }] = await Promise.all([
+      client.from("guests").select("id,full_name,phone,allowed_guests").eq("event_id", eventId),
+      client.from("event_pledges").select("id,full_name,normalized_phone,guest_id").eq("event_id", eventId).is("cancelled_at", null),
+      client.from("event_contributor_guest_settings").select("*").eq("event_id", eventId).maybeSingle(),
     ]);
-    if (guestError || pledgeError) return response({ error: guestError?.message || pledgeError?.message }, 400);
-    type GuestMatch = { id: number; full_name: string; phone: string | null };
-    type PledgeMatch = { id: number; full_name: string; normalized_phone: string | null };
+    if (guestError || pledgeError || settingError) return response({ error: guestError?.message || pledgeError?.message || settingError?.message }, 400);
+    type GuestMatch = { id: number; full_name: string; phone: string | null; allowed_guests: number };
+    type PledgeMatch = { id: number; full_name: string; normalized_phone: string | null; guest_id: number | null };
     const guestRows = (guests ?? []) as GuestMatch[];
     const pledgeRows = (pledges ?? []) as PledgeMatch[];
-    const guestPhones = new Map<string, GuestMatch>(guestRows.flatMap((guest) => {
+    const guestPhones = new Map<string, GuestMatch[]>(guestRows.flatMap((guest) => {
       const phone = normalizedPhone(guest.phone ?? "");
-      return phone ? [[phone, guest] as const] : [];
+      return phone ? [[phone, guestRows.filter((item) => normalizedPhone(item.phone ?? "") === phone)] as const] : [];
     }));
-    const guestNames = new Map<string, GuestMatch>(guestRows.map((guest) => [cleanName(guest.full_name), guest] as const));
+    const guestNames = new Map<string, GuestMatch[]>(guestRows.map((guest) => [cleanName(guest.full_name), guestRows.filter((item) => cleanName(item.full_name) === cleanName(guest.full_name))] as const));
     const pledgePhones = new Map<string, PledgeMatch>(pledgeRows.flatMap((pledge) =>
       pledge.normalized_phone ? [[pledge.normalized_phone, pledge] as const] : []));
     const seenPhones = new Set<string>();
@@ -88,14 +89,32 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
         duplicateType = "file_name"; duplicateName = "another Excel row";
       }
       else if (!phone && ((options.includeGuests && guestNames.has(cleanName(row.fullName))) || pledgeRows.some((p) => cleanName(p.full_name) === cleanName(row.fullName)))) {
-        duplicateType = "name"; duplicateName = (options.includeGuests ? guestNames.get(cleanName(row.fullName))?.full_name : null) ?? row.fullName;
+        duplicateType = "name"; duplicateName = (options.includeGuests ? guestNames.get(cleanName(row.fullName))?.[0]?.full_name : null) ?? row.fullName;
       }
       if (phone) seenPhones.add(phone);
       else if (row.fullName) seenPhoneLessNames.add(cleanName(row.fullName));
       const linkedGuest = phone ? guestPhones.get(phone) : undefined;
+      const candidates = linkedGuest ?? (!phone ? guestNames.get(cleanName(row.fullName)) ?? [] : []);
+      const basis = setting?.classification_basis === "pledged_amount"
+        ? Number(row.pledgedAmount) : options.createInitialPayments ? Number(row.paidAmount) : 0;
+      const singleMinimum = Number(setting?.single_card_minimum ?? 50000);
+      const doubleMinimum = Number(setting?.double_card_minimum ?? 120000);
+      const allowedGuests = basis >= doubleMinimum ? 2 : basis >= singleMinimum ? 1 : null;
+      const ambiguous = candidates.length > 1;
+      const existingGuest = candidates.length === 1 ? candidates[0] : undefined;
+      const cardType = ambiguous ? "Needs review" : allowedGuests === 2 ? "Double" : allowedGuests === 1 ? "Single"
+        : setting?.below_minimum_behavior === "pending_guest" ? "Pending" : "None";
+      const guestResult = !options.includeGuests ? "Guest sync not selected"
+        : ambiguous ? "Needs review"
+        : !allowedGuests ? (setting?.below_minimum_behavior === "pending_guest" ? "Pending guest" : "Below minimum — no guest")
+        : existingGuest ? existingGuest.allowed_guests < allowedGuests ? `Upgrade to ${cardType}` : "Existing classification unchanged"
+        : `Create ${cardType} Guest`;
       return {
         ...row, valid: errors.length === 0, errors, duplicateType, duplicateName,
-        guestAction: options.includeGuests ? (linkedGuest ? "link" : "create") : "none",
+        guestAction: options.includeGuests ? ambiguous ? "review" : existingGuest ? "link" : allowedGuests ? "create" : "none" : "none",
+        basisAmount: basis, guestResult, cardType, allowedGuests,
+        existingGuestMatch: existingGuest?.full_name ?? null,
+        guestCandidates: candidates.map((guest) => ({ id: guest.id, fullName: guest.full_name, phone: guest.phone })),
       };
     });
     const actionable = previewRows.filter((row) =>
@@ -110,6 +129,10 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
       possibleDuplicates: previewRows.filter((r) => r.duplicateType !== null).length,
       guestsToCreate: actionable.filter((r) => r.guestAction === "create").length,
       guestsToLink: actionable.filter((r) => r.guestAction === "link").length,
+      singleGuests: actionable.filter((r) => r.allowedGuests === 1).length,
+      doubleGuests: actionable.filter((r) => r.allowedGuests === 2).length,
+      belowMinimum: actionable.filter((r) => r.allowedGuests === null && r.cardType !== "Needs review").length,
+      needsReview: previewRows.filter((r) => r.cardType === "Needs review").length,
       pledgesToCreate: actionable.length,
       initialPaymentsToRecord: options.createInitialPayments ? actionable.filter((r) => Number(r.paidAmount) > 0).length : 0,
       totalPledged: actionable.reduce((sum, r) => sum + Number(r.pledgedAmount), 0),
@@ -121,7 +144,7 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     const raw = options.createInitialPayments && Number(row.paidAmount) > 0 ? generateReceiptToken() : null;
     return { ...row, receiptToken: raw, receiptTokenHash: raw ? hashOrganiserToken(raw) : null };
   });
-  const { data, error } = await client.rpc("import_event_financial_rows", {
+  const { data, error } = await client.rpc("import_event_financial_rows_with_guest_sync", {
     target_event_id: eventId,
     import_rows: rowsWithTokens.map((row) => ({
       rowNumber: row.rowNumber, fullName: row.fullName, phone: row.phone, email: row.email,

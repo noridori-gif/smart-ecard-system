@@ -23,7 +23,13 @@ export type FinancialImportPreviewRow = FinancialImportRow & {
   errors: string[];
   duplicateType: "phone" | "name" | "file_phone" | "file_name" | null;
   duplicateName: string | null;
-  guestAction: "create" | "link" | "none";
+  guestAction: "create" | "link" | "update" | "none" | "review";
+  basisAmount: number;
+  guestResult: string;
+  cardType: "Single" | "Double" | "None" | "Pending" | "Needs review";
+  allowedGuests: number | null;
+  existingGuestMatch: string | null;
+  guestCandidates: { id: number; fullName: string; phone: string | null }[];
 };
 
 export type FinancialImportPreview = {
@@ -35,6 +41,10 @@ export type FinancialImportPreview = {
     possibleDuplicates: number;
     guestsToCreate: number;
     guestsToLink: number;
+    singleGuests: number;
+    doubleGuests: number;
+    belowMinimum: number;
+    needsReview: number;
     pledgesToCreate: number;
     initialPaymentsToRecord: number;
     totalPledged: number;

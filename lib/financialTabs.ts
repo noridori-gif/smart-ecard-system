@@ -1,6 +1,7 @@
 export const FINANCIAL_TABS = [
   "overview",
   "contributors",
+  "eligibility",
   "payments",
   "reminders",
   "reports",

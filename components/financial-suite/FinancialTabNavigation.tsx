@@ -5,6 +5,7 @@ import { FINANCIAL_TABS, type FinancialTab } from "@/lib/financialTabs";
 const labels: Record<FinancialTab, string> = {
   overview: "Overview",
   contributors: "Contributors",
+  eligibility: "Eligibility",
   payments: "Payments",
   reminders: "Reminders",
   reports: "Reports",

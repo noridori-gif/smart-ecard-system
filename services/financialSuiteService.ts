@@ -9,6 +9,8 @@ export type FinancialPledge = {
   notes: string | null; total_paid: string; balance: string; calculated_status: PledgeStatus;
   payment_count: number; last_payment_at: string | null; cancelled_at: string | null;
   cancellation_reason: string | null; created_at: string; updated_at: string;
+  guest_eligibility_status: "not_linked" | "below_minimum" | "pending_guest" | "single" | "double" | "needs_review" | "sync_failed";
+  linked_guest_allowed_guests: number | null;
   payment_row_count: number; has_protected_financial_history: boolean;
 };
 export type NumericInput = string | number | null | undefined;
@@ -21,6 +23,11 @@ export type FinanceSummary = {
   days_remaining: number | null; deadline_status: string;
 };
 export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline">;
+export type FinancialGuest = {
+  id: number; full_name: string; phone: string | null; email: string | null;
+  allowed_guests: number;
+  invitations: Array<{ id: number; invitation_status: string; rsvp_status: string; viewed_at: string | null }> | { id: number; invitation_status: string; rsvp_status: string; viewed_at: string | null } | null;
+};
 
 export function normalizeNumericInput(value: NumericInput): string {
   return value === null || value === undefined ? "" : String(value).trim();
@@ -52,7 +59,7 @@ export async function getFinancialSuite(eventId: number) {
     supabase.from("events").select("id,title,event_date,language").eq("id", eventId).single(),
     supabase.from("event_pledge_financial_summary").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
     supabase.rpc("get_event_finance_summary", { target_event_id: eventId }).single(),
-    supabase.from("guests").select("id,full_name,phone,email").eq("event_id", eventId).order("full_name"),
+    supabase.from("guests").select("id,full_name,phone,email,allowed_guests,invitations(id,invitation_status,rsvp_status,viewed_at)").eq("event_id", eventId).order("full_name"),
   ]);
   const error = eventResult.error || pledgeResult.error || summaryResult.error || guestsResult.error;
   if (error) throw new Error(error.message);
@@ -60,7 +67,7 @@ export async function getFinancialSuite(eventId: number) {
     event: eventResult.data as { id: number; title: string; event_date: string; language: "sw" | "en" },
     pledges: (pledgeResult.data ?? []) as FinancialPledge[],
     summary: summaryResult.data as unknown as FinanceSummary,
-    guests: (guestsResult.data ?? []) as { id: number; full_name: string; phone: string | null; email: string | null }[],
+    guests: (guestsResult.data ?? []) as unknown as FinancialGuest[],
   };
 }
 
