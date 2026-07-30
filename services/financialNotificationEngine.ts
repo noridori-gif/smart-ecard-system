@@ -145,6 +145,10 @@ export type ThankYouPreview = {
     pledgeId:number;contributor:string;phone:string|null;pledgedAmount:string;totalPaid:string;balance:string;
     channel:FinancialChannel;message:string;eligible:boolean;skippedReason:ThankYouSkipReason|null;
     deliveryStatus:string|null;completionFingerprint:string;idempotencyKey:string;
+    latestFailure:{
+      httpStatus:number|null;metaCode:number|null;errorSubcode:number|null;
+      providerMessage:string;fbtraceId:string|null;retryable:boolean;
+    }|null;
   }>;
   completed:number;eligible:number;alreadyThanked:number;missingPhone:number;invalidPhone:number;skipped:number;
   provider:{sms:{configured:boolean;message:string};whatsapp:{configured:boolean;message:string}};
@@ -154,6 +158,28 @@ function completionFingerprint(pledge:PledgeRow){
   return `${pledge.id}:${pledge.pledged_amount}:${pledge.total_paid}:${pledge.balance}`;
 }
 
+function safeThankYouFailure(log:{
+  error_message?:string|null;retry_count?:number|null;next_retry_at?:string|null;
+}){
+  if(!log.error_message)return null;
+  const redacted=log.error_message
+    .replace(/Bearer\s+[^\s,)]+/gi,"Bearer [redacted]")
+    .replace(/(access[_ -]?token|authorization)\s*[:=]\s*[^\s,)]+/gi,"$1=[redacted]")
+    .slice(0,500);
+  const httpStatus=Number(redacted.match(/HTTP\s+(\d{3})/i)?.[1]??0)||null;
+  const metaCode=Number(redacted.match(/\bcode\s+(\d+)/i)?.[1]??0)||null;
+  const errorSubcode=Number(redacted.match(/\bsubcode\s+(\d+)/i)?.[1]??0)||null;
+  const fbtraceId=redacted.match(/\btrace\s+([A-Za-z0-9_-]+)/i)?.[1]?.slice(0,100)??null;
+  const providerMessage=redacted
+    .replace(/^WhatsApp Cloud API(?:\s+\(HTTP\s+\d{3}\))?:\s*/i,"")
+    .replace(/\s*\((?:code|subcode|trace)\s+[^)]*\)\s*$/i,"")
+    .trim()||"WhatsApp provider rejected the message.";
+  return {
+    httpStatus,metaCode,errorSubcode,providerMessage,fbtraceId,
+    retryable:Number(log.retry_count??0)<3,
+  };
+}
+
 export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number;language?:"sw"|"en"}):Promise<ThankYouPreview>{
   const {data:event,error:eventError}=await db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single();
   if(eventError||!event)throw new Error("Event could not be loaded.");
@@ -161,7 +187,7 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
   if(input.pledgeId)query=query.eq("id",input.pledgeId);
   const {data,error}=await query;if(error)throw new Error("Completed contributors could not be loaded.");
   const pledges=(data??[]) as PledgeRow[];const ids=pledges.map(item=>item.id);
-  const {data:logs}=ids.length?await db.from("pledge_reminders").select("pledge_id,channel,idempotency_key,delivery_status").eq("reminder_type","pledge_thank_you").in("pledge_id",ids):{data:[]};
+  const {data:logs}=ids.length?await db.from("pledge_reminders").select("pledge_id,channel,idempotency_key,delivery_status,error_message,retry_count,next_retry_at,last_attempt_at").eq("reminder_type","pledge_thank_you").in("pledge_id",ids).order("last_attempt_at",{ascending:false,nullsFirst:false}):{data:[]};
   const language=input.language??(event.language==="en"?"en":"sw");const rows:ThankYouPreview["rows"]=[];
   for(const pledge of pledges){
     const fingerprint=completionFingerprint(pledge);
@@ -171,14 +197,17 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
       const successful=existing&&["sent","delivered","read"].includes(existing.delivery_status);
       let reason:ThankYouSkipReason|null=null;
       if(event.archived_at)reason="archived";else if(pledge.calculated_status==="cancelled")reason="cancelled";else if(Number(pledge.balance)!==0||Number(pledge.total_paid)<Number(pledge.pledged_amount))reason="not_completed";else if(!pledge.normalized_phone)reason="missing_phone";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="invalid_phone";else if(successful)reason="already_thanked";
-      rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message:buildPledgeMessage("pledge_thank_you",language,{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance}),eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key});
+      rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message:buildPledgeMessage("pledge_thank_you",language,{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance}),eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key,latestFailure:existing&&!successful?safeThankYouFailure(existing):null});
     }
   }
   return {event:{...event,language} as EventRow,rows,completed:new Set(rows.filter(row=>row.skippedReason!=="not_completed"&&row.skippedReason!=="cancelled").map(row=>row.pledgeId)).size,eligible:rows.filter(row=>row.eligible).length,alreadyThanked:rows.filter(row=>row.skippedReason==="already_thanked").length,missingPhone:rows.filter(row=>row.skippedReason==="missing_phone").length,invalidPhone:rows.filter(row=>row.skippedReason==="invalid_phone").length,skipped:rows.filter(row=>!row.eligible).length,provider:{sms:financialProviderStatus("sms",language,"pledge_thank_you"),whatsapp:financialProviderStatus("whatsapp",language,"pledge_thank_you")}};
 }
 
 function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: string; retry: boolean } {
-  const message = error instanceof Error ? error.message : "Provider request failed.";
+  const message = (error instanceof Error ? error.message : "Provider request failed.")
+    .replace(/Bearer\s+[^\s,)]+/gi, "Bearer [redacted]")
+    .replace(/(access[_ -]?token|authorization)\s*[:=]\s*[^\s,)]+/gi, "$1=[redacted]")
+    .slice(0, 500);
   const configuration = /environment|configured|configuration|template/i.test(message);
   const validation = /phone|invalid/i.test(message);
   return { type: configuration ? "configuration" : validation ? "validation" : "provider", message: message.slice(0, 500), retry: !configuration && !validation };
@@ -215,7 +244,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
     const failed = failure(error);
     const nextRetry = failed.retry && attempt < 3 ? new Date(Date.now() + 15 * 60_000 * 2 ** (attempt - 1)).toISOString() : null;
     await db.from("pledge_reminders").update({ delivery_status: "failed", error_message: failed.message, failure_type: failed.type, next_retry_at: nextRetry }).eq("id", reminder.id);
-    await db.from("finance_audit_logs").insert({ event_id: reminder.event_id, pledge_id: reminder.pledge_id, actor_type: actor.type, actor_user_id: actor.userId ?? null, organiser_access_link_id: actor.linkId ?? null, action: "reminder_failed", metadata: { channel: reminder.channel, reminder_id: reminder.id, failure_type: failed.type } });
+    await db.from("finance_audit_logs").insert({ event_id: reminder.event_id, pledge_id: reminder.pledge_id, actor_type: actor.type, actor_user_id: actor.userId ?? null, organiser_access_link_id: actor.linkId ?? null, action: "reminder_failed", metadata: { channel: reminder.channel, reminder_id: reminder.id, failure_type: failed.type, safe_provider_error: failed.message } });
     return { status: "failed" as const, error: failed.message };
   }
 }
@@ -254,7 +283,7 @@ export async function sendPledgeThankYous(db:SupabaseClient,preview:ThankYouPrev
     const existing=await db.from("pledge_reminders").select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").eq("idempotency_key",row.idempotencyKey).maybeSingle();
     let log=existing.data;
     if(log){
-      const updated=await db.from("pledge_reminders").update({delivery_status:"queued",error_message:null,next_retry_at:null,message_body:row.message,recipient_phone:row.phone}).eq("id",log.id).select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").single();
+      const updated=await db.from("pledge_reminders").update({delivery_status:"queued",next_retry_at:null,message_body:row.message,recipient_phone:row.phone}).eq("id",log.id).select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").single();
       log=updated.data;
     }else{
       const inserted=await db.from("pledge_reminders").insert({pledge_id:row.pledgeId,event_id:preview.event.id,reminder_type:"pledge_thank_you",channel:row.channel,recipient_phone:row.phone,message_body:row.message,delivery_status:"queued",idempotency_key:row.idempotencyKey,requested_by:actor.userId}).select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type").maybeSingle();

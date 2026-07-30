@@ -449,7 +449,9 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
   });
   const responseData = await response.json() as WhatsAppApiResponse;
   if (!response.ok || responseData.error) {
-    throw new Error(`WhatsApp Cloud API: ${getMetaApiError(responseData)}`);
+    throw new Error(
+      `WhatsApp Cloud API (HTTP ${response.status}): ${getMetaApiError(responseData)}`
+    );
   }
   const messageId = responseData.messages?.[0]?.id;
   if (!messageId) throw new Error("WhatsApp Cloud API did not return a message ID.");
