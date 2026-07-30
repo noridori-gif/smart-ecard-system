@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -82,11 +83,20 @@ export default function DashboardPage() {
     DashboardActivity[]
   >([]);
 
-  const [isLoading, setIsLoading] =
+  const [initialLoading, setInitialLoading] =
     useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
 
   const [errorMessage, setErrorMessage] =
     useState("");
+
+  const eventsRef = useRef<DashboardEvent[]>([]);
+  const selectedEventIdRef = useRef<number | null>(null);
+  const requestIdRef = useRef(0);
+  const requestInFlightRef = useRef(false);
+  const mountedRef = useRef(false);
 
   const selectedEvent = useMemo(() => {
     if (selectedEventId === null) {
@@ -102,15 +112,38 @@ export default function DashboardPage() {
   }, [events, selectedEventId]);
 
   const loadDashboard = useCallback(
-    async (
-      requestedEventId?: number,
-      refreshEvents = false
-    ) => {
+    async ({
+      requestedEventId,
+      refreshEvents,
+      trigger,
+    }: {
+      requestedEventId?: number;
+      refreshEvents: boolean;
+      trigger: "initial" | "event-change" | "manual-refresh";
+    }) => {
+      if (requestInFlightRef.current) {
+        return;
+      }
+
+      if (
+        trigger === "event-change" &&
+        requestedEventId === selectedEventIdRef.current
+      ) {
+        return;
+      }
+
+      requestInFlightRef.current = true;
+      const requestId = ++requestIdRef.current;
+
       try {
-        setIsLoading(true);
+        if (trigger === "manual-refresh") {
+          setRefreshing(true);
+        } else {
+          setInitialLoading(true);
+        }
         setErrorMessage("");
 
-        let availableEvents = events;
+        let availableEvents = eventsRef.current;
 
         if (
           refreshEvents ||
@@ -119,10 +152,16 @@ export default function DashboardPage() {
           availableEvents =
             await getDashboardEvents();
 
+          if (!mountedRef.current || requestId !== requestIdRef.current) {
+            return;
+          }
+
+          eventsRef.current = availableEvents;
           setEvents(availableEvents);
         }
 
         if (availableEvents.length === 0) {
+          selectedEventIdRef.current = null;
           setSelectedEventId(null);
 
           setStats(
@@ -134,20 +173,26 @@ export default function DashboardPage() {
           return;
         }
 
+        const currentSelectedEventId =
+          selectedEventIdRef.current;
+
         const eventStillExists =
-          selectedEventId !== null &&
+          currentSelectedEventId !== null &&
           availableEvents.some(
             (eventItem) =>
-              eventItem.id === selectedEventId
+              eventItem.id === currentSelectedEventId
           );
 
         const eventIdToLoad =
           requestedEventId ??
           (eventStillExists
-            ? selectedEventId
+            ? currentSelectedEventId
             : availableEvents[0].id);
 
-        setSelectedEventId(eventIdToLoad);
+        if (eventIdToLoad !== selectedEventIdRef.current) {
+          selectedEventIdRef.current = eventIdToLoad;
+          setSelectedEventId(eventIdToLoad);
+        }
 
         const [
           dashboardStats,
@@ -163,6 +208,10 @@ export default function DashboardPage() {
           ),
         ]);
 
+        if (!mountedRef.current || requestId !== requestIdRef.current) {
+          return;
+        }
+
         setStats(dashboardStats);
         setActivities(recentActivities);
       } catch (error) {
@@ -171,38 +220,60 @@ export default function DashboardPage() {
           error
         );
 
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Dashboard haikuweza kupakiwa."
-        );
+        if (mountedRef.current && requestId === requestIdRef.current) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Dashboard haikuweza kupakiwa."
+          );
+        }
       } finally {
-        setIsLoading(false);
+        if (requestId === requestIdRef.current) {
+          requestInFlightRef.current = false;
+          if (mountedRef.current) {
+            setInitialLoading(false);
+            setRefreshing(false);
+          }
+        }
       }
     },
-    [events, selectedEventId]
+    []
   );
 
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => void loadDashboard(undefined, true),
-      0
-    );
-    return () => window.clearTimeout(timer);
+    mountedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void loadDashboard({
+        refreshEvents: true,
+        trigger: "initial",
+      });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      mountedRef.current = false;
+    };
   }, [loadDashboard]);
 
   async function handleEventChange(
     eventId: number
   ) {
-    await loadDashboard(eventId);
+    await loadDashboard({
+      requestedEventId: eventId,
+      refreshEvents: false,
+      trigger: "event-change",
+    });
   }
 
   async function handleRefresh() {
-    await loadDashboard(
-      selectedEventId ?? undefined,
-      true
-    );
+    await loadDashboard({
+      requestedEventId:
+        selectedEventIdRef.current ?? undefined,
+      refreshEvents: true,
+      trigger: "manual-refresh",
+    });
   }
+
+  const isBusy = initialLoading || refreshing;
 
   return (
     <section className="space-y-7">
@@ -244,12 +315,12 @@ export default function DashboardPage() {
       <EventSelector
         events={events}
         selectedEventId={selectedEventId}
-        isLoading={isLoading}
+        isLoading={isBusy}
         onRefresh={handleRefresh}
         onChange={handleEventChange}
       />
 
-      {events.length === 0 && !isLoading ? (
+      {events.length === 0 && !initialLoading ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
           <h2 className="text-xl font-bold text-slate-900">
             Hakuna event iliyopatikana
@@ -260,7 +331,7 @@ export default function DashboardPage() {
             iweze kuonyesha analytics.
           </p>
         </div>
-      ) : isLoading ? (
+      ) : initialLoading ? (
         <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="text-center">
             <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
@@ -371,7 +442,7 @@ export default function DashboardPage() {
 
           <RecentActivityFeed
             activities={activities}
-            isLoading={isLoading}
+            isLoading={false}
           />
 
           <InvitationFunnel stats={stats} />
@@ -434,10 +505,10 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                disabled={isLoading}
+                disabled={isBusy}
                 className="min-h-11 rounded-xl bg-white px-5 text-sm font-bold text-slate-900 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading
+                {refreshing
                   ? "Refreshing..."
                   : "Refresh Analytics"}
               </button>

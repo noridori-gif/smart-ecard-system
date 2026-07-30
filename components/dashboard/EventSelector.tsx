@@ -27,10 +27,11 @@ export default function EventSelector({
 
           <select
             value={selectedEventId ?? ""}
+            disabled={isLoading}
             onChange={(e) =>
               onChange(Number(e.target.value))
             }
-            className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
+            className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-slate-500"
           >
             {events.map((event) => (
               <option
