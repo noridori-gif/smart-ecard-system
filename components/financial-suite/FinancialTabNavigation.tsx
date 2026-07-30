@@ -12,9 +12,9 @@ const labels: Record<FinancialTab, string> = {
 };
 
 export default function FinancialTabNavigation({active,onChange}:{active:FinancialTab;onChange:(tab:FinancialTab)=>void}) {
-  return <nav aria-label="Financial Suite sections" className="sticky top-0 z-20 -mx-1 overflow-x-auto border-b border-slate-200 bg-slate-50/95 px-1 backdrop-blur">
+  return <nav aria-label="Financial Suite sections" className="sticky top-0 z-20 overflow-x-auto rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     <div className="flex min-w-max gap-1">
-      {FINANCIAL_TABS.map(tab=><button key={tab} type="button" onClick={()=>onChange(tab)} aria-current={active===tab?"page":undefined} className={`min-h-11 border-b-2 px-4 text-sm font-semibold transition ${active===tab?"border-emerald-600 text-emerald-700":"border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"}`}>{labels[tab]}</button>)}
+      {FINANCIAL_TABS.map(tab=><button key={tab} type="button" onClick={()=>onChange(tab)} aria-current={active===tab?"page":undefined} className={`min-h-11 rounded-xl px-4 text-[15px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 ${active===tab?"bg-slate-900 text-white shadow-sm":"text-slate-600 hover:bg-stone-100 hover:text-slate-950"}`}>{labels[tab]}</button>)}
     </div>
   </nav>;
 }

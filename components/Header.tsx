@@ -189,16 +189,16 @@ export default function Header({
   }
 
   return (
-    <header className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6">
+    <header className="rounded-2xl border border-[#e7e1d7] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)] sm:px-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={onMenuClick}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-2xl text-blue-800 transition hover:bg-blue-100 lg:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 transition hover:bg-emerald-100 lg:hidden"
             aria-label="Open menu"
           >
-            ☰
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
 
           <div className="min-w-0">
@@ -215,14 +215,14 @@ export default function Header({
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-xl transition hover:bg-amber-100"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition hover:bg-amber-100"
             aria-label="Notifications"
           >
-            🔔
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 font-bold text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 font-bold text-white">
               {isUserLoading
                 ? "..."
                 : currentUser.initial}
@@ -235,7 +235,7 @@ export default function Header({
                   : currentUser.displayName}
               </p>
 
-              <p className="truncate text-xs font-medium text-blue-600">
+              <p className="truncate text-xs font-medium text-emerald-700">
                 {isUserLoading
                   ? "Checking profile"
                   : currentUser.roleLabel}
