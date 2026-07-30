@@ -33,7 +33,7 @@ export async function getContributorGuestSettings(eventId: number) {
 }
 
 export async function saveContributorGuestSettings(settings: ContributorGuestSettings) {
-  const { data, error } = await supabase.rpc("save_contributor_guest_settings", {
+  const payload = {
     target_event_id: settings.event_id,
     sync_enabled: settings.contributor_guest_sync_enabled,
     basis: settings.classification_basis,
@@ -42,8 +42,22 @@ export async function saveContributorGuestSettings(settings: ContributorGuestSet
     minimum_behavior: settings.below_minimum_behavior,
     auto_upgrade: settings.auto_upgrade_guest_card,
     auto_downgrade: settings.auto_downgrade_guest_card,
-  });
-  if (error) throw new Error(error.message);
+  };
+  const { data, error } = await supabase.rpc("save_contributor_guest_settings", payload);
+  if (error) {
+    console.error("save_contributor_guest_settings RPC failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      eventId: settings.event_id,
+      payload: {
+        ...payload,
+        target_event_id: settings.event_id,
+      },
+    });
+    throw new Error(error.message);
+  }
   return data as ContributorGuestSettings;
 }
 
@@ -52,6 +66,15 @@ export async function recalculateContributorGuest(pledgeId: number) {
     target_pledge_id: pledgeId,
     sync_source: "eligibility_dashboard",
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("sync_contributor_guest RPC failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      pledgeId,
+    });
+    throw new Error(error.message);
+  }
   return data as { status: string };
 }
