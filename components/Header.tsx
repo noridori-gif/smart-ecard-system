@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -32,6 +32,26 @@ const emptyUser: HeaderUser = {
   initial: "U",
   roleLabel: "Loading role...",
 };
+
+const routeTitles = [
+  { matches: (path: string) => /^\/events\/[^/]+\/contributions(?:\/|$)/.test(path), title: "Michango & Ahadi" },
+  { matches: (path: string) => /^\/events(?:\/|$)/.test(path), title: "Events" },
+  { matches: (path: string) => /^\/dashboard(?:\/|$)/.test(path), title: "Dashboard" },
+  { matches: (path: string) => /^\/guests(?:\/|$)/.test(path), title: "Guests" },
+  { matches: (path: string) => /^\/invitations(?:\/|$)/.test(path), title: "Invitations" },
+  { matches: (path: string) => /^\/check-in(?:\/|$)/.test(path), title: "Check-In" },
+  { matches: (path: string) => /^\/reports(?:\/|$)/.test(path), title: "Reports" },
+  { matches: (path: string) => /^\/import-history(?:\/|$)/.test(path), title: "Import History" },
+  { matches: (path: string) => /^\/change-password(?:\/|$)/.test(path), title: "Change Password" },
+  { matches: (path: string) => /^\/settings(?:\/|$)/.test(path), title: "Settings" },
+  { matches: (path: string) => /^\/users(?:\/|$)/.test(path), title: "User Management" },
+  { matches: (path: string) => /^\/whatsapp-logs(?:\/|$)/.test(path), title: "WhatsApp Logs" },
+  { matches: (path: string) => /^\/whatsapp-card-preview(?:\/|$)/.test(path), title: "WhatsApp Card Preview" },
+] as const;
+
+export function getAuthenticatedHeaderTitle(pathname: string) {
+  return routeTitles.find((route) => route.matches(pathname))?.title ?? "Smart Event Pass";
+}
 
 function createHeaderUser(
   fullName: string | null,
@@ -60,6 +80,8 @@ export default function Header({
   onMenuClick,
 }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const pageTitle = getAuthenticatedHeaderTitle(pathname);
 
   const supabase = useMemo(
     () => createClient(),
@@ -203,7 +225,7 @@ export default function Header({
 
           <div className="min-w-0">
             <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
-              Dashboard
+              {pageTitle}
             </h2>
 
             <p className="mt-1 hidden text-sm text-slate-500 sm:block">
@@ -215,7 +237,7 @@ export default function Header({
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition hover:bg-amber-100"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
             aria-label="Notifications"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
@@ -257,11 +279,13 @@ export default function Header({
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
             aria-label="Logout"
           >
             <span className="sm:hidden">
-              ↪
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M10 17l5-5-5-5M15 12H3M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
+              </svg>
             </span>
 
             <span className="hidden sm:inline">

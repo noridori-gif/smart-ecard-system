@@ -7,6 +7,10 @@ import {
   type Event,
   type EventDeletionPreview,
 } from "@/services/eventService";
+import Dialog from "@/components/ui/Dialog";
+import Button from "@/components/ui/Button";
+import FeedbackBanner from "@/components/ui/FeedbackBanner";
+import IconButton from "@/components/ui/IconButton";
 
 export default function EventPermanentDeleteDialog({ event, onClose, onDeleted }: {
   event: Event; onClose: () => void; onDeleted: () => void;
@@ -36,9 +40,8 @@ export default function EventPermanentDeleteDialog({ event, onClose, onDeleted }
     }
   }
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-labelledby="permanent-delete-title">
-    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6">
-      <div className="flex justify-between gap-4"><div><h2 id="permanent-delete-title" className="text-xl font-bold text-red-700">Delete event permanently</h2><p className="mt-1 text-sm text-slate-600">This removes the event and all event-scoped records in one database transaction.</p></div><button onClick={onClose} aria-label="Close" className="text-2xl">×</button></div>
+  return <Dialog titleId="permanent-delete-title" onClose={onClose} className="max-w-2xl">
+      <div className="flex justify-between gap-4"><div><h2 id="permanent-delete-title" className="text-xl font-bold text-red-700">Delete event permanently</h2><p className="mt-1 text-sm text-slate-600">This removes the event and all event-scoped records in one database transaction.</p></div><IconButton label="Close" onClick={onClose}><svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></IconButton></div>
       {busy && !preview && <p className="mt-6">Loading deletion impact…</p>}
       {preview && <div className="mt-5 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
         {[
@@ -55,8 +58,7 @@ export default function EventPermanentDeleteDialog({ event, onClose, onDeleted }
         <label className="block text-sm font-semibold">Type the exact event title: <span className="text-red-700">{event.title}</span><input value={typedTitle} onChange={(e)=>setTypedTitle(e.target.value)} className="mt-2 w-full rounded-lg border px-3 py-2 font-normal" /></label>
         <label className="flex gap-2 text-sm"><input type="checkbox" checked={secondConfirmation} onChange={(e)=>setSecondConfirmation(e.target.checked)} /><span>I understand that guests, invitations, financial history, receipts, messages, wishes, and reports for this event will be permanently removed.</span></label>
       </div>
-      {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <div className="mt-6 flex justify-end gap-3"><button onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={busy || !preview || typedTitle !== event.title || !secondConfirmation} onClick={() => void remove()} className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-40">{busy ? "Deleting…" : "Delete permanently"}</button></div>
-    </div>
-  </div>;
+      {error && <FeedbackBanner tone="error" className="mt-4">{error}</FeedbackBanner>}
+      <div className="sticky bottom-0 mt-6 flex justify-end gap-3 border-t border-[#e7e1d7] bg-white pt-4"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button variant="danger" loading={busy && Boolean(preview)} disabled={!preview || typedTitle !== event.title || !secondConfirmation} onClick={() => void remove()}>{busy ? "Deleting…" : "Delete permanently"}</Button></div>
+  </Dialog>;
 }

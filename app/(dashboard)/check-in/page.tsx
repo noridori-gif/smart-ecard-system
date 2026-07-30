@@ -238,7 +238,9 @@ export default function CheckInPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl bg-white p-5 shadow-md sm:p-7">
           <div className="text-center">
-            <div className="text-4xl">📷</div>
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
+              <CheckInIcon name="camera" />
+            </div>
 
             <h2 className="mt-3 text-2xl font-bold text-slate-900">
               Scan QR Code
@@ -267,7 +269,9 @@ export default function CheckInPage() {
 
         <section className="rounded-2xl bg-white p-5 shadow-md sm:p-7">
           <div className="text-center">
-            <div className="text-4xl">🎫</div>
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-700">
+              <CheckInIcon name="pass" />
+            </div>
 
             <h2 className="mt-3 text-2xl font-bold text-slate-900">
               Enter Event Pass ID
@@ -369,12 +373,17 @@ export default function CheckInPage() {
                   : "bg-red-600"
             }`}
           >
-            <div className="text-6xl">
-              {isSuccessful
-                ? "✅"
-                : isAlreadyCheckedIn
-                  ? "⚠️"
-                  : "❌"}
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-white/15">
+              <CheckInIcon
+                name={
+                  isSuccessful
+                    ? "success"
+                    : isAlreadyCheckedIn
+                      ? "warning"
+                      : "error"
+                }
+                className="h-9 w-9"
+              />
             </div>
 
             <h2 className="mt-4 text-3xl font-bold">
@@ -509,4 +518,21 @@ export default function CheckInPage() {
       )}
     </section>
   );
+}
+
+function CheckInIcon({
+  name,
+  className = "h-7 w-7",
+}: {
+  name: "camera" | "pass" | "success" | "warning" | "error";
+  className?: string;
+}) {
+  const paths = {
+    camera: <><path d="M4 7h4l2-2h4l2 2h4v12H4z" /><circle cx="12" cy="13" r="4" /></>,
+    pass: <><path d="M4 6h16v12H4z" /><path d="M8 10h8M8 14h5" /></>,
+    success: <><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></>,
+    warning: <><path d="M12 3 2.5 20h19z" /><path d="M12 9v5M12 17h.01" /></>,
+    error: <><circle cx="12" cy="12" r="9" /><path d="m8 8 8 8M16 8l-8 8" /></>,
+  };
+  return <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }

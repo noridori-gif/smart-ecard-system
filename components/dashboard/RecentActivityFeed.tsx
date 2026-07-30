@@ -11,7 +11,7 @@ type RecentActivityFeedProps = {
 };
 
 type ActivityStyle = {
-  icon: string;
+  icon: "check" | "eye" | "help" | "close";
   iconClassName: string;
   lineClassName: string;
   label: string;
@@ -22,7 +22,7 @@ const activityStyles: Record<
   ActivityStyle
 > = {
   check_in: {
-    icon: "✓",
+    icon: "check",
     iconClassName:
       "bg-violet-100 text-violet-700",
     lineClassName: "bg-violet-200",
@@ -30,7 +30,7 @@ const activityStyles: Record<
   },
 
   invitation_viewed: {
-    icon: "👁",
+    icon: "eye",
     iconClassName:
       "bg-blue-100 text-blue-700",
     lineClassName: "bg-blue-200",
@@ -38,7 +38,7 @@ const activityStyles: Record<
   },
 
   rsvp_accepted: {
-    icon: "✓",
+    icon: "check",
     iconClassName:
       "bg-emerald-100 text-emerald-700",
     lineClassName: "bg-emerald-200",
@@ -46,7 +46,7 @@ const activityStyles: Record<
   },
 
   rsvp_maybe: {
-    icon: "?",
+    icon: "help",
     iconClassName:
       "bg-amber-100 text-amber-700",
     lineClassName: "bg-amber-200",
@@ -54,13 +54,37 @@ const activityStyles: Record<
   },
 
   rsvp_declined: {
-    icon: "×",
+    icon: "close",
     iconClassName:
       "bg-red-100 text-red-700",
     lineClassName: "bg-red-200",
     label: "RSVP Declined",
   },
 };
+
+function ActivityIcon({ name }: { name: ActivityStyle["icon"] }) {
+  const paths = {
+    check: <path d="m5 12 4 4L19 6" />,
+    eye: (
+      <>
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    help: (
+      <>
+        <path d="M9.5 9a2.7 2.7 0 1 1 4.3 2.2c-1 .7-1.8 1.2-1.8 2.8" />
+        <path d="M12 18h.01" />
+      </>
+    ),
+    close: <path d="m7 7 10 10M17 7 7 17" />,
+  };
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  );
+}
 
 function formatActivityDate(value: string) {
   const date = new Date(value);
@@ -155,7 +179,7 @@ export default function RecentActivityFeed({
   isLoading = false,
 }: RecentActivityFeedProps) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-xl font-bold text-slate-900">
@@ -169,7 +193,7 @@ export default function RecentActivityFeed({
         </div>
 
         {!isLoading && activities.length > 0 && (
-          <div className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+          <div className="rounded-full bg-stone-100 px-3 py-1 text-xs font-bold tabular-nums text-slate-700">
             {activities.length} activities
           </div>
         )}
@@ -179,10 +203,10 @@ export default function RecentActivityFeed({
         {isLoading ? (
           <LoadingState />
         ) : activities.length === 0 ? (
-          <div className="flex min-h-56 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 text-center">
+          <div className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-[#ddd7cc] bg-[#faf8f4] px-5 text-center">
             <div>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-xl">
-                ◷
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                <ActivityIcon name="eye" />
               </div>
 
               <p className="mt-3 font-semibold text-slate-700">
@@ -220,7 +244,7 @@ export default function RecentActivityFeed({
                     <div
                       className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold ${style.iconClassName}`}
                     >
-                      {style.icon}
+                      <ActivityIcon name={style.icon} />
                     </div>
 
                     <div
@@ -274,6 +298,6 @@ export default function RecentActivityFeed({
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

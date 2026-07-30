@@ -184,8 +184,12 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
-    loadDashboard(undefined, true);
-  }, []);
+    const timer = window.setTimeout(
+      () => void loadDashboard(undefined, true),
+      0
+    );
+    return () => window.clearTimeout(timer);
+  }, [loadDashboard]);
 
   async function handleEventChange(
     eventId: number
@@ -201,14 +205,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+    <section className="space-y-7">
+      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Smart Event Pass
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
+          <h1 className="mt-2 text-[32px] font-bold leading-tight text-slate-950 sm:text-4xl">
             Event Analytics Dashboard
           </h1>
 
@@ -219,12 +223,12 @@ export default function DashboardPage() {
         </div>
 
         {selectedEvent && (
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            <p className="font-semibold">
+          <div className="min-w-64 rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">
               Active Event
             </p>
 
-            <p className="mt-1">
+            <p className="mt-1 font-bold text-slate-950">
               {selectedEvent.title}
             </p>
           </div>
@@ -259,7 +263,7 @@ export default function DashboardPage() {
       ) : isLoading ? (
         <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="text-center">
-            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+            <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
             <p className="mt-4 text-sm font-medium text-slate-600">
               Inapakua event analytics...
@@ -269,10 +273,10 @@ export default function DashboardPage() {
       ) : (
         <>
           {selectedEvent && (
-            <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-5 shadow-sm">
+            <section className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-stone-50 p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
               <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
                     Selected Event
                   </p>
 
@@ -286,31 +290,31 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3 lg:min-w-[580px]">
-                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                  <div className="rounded-xl border border-emerald-100 bg-white/90 p-4">
                     <p className="text-xs font-semibold uppercase text-slate-400">
                       Date
                     </p>
 
-                    <p className="mt-1 text-sm font-bold text-slate-800">
+                    <p className="mt-1 text-sm font-bold tabular-nums text-slate-800">
                       {formatEventDate(
                         selectedEvent.event_date
                       )}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                  <div className="rounded-xl border border-emerald-100 bg-white/90 p-4">
                     <p className="text-xs font-semibold uppercase text-slate-400">
                       Time
                     </p>
 
-                    <p className="mt-1 text-sm font-bold text-slate-800">
+                    <p className="mt-1 text-sm font-bold tabular-nums text-slate-800">
                       {formatEventTime(
                         selectedEvent.event_time
                       )}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-white bg-white/80 p-4">
+                  <div className="rounded-xl border border-emerald-100 bg-white/90 p-4">
                     <p className="text-xs font-semibold uppercase text-slate-400">
                       Venue
                     </p>
@@ -321,7 +325,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           <AnalyticsCards stats={stats} />
@@ -331,7 +335,7 @@ export default function DashboardPage() {
               title="Invitation Rate"
               value={stats.invitationRate}
               description={`${stats.totalInvitations} invitations kwa ${stats.totalGuests} guests`}
-              barClassName="bg-indigo-600"
+              barClassName="bg-slate-800"
             />
 
             <ProgressCard
@@ -352,7 +356,7 @@ export default function DashboardPage() {
               title="Attendance Rate"
               value={stats.attendanceRate}
               description={`${stats.checkedIn} guests wamefanya check-in`}
-              barClassName="bg-violet-600"
+              barClassName="bg-emerald-800"
             />
           </div>
 
@@ -373,48 +377,48 @@ export default function DashboardPage() {
           <InvitationFunnel stats={stats} />
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
               <p className="text-sm text-slate-500">
                 Invitations Not Viewed
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-slate-900">
+              <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">
                 {stats.notViewed}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
               <p className="text-sm text-emerald-700">
                 RSVP Accepted
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-emerald-700">
+              <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700">
                 {stats.accepted}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
               <p className="text-sm text-amber-700">
                 RSVP Maybe
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-amber-700">
+              <p className="mt-2 text-3xl font-bold tabular-nums text-amber-700">
                 {stats.maybe}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-5">
               <p className="text-sm text-red-700">
                 RSVP Declined
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-red-700">
+              <p className="mt-2 text-3xl font-bold tabular-nums text-red-700">
                 {stats.declined}
               </p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
+          <div className="rounded-2xl border border-slate-800 bg-[#111820] p-6 text-white shadow-[0_12px_28px_rgba(17,24,32,0.16)]">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h2 className="text-xl font-bold">
@@ -431,7 +435,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-xl bg-white px-5 text-sm font-bold text-slate-900 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading
                   ? "Refreshing..."

@@ -18,10 +18,10 @@ export default function EventSelector({
   onChange,
 }: EventSelectorProps) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex-1">
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
+          <label className="mb-2 block text-[15px] font-semibold text-slate-800">
             Select Event
           </label>
 
@@ -30,7 +30,7 @@ export default function EventSelector({
             onChange={(e) =>
               onChange(Number(e.target.value))
             }
-            className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+            className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
           >
             {events.map((event) => (
               <option
@@ -47,13 +47,13 @@ export default function EventSelector({
           type="button"
           onClick={onRefresh}
           disabled={isLoading}
-          className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-slate-400"
+          className="min-h-12 rounded-xl bg-emerald-700 px-6 font-semibold text-white shadow-sm hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
         >
           {isLoading
             ? "Refreshing..."
             : "Refresh"}
         </button>
       </div>
-    </div>
+    </section>
   );
 }

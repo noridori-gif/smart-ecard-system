@@ -48,56 +48,56 @@ const invitationTemplates: Array<{
     name: "Classic Photo",
     description:
       "Picha kubwa, taarifa za event, countdown, RSVP na Event Pass.",
-    icon: "📷",
+    icon: "CP",
   },
   {
     value: "elegant_gold",
     name: "Elegant Gold",
     description:
       "Kadi ndefu yenye rangi za dhahabu na maandishi rasmi.",
-    icon: "✨",
+    icon: "EG",
   },
   {
     value: "luxury_envelope",
     name: "Luxury Envelope",
     description:
       "Bahasha inayofunguka na invitation experience yenye taarifa zote.",
-    icon: "💌",
+    icon: "LE",
   },
   {
     value: "modern_floral",
     name: "Modern Floral",
     description:
       "Design ya kisasa yenye mapambo ya maua na rangi laini.",
-    icon: "🌿",
+    icon: "MF",
   },
   {
     value: "royal_dark",
     name: "Royal Dark",
     description:
       "Dark luxury design yenye metallic accents, split photo na muonekano wa kifalme.",
-    icon: "♛",
+    icon: "RD",
   },
   {
     value: "minimal_ivory",
     name: "Minimal Ivory",
     description:
       "Editorial ivory stationery yenye portrait ndogo, itinerary na typography safi.",
-    icon: "◯",
+    icon: "MI",
   },
   {
     value: "african_royal",
     name: "African Royal",
     description:
       "Premium African editorial yenye geometric patterns, asymmetrical photo na royal details.",
-    icon: "◆",
+    icon: "AR",
   },
   {
     value: "midnight_luxe",
     name: "Midnight Luxe",
     description:
       "Cinematic evening-gala layout yenye layered hero, floating title panel na fine-line glow.",
-    icon: "☾",
+    icon: "ML",
   },
   {
     value: "heritage_monogram",

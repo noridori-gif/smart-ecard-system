@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
-import ShareInvitationCardButton from "@/components/invitation/ShareInvitationCardButton";
 import SendWhatsAppCloudButton from "@/components/invitation/SendWhatsAppCloudButton";
+import Badge from "@/components/ui/Badge";
+import { buttonClassName } from "@/components/ui/Button";
 
 import {
   getAllInvitations,
@@ -18,7 +20,6 @@ import {
 
 import {
   buildWhatsAppMessage,
-  buildWhatsAppUrl,
   formatGuestPhoneNumber,
 } from "@/services/invitationMessageService";
 import { sendSmsInvitation } from "@/services/smsService";
@@ -33,11 +34,6 @@ type NotificationState = {
 } | null;
 
 type InvitationActionHandlers = {
-  onWhatsApp: (
-    invitation:
-      InvitationWithDetails
-  ) => void;
-
   onSMS: (
     invitation:
       InvitationWithDetails
@@ -104,19 +100,22 @@ export default function InvitationsPage() {
     setSendingInvitationId,
   ] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadInvitations();
+  const showNotification = useCallback((
+    message: string,
+    type: NotificationType =
+      "success"
+  ) => {
+    setNotification({
+      message,
+      type,
+    });
+
+    window.setTimeout(() => {
+      setNotification(null);
+    }, 3500);
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    searchTerm,
-    selectedEventId,
-    selectedLanguage,
-  ]);
-
-  async function loadInvitations() {
+  const loadInvitations = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -141,59 +140,15 @@ export default function InvitationsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showNotification]);
 
-  function showNotification(
-    message: string,
-    type: NotificationType =
-      "success"
-  ) {
-    setNotification({
-      message,
-      type,
-    });
-
-    window.setTimeout(() => {
-      setNotification(null);
-    }, 3500);
-  }
-
-  function handleWhatsApp(
-    invitation:
-      InvitationWithDetails
-  ) {
-    const phoneNumber =
-      formatGuestPhoneNumber(
-        invitation.guests?.phone
-      );
-
-    if (!phoneNumber) {
-      showNotification(
-        "Mgeni huyu hana namba ya simu.",
-        "error"
-      );
-
-      return;
-    }
-
-    const message =
-      buildWhatsAppMessage(
-        invitation,
-        window.location.origin
-      );
-
-    const whatsappUrl =
-      buildWhatsAppUrl(
-        phoneNumber,
-        message
-      );
-
-    window.open(
-      whatsappUrl,
-      "_blank",
-      "noopener,noreferrer"
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => void loadInvitations(),
+      0
     );
-  }
+    return () => window.clearTimeout(timer);
+  }, [loadInvitations]);
 
   async function handleSMS(
     invitation:
@@ -454,9 +409,9 @@ export default function InvitationsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[350px] items-center justify-center">
+      <div className="flex min-h-[350px] items-center justify-center rounded-2xl border border-[#e7e1d7] bg-white">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
           <p className="mt-4 text-sm text-slate-600">
             Inapakua
@@ -468,7 +423,7 @@ export default function InvitationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <section className="space-y-6">
       {notification && (
         <div
           className={`fixed right-4 top-4 z-50 max-w-sm rounded-xl px-5 py-4 text-sm font-semibold text-white shadow-lg ${
@@ -482,24 +437,24 @@ export default function InvitationsPage() {
         </div>
       )}
 
-      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+      <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-[32px] font-bold leading-tight text-slate-950 sm:text-4xl">
             Invitations
           </h1>
 
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-2 text-[15px] text-slate-600">
             Tuma na usimamie
             mialiko ya wageni.
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+        <div className="min-w-52 rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Total Invitations
           </p>
 
-          <p className="mt-1 text-2xl font-bold text-slate-900">
+          <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950">
             {
               filteredInvitations.length
             }
@@ -507,12 +462,12 @@ export default function InvitationsPage() {
         </div>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
             <label
               htmlFor="invitation-search"
-              className="mb-2 block text-sm font-medium text-slate-700"
+              className="mb-2 block text-sm font-semibold text-slate-700"
             >
               Search
             </label>
@@ -522,19 +477,20 @@ export default function InvitationsPage() {
               type="search"
               value={searchTerm}
               onChange={(event) =>
-                setSearchTerm(
-                  event.target.value
-                )
+                {
+                  setSearchTerm(event.target.value);
+                  setCurrentPage(1);
+                }
               }
               placeholder="Jina, simu, event au Pass ID..."
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 caret-blue-600 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 [color-scheme:light]"
+              className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] text-slate-900 caret-emerald-700 outline-none placeholder:text-slate-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 [color-scheme:light]"
             />
           </div>
 
           <div>
             <label
               htmlFor="event-filter"
-              className="mb-2 block text-sm font-medium text-slate-700"
+              className="mb-2 block text-sm font-semibold text-slate-700"
             >
               Event
             </label>
@@ -545,11 +501,12 @@ export default function InvitationsPage() {
                 selectedEventId
               }
               onChange={(event) =>
-                setSelectedEventId(
-                  event.target.value
-                )
+                {
+                  setSelectedEventId(event.target.value);
+                  setCurrentPage(1);
+                }
               }
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 [color-scheme:light]"
+              className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] text-slate-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 [color-scheme:light]"
             >
               <option value="all">
                 Events zote
@@ -577,7 +534,7 @@ export default function InvitationsPage() {
           <div>
             <label
               htmlFor="language-filter"
-              className="mb-2 block text-sm font-medium text-slate-700"
+              className="mb-2 block text-sm font-semibold text-slate-700"
             >
               Language
             </label>
@@ -588,11 +545,12 @@ export default function InvitationsPage() {
                 selectedLanguage
               }
               onChange={(event) =>
-                setSelectedLanguage(
-                  event.target.value
-                )
+                {
+                  setSelectedLanguage(event.target.value);
+                  setCurrentPage(1);
+                }
               }
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 [color-scheme:light]"
+              className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] text-slate-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 [color-scheme:light]"
             >
               <option value="all">
                 Languages zote
@@ -630,9 +588,6 @@ export default function InvitationsPage() {
             invitations={
               paginatedInvitations
             }
-            onWhatsApp={
-              handleWhatsApp
-            }
             onSMS={handleSMS}
             onCopy={
               handleCopyMessage
@@ -643,9 +598,6 @@ export default function InvitationsPage() {
           <MobileInvitationsList
             invitations={
               paginatedInvitations
-            }
-            onWhatsApp={
-              handleWhatsApp
             }
             onSMS={handleSMS}
             onCopy={
@@ -693,13 +645,12 @@ export default function InvitationsPage() {
           />
         </>
       )}
-    </div>
+    </section>
   );
 }
 
 function DesktopInvitationsTable({
   invitations,
-  onWhatsApp,
   onSMS,
   onCopy,
   sendingInvitationId,
@@ -709,10 +660,10 @@ function DesktopInvitationsTable({
   sendingInvitationId: number | null;
 }) {
   return (
-    <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+    <div className="hidden overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-[0_8px_24px_rgba(39,34,25,0.05)] md:block">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-[1040px] divide-y divide-[#e8e2d9] text-[15px]">
+          <thead className="bg-[#faf8f4]">
             <tr>
               <TableHeading>
                 Guest
@@ -794,9 +745,6 @@ function DesktopInvitationsTable({
                       invitation={
                         invitation
                       }
-                      onWhatsApp={
-                        onWhatsApp
-                      }
                       onSMS={onSMS}
                       onCopy={onCopy}
                       compact
@@ -815,7 +763,6 @@ function DesktopInvitationsTable({
 
 function MobileInvitationsList({
   invitations,
-  onWhatsApp,
   onSMS,
   onCopy,
   sendingInvitationId,
@@ -824,38 +771,19 @@ function MobileInvitationsList({
     InvitationWithDetails[];
   sendingInvitationId: number | null;
 }) {
-  const [
-    openInvitationId,
-    setOpenInvitationId,
-  ] = useState<number | null>(
-    null
-  );
-
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:hidden">
+    <div className="grid gap-3 md:hidden">
       {invitations.map(
         (invitation) => {
-          const isMoreOpen =
-            openInvitationId ===
-            invitation.id;
-
-          const morePanelId =
-            `invitation-more-${invitation.id}`;
-
           const guestName =
             invitation.guests
               ?.full_name ??
             "Guest";
 
-          const closeMore = () =>
-            setOpenInvitationId(
-              null
-            );
-
           return (
           <article
             key={invitation.id}
-            className="border-b border-slate-200 px-3 py-3 last:border-b-0"
+            className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)]"
           >
             <div className="flex min-w-0 items-start justify-between gap-2">
               <div className="min-w-0">
@@ -929,121 +857,12 @@ function MobileInvitationsList({
               </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.25fr)_44px] gap-2">
-              <Link
-                href={`/invite/${invitation.invitation_token}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-11 min-w-0 items-center justify-center rounded-lg bg-slate-900 px-2 text-xs font-semibold text-white transition hover:bg-slate-700"
-              >
-                View
-              </Link>
-
-              <SendWhatsAppCloudButton
-                invitationToken={
-                  invitation.invitation_token
-                }
-                disabled={
-                  !invitation.guests
-                    ?.phone
-                }
-                mobile
-              />
-
-              <button
-                type="button"
-                aria-label={`More actions for ${guestName}`}
-                aria-expanded={
-                  isMoreOpen
-                }
-                aria-controls={
-                  morePanelId
-                }
-                onClick={() =>
-                  setOpenInvitationId(
-                    isMoreOpen
-                      ? null
-                      : invitation.id
-                  )
-                }
-                className="flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition hover:bg-slate-100"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  fill="currentColor"
-                >
-                  <circle cx="5" cy="12" r="2" />
-                  <circle cx="12" cy="12" r="2" />
-                  <circle cx="19" cy="12" r="2" />
-                </svg>
-              </button>
-            </div>
-
-            {isMoreOpen && (
-              <div
-                id={morePanelId}
-                aria-label={`More actions for ${guestName}`}
-                className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onWhatsApp(
-                      invitation
-                    );
-                    closeMore();
-                  }}
-                  className="min-h-11 rounded-lg bg-emerald-600 px-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-                >
-                  WhatsApp
-                </button>
-
-                <button
-                  type="button"
-                  disabled={
-                    !invitation.guests?.phone ||
-                    sendingInvitationId === invitation.id
-                  }
-                  onClick={() => {
-                    onSMS(invitation);
-                    closeMore();
-                  }}
-                  className="min-h-11 rounded-lg bg-blue-600 px-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void onCopy(
-                      invitation
-                    );
-                    closeMore();
-                  }}
-                  className="min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Copy
-                </button>
-
-                <ShareInvitationCardButton
-                  invitationToken={
-                    invitation.invitation_token
-                  }
-                  guestName={guestName}
-                  eventPassId={
-                    invitation.event_pass_id
-                  }
-                  compact
-                  mobile
-                  onActionComplete={
-                    closeMore
-                  }
-                />
-              </div>
-            )}
+            <InvitationActions
+              invitation={invitation}
+              onSMS={onSMS}
+              onCopy={onCopy}
+              sendingInvitationId={sendingInvitationId}
+            />
           </article>
           );
         }
@@ -1054,7 +873,6 @@ function MobileInvitationsList({
 
 function InvitationActions({
   invitation,
-  onWhatsApp,
   onSMS,
   onCopy,
   compact = false,
@@ -1062,10 +880,6 @@ function InvitationActions({
 }: InvitationActionsProps & {
   compact?: boolean;
 }) {
-  const guestName =
-    invitation.guests
-      ?.full_name ?? "Guest";
-
   return (
     <div
       className={
@@ -1078,20 +892,10 @@ function InvitationActions({
         href={`/invite/${invitation.invitation_token}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center justify-center rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+        className={buttonClassName({ variant: "dark", size: "sm" })}
       >
         View
       </Link>
-
-      <button
-        type="button"
-        onClick={() =>
-          onWhatsApp(invitation)
-        }
-        className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
-      >
-        WhatsApp
-      </button>
 
       <button
         type="button"
@@ -1102,7 +906,7 @@ function InvitationActions({
         onClick={() =>
           onSMS(invitation)
         }
-        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className={buttonClassName({ variant: "info", size: "sm" })}
       >
         {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
       </button>
@@ -1112,7 +916,7 @@ function InvitationActions({
         onClick={() =>
           onCopy(invitation)
         }
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+        className={buttonClassName({ variant: "secondary", size: "sm" })}
       >
         Copy
       </button>
@@ -1126,17 +930,6 @@ function InvitationActions({
         }
         compact={compact}
       />
-
-      <ShareInvitationCardButton
-        invitationToken={
-          invitation.invitation_token
-        }
-        guestName={guestName}
-        eventPassId={
-          invitation.event_pass_id
-        }
-        compact={compact}
-      />
     </div>
   );
 }
@@ -1147,9 +940,9 @@ function LanguageBadge({
   language: string;
 }) {
   return (
-    <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+    <Badge variant="info" className="uppercase">
       {language}
-    </span>
+    </Badge>
   );
 }
 
@@ -1195,7 +988,7 @@ function Pagination({
   onNext: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row">
+    <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)] sm:flex-row">
       <p className="text-sm text-slate-600">
         Showing{" "}
         <span className="font-semibold">
@@ -1218,12 +1011,12 @@ function Pagination({
             currentPage === 1
           }
           onClick={onPrevious}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
         </button>
 
-        <span className="px-2 text-sm font-medium text-slate-700">
+        <span className="px-2 text-sm font-medium tabular-nums text-slate-700">
           Page {currentPage} of{" "}
           {totalPages}
         </span>
@@ -1235,7 +1028,7 @@ function Pagination({
             totalPages
           }
           onClick={onNext}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
         </button>

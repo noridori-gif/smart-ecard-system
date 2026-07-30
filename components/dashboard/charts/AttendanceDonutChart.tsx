@@ -93,7 +93,7 @@ export default function AttendanceDonutChart({
         ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
       <div className="mb-4">
         <h2 className="text-lg font-bold text-slate-900">
           Attendance Overview
@@ -104,7 +104,7 @@ export default function AttendanceDonutChart({
         </p>
       </div>
 
-      <div className="relative h-[300px] w-full">
+      <div className="relative h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -173,6 +173,6 @@ export default function AttendanceDonutChart({
           </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

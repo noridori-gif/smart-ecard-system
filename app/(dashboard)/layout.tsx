@@ -15,7 +15,7 @@ export default function DashboardLayout({
     useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ed] lg:flex">
+    <div className="dashboard-shell min-h-screen lg:flex">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -23,14 +23,16 @@ export default function DashboardLayout({
 
       <div className="min-w-0 flex-1">
         <main className="min-w-0 p-4 sm:p-6 lg:p-8 xl:p-10">
-          <Header
-            onMenuClick={() =>
-              setIsSidebarOpen(true)
-            }
-          />
+          <div className="mx-auto min-w-0 max-w-[1500px]">
+            <Header
+              onMenuClick={() =>
+                setIsSidebarOpen(true)
+              }
+            />
 
-          <div className="mt-6 min-w-0">
-            {children}
+            <div className="mt-6 min-w-0">
+              {children}
+            </div>
           </div>
         </main>
       </div>

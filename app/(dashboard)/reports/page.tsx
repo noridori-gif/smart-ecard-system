@@ -237,16 +237,14 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedEventId) {
-      setGuests([]);
-      setInvitations([]);
-      setWishes([]);
-      setSummary(initialSummary);
-
-      return;
-    }
-
-    async function loadReport() {
+    const timer = window.setTimeout(async () => {
+      if (!selectedEventId) {
+        setGuests([]);
+        setInvitations([]);
+        setWishes([]);
+        setSummary(initialSummary);
+        return;
+      }
       try {
         setLoadingReport(true);
         setErrorMessage("");
@@ -284,14 +282,9 @@ export default function ReportsPage() {
       } finally {
         setLoadingReport(false);
       }
-    }
-
-    loadReport();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [selectedEventId]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchTerm, statusFilter]);
 
   const selectedEvent = useMemo(() => {
     return (
@@ -728,7 +721,9 @@ export default function ReportsPage() {
             }
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            <span>📊</span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M4 20V10m6 10V4m6 16v-7m4 7H2" />
+            </svg>
 
             <span>
               {exportingExcel
@@ -909,9 +904,10 @@ export default function ReportsPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    setActiveTab("attendance")
-                  }
+                  onClick={() => {
+                    setActiveTab("attendance");
+                    setCurrentPage(1);
+                  }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "attendance"
                       ? "bg-blue-600 text-white"
@@ -923,9 +919,10 @@ export default function ReportsPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setActiveTab("guests")
-                  }
+                  onClick={() => {
+                    setActiveTab("guests");
+                    setCurrentPage(1);
+                  }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "guests"
                       ? "bg-blue-600 text-white"
@@ -937,9 +934,10 @@ export default function ReportsPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setActiveTab("invitations")
-                  }
+                  onClick={() => {
+                    setActiveTab("invitations");
+                    setCurrentPage(1);
+                  }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "invitations"
                       ? "bg-blue-600 text-white"
@@ -951,9 +949,10 @@ export default function ReportsPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setActiveTab("wishes")
-                  }
+                  onClick={() => {
+                    setActiveTab("wishes");
+                    setCurrentPage(1);
+                  }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "wishes"
                       ? "bg-blue-600 text-white"
@@ -969,9 +968,10 @@ export default function ReportsPage() {
               <input
                 type="search"
                 value={searchTerm}
-                onChange={(event) =>
-                  setSearchTerm(event.target.value)
-                }
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Tafuta jina, simu au Event Pass ID..."
                 className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
@@ -980,11 +980,10 @@ export default function ReportsPage() {
                 activeTab !== "wishes" && (
                 <select
                   value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(
-                      event.target.value as StatusFilter
-                    )
-                  }
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as StatusFilter);
+                    setCurrentPage(1);
+                  }}
                   className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="all">

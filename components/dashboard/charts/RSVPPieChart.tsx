@@ -83,7 +83,7 @@ export default function RSVPPieChart({
   );
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
       <div>
         <h2 className="text-xl font-bold text-slate-900">
           RSVP Distribution
@@ -95,7 +95,7 @@ export default function RSVPPieChart({
       </div>
 
       {totalResponses === 0 ? (
-        <div className="flex h-80 items-center justify-center">
+        <div className="flex h-56 items-center justify-center">
           <div className="text-center">
             <p className="font-semibold text-slate-700">
               Hakuna RSVP data bado
@@ -107,7 +107,7 @@ export default function RSVPPieChart({
           </div>
         </div>
       ) : (
-        <div className="mt-4 h-80 w-full">
+        <div className="mt-4 h-64 w-full">
           <ResponsiveContainer
             width="100%"
             height="100%"
@@ -190,6 +190,6 @@ export default function RSVPPieChart({
           </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
