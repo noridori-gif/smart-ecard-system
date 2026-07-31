@@ -1,391 +1,76 @@
 "use client";
 
 import type { FinancialPledge } from "@/services/financialSuiteService";
-import { formatTzs } from "@/services/pledgeMessageService";
-import {
-  FinancialActionIconButton,
-  FinancialStatusBadge,
-  FinancialToolbarButton,
-  financialDesktop,
-} from "./FinancialDesktopUI";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import { formatAppDate, formatAppNumber, formatAppTzs } from "@/lib/i18n/formatters";
+import { FinancialToolbarButton, financialDesktop } from "./FinancialDesktopUI";
 
-const statusLabels = {
-  pledged: "Ameahidi",
-  partial: "Amepunguza",
-  completed: "Amekamilisha",
-  cancelled: "Imefutwa",
+type WorkspaceProps = {
+  eventTitle: string; pledges: FinancialPledge[]; visible: FinancialPledge[];
+  query: string; status: string; guestFilter: string; page: number; pages: number; total: number;
+  actionPledgeId: number | null;
+  onQuery: (value: string) => void; onStatus: (value: string) => void; onGuestFilter: (value: string) => void; onPage: (value: number) => void;
+  onCreate: () => void; onImport: () => void; onBulk: () => void; onExport: (title: string, pledges: FinancialPledge[]) => void; onTemplate: () => void;
+  onPay: (pledge: FinancialPledge) => void; onRemind: (pledge: FinancialPledge) => void; onHistory: (pledge: FinancialPledge) => void; onEdit: (pledge: FinancialPledge) => void;
+  onCancel: (pledge: FinancialPledge) => void; onRestore: (pledge: FinancialPledge) => void; onDelete: (pledge: FinancialPledge) => void;
+  onOpenGuest: (pledge: FinancialPledge) => void; onGenerateInvitation: (pledge: FinancialPledge) => void;
 };
 
-export function FinancialContributorsWorkspace({
-  eventTitle,
-  pledges,
-  visible,
-  query,
-  status,
-  page,
-  pages,
-  total,
-  actionPledgeId,
-  onQuery,
-  onStatus,
-  onPage,
-  onCreate,
-  onImport,
-  onBulk,
-  onExport,
-  onTemplate,
-  onPay,
-  onRemind,
-  onHistory,
-  onEdit,
-  onCancel,
-  onRestore,
-  onDelete,
-}: {
-  eventTitle: string;
-  pledges: FinancialPledge[];
-  visible: FinancialPledge[];
-  query: string;
-  status: string;
-  page: number;
-  pages: number;
-  total: number;
-  actionPledgeId: number | null;
-  onQuery: (value: string) => void;
-  onStatus: (value: string) => void;
-  onPage: (value: number) => void;
-  onCreate: () => void;
-  onImport: () => void;
-  onBulk: () => void;
-  onExport: (eventTitle: string, pledges: FinancialPledge[]) => void;
-  onTemplate: () => void;
-  onPay: (pledge: FinancialPledge) => void;
-  onRemind: (pledge: FinancialPledge) => void;
-  onHistory: (pledge: FinancialPledge) => void;
-  onEdit: (pledge: FinancialPledge) => void;
-  onCancel: (pledge: FinancialPledge) => void;
-  onRestore: (pledge: FinancialPledge) => void;
-  onDelete: (pledge: FinancialPledge) => void;
-}) {
-  const { t } = useAppLanguage();
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3">
-        <FinancialToolbarButton icon="plus" tone="primary" onClick={onCreate}>
-          {t("overview.createPledge")}
-        </FinancialToolbarButton>
-        <FinancialToolbarButton icon="upload" onClick={onImport}>
-          {t("overview.importExcel")}
-        </FinancialToolbarButton>
-        <FinancialToolbarButton icon="layers" tone="attention" onClick={onBulk}>
-          Bulk Actions
-        </FinancialToolbarButton>
-        <FinancialToolbarButton
-          icon="download"
-          onClick={() => onExport(eventTitle, pledges)}
-        >
-          Export contributors
-        </FinancialToolbarButton>
-        <FinancialToolbarButton icon="download" onClick={onTemplate}>
-          Import template
-        </FinancialToolbarButton>
+export function FinancialContributorsWorkspace(props: WorkspaceProps) {
+  const { language, t } = useAppLanguage();
+  const statusOptions = [["all",t("common.all")],["completed",t("overview.completed")],["partial",t("overview.partial")],["pledged",t("overview.notStarted")],["cancelled",language === "sw" ? "Zilizofutwa" : "Cancelled"]];
+  const guestOptions = [["all",t("common.all")],["single",language === "sw" ? "Mtu Mmoja" : "Single"],["double",language === "sw" ? "Watu Wawili" : "Double"],["pending_guest",language === "sw" ? "Inasubiri" : "Pending"],["none",language === "sw" ? "Hakuna" : "None"]];
+  return <div className="space-y-4">
+    <section className={`overflow-visible ${financialDesktop.card}`}>
+      <div className="grid gap-3 border-b border-[#ece7df] bg-[#fffdf9] p-4 lg:grid-cols-[minmax(260px,1fr)_180px_180px_auto] lg:items-center">
+        <label className="relative"><span className="sr-only">{t("queue.search")}</span><span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400"><SearchIcon /></span><input id="pledge-search" value={props.query} onChange={(event)=>props.onQuery(event.target.value)} placeholder={language === "sw" ? "Tafuta jina au simu..." : "Search name or phone..."} className={`w-full pl-12 ${financialDesktop.input}`}/></label>
+        <label><span className="sr-only">{language === "sw" ? "Chuja hali" : "Status filter"}</span><select value={props.status} onChange={(event)=>props.onStatus(event.target.value)} className={`w-full ${financialDesktop.input}`}>{statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span className="sr-only">{language === "sw" ? "Chuja aina ya mgeni" : "Guest filter"}</span><select value={props.guestFilter} onChange={(event)=>props.onGuestFilter(event.target.value)} className={`w-full ${financialDesktop.input}`}>{guestOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <div className="flex flex-wrap justify-start gap-2 lg:justify-end"><FinancialToolbarButton icon="upload" onClick={props.onImport}>{t("overview.importExcel")}</FinancialToolbarButton><FinancialToolbarButton icon="plus" tone="primary" onClick={props.onCreate}>{language === "sw" ? "Ongeza Mchangiaji" : "Add Contributor"}</FinancialToolbarButton></div>
       </div>
+      <details className="group border-b border-[#ece7df] px-4 py-2"><summary className="cursor-pointer list-none text-xs font-semibold text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">{language === "sw" ? "Vitendo zaidi" : "More actions"}</summary><div className="mt-2 flex flex-wrap gap-2 pb-2"><FinancialToolbarButton icon="layers" tone="attention" onClick={props.onBulk}>{language === "sw" ? "Vitendo vya Wengi" : "Bulk Actions"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={()=>props.onExport(props.eventTitle,props.pledges)}>{language === "sw" ? "Pakua Wachangiaji" : "Export Contributors"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={props.onTemplate}>{language === "sw" ? "Muundo wa Excel" : "Excel Template"}</FinancialToolbarButton></div></details>
 
-      <section className={`overflow-hidden ${financialDesktop.card}`}>
-        <div className="flex flex-col gap-3 border-b border-[#ece7df] p-4 md:flex-row">
-          <label className="relative flex-1">
-            <span className="sr-only">{t("queue.search")}</span>
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-            </span>
-            <input
-              id="pledge-search"
-              value={query}
-              onChange={(event) => onQuery(event.target.value)}
-              placeholder="Search by name or phone..."
-              className={`w-full pl-12 ${financialDesktop.input}`}
-            />
-          </label>
-          <select
-            aria-label="Filter by status"
-            value={status}
-            onChange={(event) => onStatus(event.target.value)}
-            className={`md:min-w-52 ${financialDesktop.input}`}
-          >
-            <option value="all">All statuses</option>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {!visible.length ? (
-          <div className="p-12 text-center text-[15px] text-slate-500">
-            No pledges match this view.
-          </div>
-        ) : (
-          <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[1240px] text-left text-[15px]">
-                <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="min-w-56 px-5 py-4">Mchangiaji</th>
-                    <th className="min-w-40 px-5 py-4">Simu</th>
-                    {["Pledged", "Paid", "Balance"].map((heading) => (
-                      <th key={heading} className="min-w-40 px-5 py-4 text-right">
-                        {heading}
-                      </th>
-                    ))}
-                    <th className="min-w-36 px-5 py-4">Status</th>
-                    <th className="min-w-36 px-5 py-4">Last Payment</th>
-                    <th className="min-w-72 px-5 py-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#eee9e1]">
-                  {visible.map((pledge) => (
-                    <tr key={pledge.id} className="transition-colors hover:bg-[#fcfbf8]">
-                      <td className="px-5 py-4 font-semibold text-slate-950">
-                        {pledge.full_name}
-                        <GuestLinkBadge pledge={pledge} />
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4 font-medium tabular-nums text-slate-600">
-                        {pledge.phone}
-                      </td>
-                      <Amount value={pledge.pledged_amount} />
-                      <Amount value={pledge.total_paid} accent />
-                      <Amount value={pledge.balance} />
-                      <td className="px-5 py-4">
-                        <FinancialStatusBadge
-                          status={pledge.calculated_status}
-                          label={statusLabels[pledge.calculated_status]}
-                        />
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {pledge.last_payment_at
-                          ? new Date(pledge.last_payment_at).toLocaleDateString()
-                          : "—"}
-                      </td>
-                      <td className="px-5 py-4">
-                        <DesktopActions
-                          pledge={pledge}
-                          busy={actionPledgeId === pledge.id}
-                          onPay={onPay}
-                          onRemind={onRemind}
-                          onHistory={onHistory}
-                          onEdit={onEdit}
-                          onCancel={onCancel}
-                          onRestore={onRestore}
-                          onDelete={onDelete}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="grid gap-3 p-3 md:hidden">
-              {visible.map((pledge) => (
-                <article key={pledge.id} className="rounded-xl border border-[#e7e1d7] p-4">
-                  <div className="flex justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="break-words font-bold">{pledge.full_name}</h2>
-                      <p className="mt-1 whitespace-nowrap text-sm tabular-nums text-slate-500">
-                        {pledge.phone}
-                      </p>
-                      <GuestLinkBadge pledge={pledge} />
-                    </div>
-                    <FinancialStatusBadge
-                      status={pledge.calculated_status}
-                      label={statusLabels[pledge.calculated_status]}
-                    />
-                  </div>
-                  <dl className="mt-4 grid grid-cols-3 gap-2 text-[13px]">
-                    {[
-                      ["Pledged", pledge.pledged_amount],
-                      ["Paid", pledge.total_paid],
-                      ["Balance", pledge.balance],
-                    ].map(([label, value]) => (
-                      <div key={label} className="min-w-0">
-                        <dt className="text-slate-500">{label}</dt>
-                        <dd className="mt-1 break-words font-bold tabular-nums">
-                          {formatTzs(value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <div className="mt-4">
-                    <DesktopActions
-                      pledge={pledge}
-                      busy={actionPledgeId === pledge.id}
-                      onPay={onPay}
-                      onRemind={onRemind}
-                      onHistory={onHistory}
-                      onEdit={onEdit}
-                      onCancel={onCancel}
-                      onRestore={onRestore}
-                      onDelete={onDelete}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className="flex flex-col gap-3 border-t border-[#ece7df] p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span>{total} contributor(s)</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page === 1}
-              onClick={() => onPage(page - 1)}
-              className="min-h-10 rounded-lg border px-3 font-semibold disabled:opacity-40"
-            >
-              {t("common.previous")}
-            </button>
-            <span className="px-2 py-1 tabular-nums">
-              {page}/{pages}
-            </span>
-            <button
-              type="button"
-              disabled={page === pages}
-              onClick={() => onPage(page + 1)}
-              className="min-h-10 rounded-lg border px-3 font-semibold disabled:opacity-40"
-            >
-              {t("common.next")}
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
+      {!props.visible.length ? <EmptyState onCreate={props.onCreate} language={language}/> : <div className="overflow-visible">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-left text-sm">
+          <caption className="sr-only">{t("financial.contributors")}</caption>
+          <thead className="sticky top-0 z-10 bg-[#faf8f4]/95 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 backdrop-blur">
+            <tr><th scope="col" className="w-10 px-2 py-3 text-center sm:w-14">#</th><th scope="col" className="w-[38%] px-3 py-3 lg:w-[24%]">{t("eligibility.contributor")}</th><th scope="col" className="hidden w-[14%] px-3 py-3 xl:table-cell">{t("common.phone")}</th><th scope="col" className="w-[32%] px-3 py-3 sm:w-[30%] lg:w-[24%]">{language === "sw" ? "Maendeleo ya Michango" : "Contribution Progress"}</th><th scope="col" className="hidden w-[12%] px-3 py-3 lg:table-cell">{t("overview.balance")}</th><th scope="col" className="hidden w-[12%] px-3 py-3 lg:table-cell">{language === "sw" ? "Aina ya Mgeni" : "Guest Type"}</th><th scope="col" className="w-[22%] px-3 py-3 sm:w-[18%]">{language === "sw" ? "Hali ya Malipo" : "Payment Status"}</th><th scope="col" className="hidden w-[13%] px-3 py-3 xl:table-cell">{language === "sw" ? "Malipo ya Mwisho" : "Last Payment"}</th><th scope="col" className="w-14 px-2 py-3 text-center">{t("common.actions")}</th></tr>
+          </thead>
+          <tbody>{props.visible.map((pledge,index)=><ContributorRow key={pledge.id} pledge={pledge} serial={(props.page-1)*10+index+1} busy={props.actionPledgeId===pledge.id} {...props}/>)}</tbody>
+        </table>
+      </div>}
+      <footer className="flex flex-col gap-3 border-t border-[#ece7df] bg-[#fffdf9] p-4 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="text-slate-600">{formatAppNumber(props.total,language)} {t("financial.contributors").toLowerCase()}</span><div className="flex items-center gap-2"><PageButton disabled={props.page===1} onClick={()=>props.onPage(props.page-1)}>{t("common.previous")}</PageButton><span className="rounded-lg bg-stone-100 px-3 py-2 font-semibold tabular-nums">{props.page} / {props.pages}</span><PageButton disabled={props.page===props.pages} onClick={()=>props.onPage(props.page+1)}>{t("common.next")}</PageButton></div></footer>
+    </section>
+  </div>;
 }
 
-function GuestLinkBadge({ pledge }: { pledge: FinancialPledge }) {
-  const status = pledge.guest_eligibility_status ?? (pledge.guest_id ? "single" : "not_linked");
-  const labels: Record<string, string> = {
-    not_linked: "Not linked", below_minimum: "Below guest minimum", pending_guest: "Pending guest",
-    single: "Single Guest", double: "Double Guest", needs_review: "Needs review", sync_failed: "Sync failed",
-  };
-  const tone = status === "double" || status === "single" ? "bg-emerald-50 text-emerald-700"
-    : status === "needs_review" || status === "sync_failed" ? "bg-amber-50 text-amber-800" : "bg-stone-100 text-slate-600";
-  return <span title="Financial contributor guest relationship" className={`mt-1.5 block w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${tone}`}>{labels[status] ?? "Not linked"}</span>;
+function ContributorRow({pledge,serial,busy,onPay,onHistory,onEdit,onCancel,onRestore,onDelete,onOpenGuest,onGenerateInvitation}: WorkspaceProps & {pledge:FinancialPledge;serial:number;busy:boolean}) {
+  const {language,t}=useAppLanguage(); const pledged=Number(pledge.pledged_amount); const paid=Number(pledge.total_paid); const balance=Number(pledge.balance); const progress=pledged>0?Math.min(100,Math.max(0,(paid/pledged)*100)):0;
+  return <tr className="group relative bg-white transition duration-150 hover:z-[1] hover:bg-emerald-50/30 hover:shadow-[0_5px_18px_rgba(15,118,110,0.08)] focus-within:z-30 focus-within:bg-emerald-50/40">
+    <td className="border-t border-[#eee9e1] px-2 py-4 text-center text-xs font-semibold tabular-nums text-slate-400">{serial}</td>
+    <td className="border-t border-[#eee9e1] px-3 py-4"><div className="flex min-w-0 items-center gap-3"><Avatar name={pledge.full_name}/><div className="min-w-0"><p className="truncate font-bold text-slate-950" title={pledge.full_name}>{pledge.full_name}</p><p className="mt-0.5 truncate text-xs text-slate-500">{pledge.phone || (language==="sw"?"Hakuna namba ya simu":"No phone number")}</p><p className="mt-0.5 hidden text-xs text-slate-400 sm:block">{language==="sw"?"Ahadi":"Contribution"}: {formatAppTzs(pledged,language)}</p></div></div></td>
+    <td className="hidden border-t border-[#eee9e1] px-3 py-4 font-medium tabular-nums text-slate-600 xl:table-cell">{pledge.phone || "—"}</td>
+    <td className="border-t border-[#eee9e1] px-3 py-4"><ContributionProgress progress={progress} paid={paid} pledged={pledged} balance={balance}/></td>
+    <td className="hidden border-t border-[#eee9e1] px-3 py-4 font-bold tabular-nums text-slate-800 lg:table-cell">{formatAppTzs(balance,language)}</td>
+    <td className="hidden border-t border-[#eee9e1] px-3 py-4 lg:table-cell"><GuestTypeBadge status={pledge.guest_eligibility_status}/></td>
+    <td className="border-t border-[#eee9e1] px-3 py-4"><PaymentStatus status={pledge.calculated_status}/></td>
+    <td className="hidden border-t border-[#eee9e1] px-3 py-4 text-slate-600 xl:table-cell"><LastPayment value={pledge.last_payment_at}/></td>
+    <td className="border-t border-[#eee9e1] px-2 py-4 text-center"><ActionMenu pledge={pledge} busy={busy} onPay={onPay} onHistory={onHistory} onEdit={onEdit} onCancel={onCancel} onRestore={onRestore} onDelete={onDelete} onOpenGuest={onOpenGuest} onGenerateInvitation={onGenerateInvitation} viewLabel={t("common.view")}/></td>
+  </tr>;
 }
 
-function Amount({ value, accent = false }: { value: string; accent?: boolean }) {
-  return (
-    <td
-      className={`whitespace-nowrap px-5 py-4 text-right font-semibold tabular-nums ${
-        accent ? "text-emerald-700" : "text-slate-800"
-      }`}
-    >
-      {formatTzs(value)}
-    </td>
-  );
-}
+function ContributionProgress({progress,paid,pledged,balance}:{progress:number;paid:number;pledged:number;balance:number}) { const {language}=useAppLanguage(); return <div className="min-w-0"><div className="flex items-center justify-between gap-2 text-xs"><span className="font-bold tabular-nums text-slate-800">{formatAppNumber(progress/100,language,{style:"percent",maximumFractionDigits:0})}</span>{balance<=0&&pledged>0?<span className="hidden font-bold text-emerald-700 sm:inline">✓ {language==="sw"?"Imekamilika":"Complete"}</span>:null}</div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-stone-200" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><div className={`h-full rounded-full ${progress>=100?"bg-emerald-600":progress>0?"bg-amber-500":"bg-slate-300"}`} style={{width:`${progress}%`}}/></div><p className="mt-1.5 truncate text-[11px] font-medium tabular-nums text-slate-500">{formatAppTzs(paid,language)} / {formatAppTzs(pledged,language)}</p><p className="mt-0.5 hidden text-[11px] tabular-nums text-slate-400 sm:block">{language==="sw"?"Salio":"Balance"}: {formatAppTzs(balance,language)}</p></div>; }
 
-function DesktopActions({
-  pledge,
-  busy,
-  onPay,
-  onRemind,
-  onHistory,
-  onEdit,
-  onCancel,
-  onRestore,
-  onDelete,
-}: {
-  pledge: FinancialPledge;
-  busy: boolean;
-  onPay: (pledge: FinancialPledge) => void;
-  onRemind: (pledge: FinancialPledge) => void;
-  onHistory: (pledge: FinancialPledge) => void;
-  onEdit: (pledge: FinancialPledge) => void;
-  onCancel: (pledge: FinancialPledge) => void;
-  onRestore: (pledge: FinancialPledge) => void;
-  onDelete: (pledge: FinancialPledge) => void;
-}) {
-  const { t } = useAppLanguage();
-  const protectedHistory =
-    pledge.payment_row_count > 0 || pledge.has_protected_financial_history;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {pledge.calculated_status === "cancelled" ? (
-        <>
-          <FinancialActionIconButton
-            icon="restore"
-            label="Restore"
-            tone="green"
-            disabled={busy}
-            onClick={() => onRestore(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="history"
-            label={t("payments.history")}
-            tone="slate"
-            onClick={() => onHistory(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="edit"
-            label="Edit details"
-            tone="blue"
-            onClick={() => onEdit(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="trash"
-            label={
-              protectedHistory
-                ? "Delete Permanently unavailable because payment history exists"
-                : "Delete Permanently"
-            }
-            tone="red"
-            disabled={busy || protectedHistory}
-            onClick={() => onDelete(pledge)}
-          />
-        </>
-      ) : (
-        <>
-          <FinancialActionIconButton
-            icon="plus"
-            label="Pay"
-            tone="green"
-            disabled={pledge.calculated_status === "completed"}
-            onClick={() => onPay(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="bell"
-            label="Remind"
-            tone="amber"
-            disabled={pledge.calculated_status === "completed"}
-            onClick={() => onRemind(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="history"
-            label="History"
-            tone="slate"
-            onClick={() => onHistory(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="edit"
-            label="Edit"
-            tone="blue"
-            onClick={() => onEdit(pledge)}
-          />
-          <FinancialActionIconButton
-            icon="cancel"
-            label="Cancel"
-            tone="red"
-            onClick={() => onCancel(pledge)}
-          />
-        </>
-      )}
-    </div>
-  );
-}
+function GuestTypeBadge({status}:{status:FinancialPledge["guest_eligibility_status"]}) { const {language}=useAppLanguage(); const config={single:["👤",language==="sw"?"Mtu Mmoja":"Single","bg-emerald-50 text-emerald-700 ring-emerald-200"],double:["👥",language==="sw"?"Watu Wawili":"Double","bg-blue-50 text-blue-700 ring-blue-200"],pending_guest:["●",language==="sw"?"Inasubiri":"Pending","bg-amber-50 text-amber-800 ring-amber-200"]} as const; const [icon,label,tone]=config[status as keyof typeof config]??["⊘",language==="sw"?"Hakuna":"None","bg-stone-100 text-slate-600 ring-stone-200"]; return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${tone}`}><span aria-hidden="true">{icon}</span>{label}</span>; }
+
+function PaymentStatus({status}:{status:FinancialPledge["calculated_status"]}) { const {language}=useAppLanguage(); const config={completed:[language==="sw"?"Imekamilika":"Complete","bg-emerald-50 text-emerald-700 ring-emerald-200","bg-emerald-500"],partial:[language==="sw"?"Sehemu":"Partial","bg-amber-50 text-amber-800 ring-amber-200","bg-amber-500"],pledged:[language==="sw"?"Inasubiri":"Pending","bg-red-50 text-red-700 ring-red-200","bg-red-500"],cancelled:[language==="sw"?"Imefutwa":"Cancelled","bg-stone-100 text-slate-600 ring-stone-200","bg-slate-400"]} as const; const [label,tone,dot]=config[status]; return <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${tone}`}><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true"/><span className="truncate">{label}</span></span>; }
+
+function LastPayment({value}:{value:string|null}) { const {language}=useAppLanguage(); if(!value)return <span className="text-slate-400">—</span>; return <time dateTime={value} className="whitespace-nowrap font-semibold">{formatAppDate(value,language,{day:"2-digit",month:"short",year:"numeric"})}</time>; }
+
+type MenuProps=Pick<WorkspaceProps,"onPay"|"onHistory"|"onEdit"|"onCancel"|"onRestore"|"onDelete"|"onOpenGuest"|"onGenerateInvitation">&{pledge:FinancialPledge;busy:boolean;viewLabel:string};
+function ActionMenu({pledge,busy,viewLabel,...actions}:MenuProps) { const {language,t}=useAppLanguage(); const item="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-stone-50 focus-visible:bg-emerald-50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"; const protectedHistory=pledge.payment_row_count>0||pledge.has_protected_financial_history; const run=(callback:(pledge:FinancialPledge)=>void)=>()=>callback(pledge); return <details className="relative inline-block text-left"><summary aria-label={`${t("common.actions")}: ${pledge.full_name}`} className="grid h-10 w-10 cursor-pointer list-none place-items-center rounded-xl border border-stone-200 bg-white text-xl font-bold text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 [&::-webkit-details-marker]:hidden">⋮</summary><div className="fixed inset-x-3 bottom-3 z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-stone-200 bg-white py-2 text-left shadow-2xl md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-12 md:w-56 md:rounded-xl"><p className="border-b border-stone-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-400 md:hidden">{pledge.full_name}</p><button className={item} onClick={run(actions.onEdit)}>{viewLabel}</button><button className={item} onClick={run(actions.onEdit)}>{t("common.edit")}</button>{pledge.calculated_status!=="cancelled"&&<><button className={item} disabled={pledge.calculated_status==="completed"} onClick={run(actions.onPay)}>{t("payments.record")}</button><button className={item} onClick={run(actions.onHistory)}>{t("payments.history")}</button>{pledge.guest_id&&<button className={item} onClick={run(actions.onOpenGuest)}>{language==="sw"?"Fungua Mgeni":"Open Guest"}</button>}<button className={item} onClick={run(actions.onGenerateInvitation)}>{language==="sw"?"Tengeneza Mwaliko":"Generate Invitation"}</button><button className={`${item} text-red-700`} onClick={run(actions.onCancel)}>{language==="sw"?"Futa":"Delete"}</button></>}{pledge.calculated_status==="cancelled"&&<><button className={item} disabled={busy} onClick={run(actions.onRestore)}>{language==="sw"?"Rejesha":"Restore"}</button><button className={`${item} text-red-700`} disabled={busy||protectedHistory} onClick={run(actions.onDelete)}>{language==="sw"?"Futa Kabisa":"Delete Permanently"}</button></>}</div></details>; }
+
+function EmptyState({onCreate,language}:{onCreate:()=>void;language:"sw"|"en"}) { return <div className="grid min-h-80 place-items-center p-8 text-center"><div><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-50 text-emerald-700"><svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6"/></svg></div><h2 className="mt-5 text-xl font-bold text-slate-950">{language==="sw"?"Bado hakuna wachangiaji.":"No contributors yet."}</h2><p className="mt-2 text-sm text-slate-500">{language==="sw"?"Ongeza mchangiaji wako wa kwanza.":"Create your first contributor."}</p><button type="button" onClick={onCreate} className="mt-5 min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white shadow-sm hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">+ {language==="sw"?"Ongeza Mchangiaji":"Add Contributor"}</button></div></div>; }
+function Avatar({name}:{name:string}) { const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]?.toUpperCase()).join("")||"?"; return <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 text-xs font-black text-white shadow-sm">{initials}</span>; }
+function PageButton({children,...props}:React.ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} className="min-h-10 rounded-lg border border-stone-200 bg-white px-3 font-semibold shadow-sm hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-40">{children}</button>; }
+function SearchIcon(){return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;}

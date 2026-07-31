@@ -54,7 +54,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const [selectedPayment,setSelectedPayment]=useState<PledgePayment|null>(null);
   const [actionPledgeId,setActionPledgeId]=useState<number|null>(null);
   const [newReceipt,setNewReceipt]=useState<{receipt:FinanceReceipt;verificationUrl:string}|null>(null);
-  const [query, setQuery] = useState(""); const [status, setStatus] = useState("all");
+  const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [guestFilter, setGuestFilter] = useState("all");
   const [page, setPage] = useState(1); const pageSize = 10;
   const load = useCallback(async () => {
     if (!validEventId) {
@@ -76,8 +76,9 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   }, [load]);
   const filtered = useMemo(() => (data?.pledges ?? []).filter((p) =>
     (status === "all" || p.calculated_status === status) &&
+    (guestFilter === "all" || (guestFilter === "none" ? !["single", "double", "pending_guest"].includes(p.guest_eligibility_status) : guestFilter === p.guest_eligibility_status)) &&
     (`${p.full_name} ${p.phone} ${p.normalized_phone}`.toLowerCase().includes(query.toLowerCase()))
-  ), [data, query, status]);
+  ), [data, guestFilter, query, status]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize)); const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   async function savePledge(input: PledgeInput) {
     if (selected) await updatePledge(selected.id, input, selected.total_paid); else await createPledge(input);
@@ -240,6 +241,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           visible={visible}
           query={query}
           status={status}
+          guestFilter={guestFilter}
           page={page}
           pages={pages}
           total={filtered.length}
@@ -252,6 +254,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             setStatus(value);
             setPage(1);
           }}
+          onGuestFilter={(value) => { setGuestFilter(value); setPage(1); }}
           onPage={setPage}
           onCreate={() => {
             setSelected(null);
@@ -277,6 +280,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           onCancel={(pledge) => void cancel(pledge)}
           onRestore={(pledge) => void restore(pledge)}
           onDelete={(pledge) => void permanentlyDelete(pledge)}
+          onOpenGuest={() => router.push(`/events/${eventId}/guests`)}
+          onGenerateInvitation={() => changeTab("invitation_queue")}
         />
       )}
 
