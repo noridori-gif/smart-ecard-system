@@ -6,6 +6,8 @@ import type {
   FinancialPledge,
 } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import { formatAppDate, formatAppNumber, formatAppTzs } from "@/lib/i18n/formatters";
 
 export const financialDesktop = {
   card:
@@ -218,10 +220,9 @@ export function FinancialOverviewContent({
   summary: FinanceSummary;
   actions: ReactNode;
 }) {
+  const { language, t } = useAppLanguage();
   const statusCards = [
-    ["Waliokamilisha", summary.completed_count, "bg-emerald-50 text-emerald-800"],
-    ["Waliopunguza", summary.partial_count, "bg-amber-50 text-amber-800"],
-    ["Bado Hawajaanza", summary.pledged_count, "bg-rose-50 text-rose-800"],
+    [t("overview.completed"), summary.completed_count, "bg-emerald-50 text-emerald-800"], [t("overview.partial"), summary.partial_count, "bg-amber-50 text-amber-800"], [t("overview.notStarted"), summary.pledged_count, "bg-rose-50 text-rose-800"],
   ];
   const collection = Number(summary.completion_percentage || 0);
   const budget = Number(summary.budget_progress_percentage || 0);
@@ -229,7 +230,7 @@ export function FinancialOverviewContent({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">{actions}</div>
       <section>
-        <h2 className="text-xl font-bold text-slate-950">Hali ya wachangiaji</h2>
+        <h2 className="text-xl font-bold text-slate-950">{t("overview.contributorStatus")}</h2>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
           {statusCards.map(([label, value, style]) => (
             <article key={label} className={`rounded-2xl border border-transparent p-5 ${style}`}>
@@ -246,29 +247,26 @@ export function FinancialOverviewContent({
       </section>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
         <section className={`space-y-6 p-5 ${financialDesktop.card}`}>
-          <Progress label="Maendeleo ya michango" value={collection} colour="emerald" />
-          <Progress label="Maendeleo ya bajeti" value={budget} colour="amber" />
+          <Progress label={t("overview.contributionProgress")} value={collection} colour="emerald" />
+          <Progress label={t("overview.budgetProgress")} value={budget} colour="amber" />
         </section>
         <section className={`p-5 ${financialDesktop.card}`}>
           <dl className="grid grid-cols-2 gap-5">
             {[
-              ["Event Budget", summary.budget_amount ? formatTzs(summary.budget_amount) : "Budget not set"],
+              [t("overview.eventBudget"), summary.budget_amount ? formatAppTzs(Number(summary.budget_amount), language) : t("overview.budgetNotSet")],
               [
-                "Remaining to Budget",
+                t("overview.remainingBudget"),
                 summary.remaining_to_budget !== null &&
                 summary.remaining_to_budget !== undefined
-                  ? formatTzs(summary.remaining_to_budget)
-                  : "—",
+                  ? formatAppTzs(Number(summary.remaining_to_budget), language) : "—",
               ],
-              ["Contribution Deadline", summary.contribution_deadline ? new Date(`${summary.contribution_deadline}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "No deadline"],
+              [t("overview.deadline"), summary.contribution_deadline ? formatAppDate(`${summary.contribution_deadline}T00:00:00`, language, { day: "numeric", month: "short", year: "numeric" }) : t("overview.noDeadline")],
               [
-                "Days Remaining",
+                t("overview.daysRemaining"),
                 summary.days_remaining === null ||
                 summary.days_remaining === undefined
                   ? "—"
-                  : `${summary.days_remaining} day${
-                      Math.abs(summary.days_remaining) === 1 ? "" : "s"
-                    }`,
+                  : formatAppNumber(summary.days_remaining, language),
               ],
               ["Deadline Status", summary.deadline_status ?? "No deadline"],
             ].map(([label, value]) => (

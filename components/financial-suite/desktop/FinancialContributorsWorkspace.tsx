@@ -8,6 +8,7 @@ import {
   FinancialToolbarButton,
   financialDesktop,
 } from "./FinancialDesktopUI";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 
 const statusLabels = {
   pledged: "Ameahidi",
@@ -67,14 +68,15 @@ export function FinancialContributorsWorkspace({
   onRestore: (pledge: FinancialPledge) => void;
   onDelete: (pledge: FinancialPledge) => void;
 }) {
+  const { t } = useAppLanguage();
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
         <FinancialToolbarButton icon="plus" tone="primary" onClick={onCreate}>
-          Create pledge
+          {t("overview.createPledge")}
         </FinancialToolbarButton>
         <FinancialToolbarButton icon="upload" onClick={onImport}>
-          Import Excel
+          {t("overview.importExcel")}
         </FinancialToolbarButton>
         <FinancialToolbarButton icon="layers" tone="attention" onClick={onBulk}>
           Bulk Actions
@@ -93,7 +95,7 @@ export function FinancialContributorsWorkspace({
       <section className={`overflow-hidden ${financialDesktop.card}`}>
         <div className="flex flex-col gap-3 border-b border-[#ece7df] p-4 md:flex-row">
           <label className="relative flex-1">
-            <span className="sr-only">Search contributors</span>
+            <span className="sr-only">{t("queue.search")}</span>
             <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
@@ -246,7 +248,7 @@ export function FinancialContributorsWorkspace({
               onClick={() => onPage(page - 1)}
               className="min-h-10 rounded-lg border px-3 font-semibold disabled:opacity-40"
             >
-              Previous
+              {t("common.previous")}
             </button>
             <span className="px-2 py-1 tabular-nums">
               {page}/{pages}
@@ -257,7 +259,7 @@ export function FinancialContributorsWorkspace({
               onClick={() => onPage(page + 1)}
               className="min-h-10 rounded-lg border px-3 font-semibold disabled:opacity-40"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -310,6 +312,7 @@ function DesktopActions({
   onRestore: (pledge: FinancialPledge) => void;
   onDelete: (pledge: FinancialPledge) => void;
 }) {
+  const { t } = useAppLanguage();
   const protectedHistory =
     pledge.payment_row_count > 0 || pledge.has_protected_financial_history;
   return (
@@ -325,7 +328,7 @@ function DesktopActions({
           />
           <FinancialActionIconButton
             icon="history"
-            label="Payment History"
+            label={t("payments.history")}
             tone="slate"
             onClick={() => onHistory(pledge)}
           />

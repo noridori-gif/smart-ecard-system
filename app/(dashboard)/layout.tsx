@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export default function DashboardLayout({
     useState(false);
 
   return (
-    <div className="dashboard-shell min-h-screen lg:flex">
+    <LanguageProvider><div className="dashboard-shell min-h-screen lg:flex">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -36,6 +37,6 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
-    </div>
+    </div></LanguageProvider>
   );
 }

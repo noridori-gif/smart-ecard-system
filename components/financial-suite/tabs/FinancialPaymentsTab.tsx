@@ -12,11 +12,12 @@ import type {
   PledgePayment,
 } from "@/services/financialSuiteService";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
-import { formatTzs } from "@/services/pledgeMessageService";
+import { formatAppTzs } from "@/lib/i18n/formatters";
 import {
   FinancialActionIconButton,
   financialDesktop,
 } from "../desktop/FinancialDesktopUI";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 
 type IssuedReceipt = {
   receipt: FinanceReceipt;
@@ -38,6 +39,8 @@ export default function FinancialPaymentsTab({
   onEdit: (pledge: FinancialPledge, payment: PledgePayment) => void;
   onVoid: (pledge: FinancialPledge, payment: PledgePayment) => void;
 }) {
+  const { language, t } = useAppLanguage();
+  const formatTzs = (value: string | number) => formatAppTzs(Number(value), language);
   const [report, setReport] = useState<ClosingReport | null>(null);
   const [filter, setFilter] = useState<"all" | "valid" | "voided">("all");
   const [selectedDate, setSelectedDate] = useState(
@@ -135,7 +138,7 @@ export default function FinancialPaymentsTab({
       <section className={`overflow-hidden ${financialDesktop.card}`}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ece7df] p-5">
           <div>
-            <h2 className="text-xl font-bold">Recent Payments</h2>
+            <h2 className="text-xl font-bold">{t("payments.history")}</h2>
             <p className="text-sm text-slate-500">
               Valid and voided transactions are shown distinctly.
             </p>
@@ -159,7 +162,7 @@ export default function FinancialPaymentsTab({
         </div>
 
         {!report ? (
-          <p className="p-10 text-center text-slate-500">Loading payments…</p>
+          <p className="p-10 text-center text-slate-500">{t("common.loading")}</p>
         ) : !payments.length ? (
           <p className="p-10 text-center text-slate-500">
             No payments match this filter.
@@ -171,13 +174,7 @@ export default function FinancialPaymentsTab({
                 <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
                     {[
-                      "Contributor",
-                      "Amount",
-                      "Receipt",
-                      "Payment date",
-                      "Method",
-                      "Status",
-                      "Actions",
+                      t("eligibility.contributor"), t("payments.amount"), t("payments.receipt"), t("payments.date"), t("payments.method"), t("common.status"), t("common.actions"),
                     ].map((label) => (
                       <th key={label} className="px-5 py-4">
                         {label}

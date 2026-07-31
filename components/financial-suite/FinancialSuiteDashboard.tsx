@@ -22,6 +22,7 @@ import ContributionBulkActionsDialog from "./ContributionBulkActionsDialog";
 import FinancialReminderDialog from "./FinancialReminderDialog";
 import EditPaymentDialog from "./EditPaymentDialog";
 import VoidPaymentDialog from "./VoidPaymentDialog";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import {
   FinancialDesktopHeader,
   FinancialOverviewContent,
@@ -40,6 +41,7 @@ import {
 
 const statusLabels = { pledged: "Ameahidi", partial: "Amepunguza", completed: "Amekamilisha", cancelled: "Imefutwa" };
 export default function FinancialSuiteDashboard({ eventId: eventIdParam, initialTab }: { eventId: string; initialTab: FinancialTab }) {
+  const { t } = useAppLanguage();
   const eventId = Number(eventIdParam);
   const validEventId = Number.isSafeInteger(eventId) && eventId > 0;
   const router=useRouter();const pathname=usePathname();const activeTab=initialTab;
@@ -212,19 +214,19 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
                   setMode("pledge");
                 }}
               >
-                Create pledge
+                {t("overview.createPledge")}
               </FinancialToolbarButton>
               <FinancialToolbarButton icon="upload" onClick={() => setMode("import")}>
-                Import Excel
+                {t("overview.importExcel")}
               </FinancialToolbarButton>
               <FinancialToolbarButton icon="report" onClick={() => changeTab("reports")}>
-                Generate report
+                {t("overview.generateReport")}
               </FinancialToolbarButton>
               <FinancialToolbarButton icon="users" onClick={() => changeTab("contributors")}>
-                Open contributors
+                {t("overview.openContributors")}
               </FinancialToolbarButton>
               <FinancialToolbarButton icon="history" onClick={() => changeTab("payments")}>
-                View recent payments
+                {t("overview.recentPayments")}
               </FinancialToolbarButton>
             </>
           }

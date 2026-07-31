@@ -1,4 +1,6 @@
 "use client";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
 export type ReminderSection =
   | "overview"
@@ -9,13 +11,9 @@ export type ReminderSection =
 
 export const reminderSections: Array<{
   value: ReminderSection;
-  label: string;
+  label: TranslationKey;
 }> = [
-  { value: "overview", label: "Overview" },
-  { value: "send", label: "Send Reminders" },
-  { value: "thank-you", label: "Thank You" },
-  { value: "operations", label: "Operations" },
-  { value: "settings", label: "Settings" },
+  { value: "overview", label: "reminders.overview" }, { value: "send", label: "reminders.send" }, { value: "thank-you", label: "reminders.thankYou" }, { value: "operations", label: "reminders.operations" }, { value: "settings", label: "reminders.settings" },
 ];
 
 export function isReminderSection(value: string | null): value is ReminderSection {
@@ -29,11 +27,12 @@ export default function ReminderSectionNavigation({
   active: ReminderSection;
   onChange: (section: ReminderSection) => void;
 }) {
+  const { t } = useAppLanguage();
   return (
     <div className="overflow-x-auto pb-1">
       <div
         role="tablist"
-        aria-label="Reminder workspace sections"
+        aria-label={t("reminders.navigation")}
         className="flex min-w-max gap-1 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-sm"
       >
         {reminderSections.map((section) => (
@@ -49,7 +48,7 @@ export default function ReminderSectionNavigation({
                 : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"
             }`}
           >
-            {section.label}
+            {t(section.label)}
           </button>
         ))}
       </div>

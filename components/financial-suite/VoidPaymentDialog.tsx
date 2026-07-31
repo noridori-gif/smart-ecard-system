@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { FinancialPledge, PledgePayment } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 
 export default function VoidPaymentDialog({ payment, pledge, onVoid, onClose }: {
   payment: PledgePayment;
@@ -10,6 +11,7 @@ export default function VoidPaymentDialog({ payment, pledge, onVoid, onClose }: 
   onVoid: (reason: string) => Promise<void>;
   onClose: () => void;
 }) {
+  const { t } = useAppLanguage();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +41,7 @@ export default function VoidPaymentDialog({ payment, pledge, onVoid, onClose }: 
 
   return <div className="space-y-4">
     <div>
-      <h3 className="text-xl font-bold text-red-700">Void Payment</h3>
+      <h3 className="text-xl font-bold text-red-700">{t("payments.void")}</h3>
       <p className="text-sm text-slate-500">{payment.receipt_number}</p>
     </div>
     <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
@@ -63,10 +65,10 @@ export default function VoidPaymentDialog({ payment, pledge, onVoid, onClose }: 
     </label>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
-      <button disabled={busy} onClick={onClose} className="rounded-xl border px-4 py-2">Cancel</button>
+      <button disabled={busy} onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button>
       <button disabled={busy || !valid} onClick={() => void submit()}
         className="rounded-xl bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-40">
-        {busy ? "Voiding…" : "Confirm Void Payment"}
+        {busy ? t("common.saving") : t("payments.confirmVoid")}
       </button>
     </div>
   </div>;

@@ -13,6 +13,8 @@ import {
 } from "@/services/financialAutomationService";
 import type { FinancialPledge } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import { formatAppDate } from "@/lib/i18n/formatters";
 
 const statuses = ["queued", "processing", "sent", "delivered", "read", "failed"];
 const typeLabels: Record<string, string> = {
@@ -28,6 +30,7 @@ function StatusBadge({ value }: { value: string }) {
 }
 
 export default function FinancialRemindersTab({ eventId, eventDate, deadline, pledges }: { eventId: number; eventDate: string; deadline: string | null; pledges: FinancialPledge[] }) {
+  const { language, t } = useAppLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -104,25 +107,25 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
     ["Default channel", settings?.reminder_channel ?? "—"],
     ["Eligible reminders", eligibleCount],
     ["Eligible thank-you", thankYou?.eligible ?? "—"],
-    ["Sent", history.filter((item) => item.delivery_status === "sent").length],
+    [t("reminders.sent"), history.filter((item) => item.delivery_status === "sent").length],
     ["Read", history.filter((item) => item.delivery_status === "read").length],
-    ["Failed", history.filter((item) => item.delivery_status === "failed").length],
-    ["Next reminder", settings?.next_reminder_at ? new Date(settings.next_reminder_at).toLocaleString() : "Not scheduled"],
+    [t("reminders.failed"), history.filter((item) => item.delivery_status === "failed").length],
+    [t("reminders.ready"), settings?.next_reminder_at ? formatAppDate(settings.next_reminder_at, language, { dateStyle: "medium", timeStyle: "short" }) : t("common.notSet")],
   ];
 
   return <div className="space-y-5">
     <ReminderSectionNavigation active={section} onChange={navigate} />
-    {loading && <p role="status" className="rounded-xl bg-stone-50 p-3 text-sm text-slate-600">Loading reminder data…</p>}
+    {loading && <p role="status" className="rounded-xl bg-stone-50 p-3 text-sm text-slate-600">{t("common.loading")}</p>}
     {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
     {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
 
     {section === "overview" && <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-      <div><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Reminder workspace</p><h2 className="mt-1 text-2xl font-bold">Overview</h2><p className="mt-1 text-sm text-slate-600">Readiness, audience, delivery health, and the next scheduled action.</p></div>
+      <div><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{t("financial.reminders")}</p><h2 className="mt-1 text-2xl font-bold">{t("reminders.overview")}</h2></div>
       <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
         {summary.map(([label, value]) => <div key={label} className="min-h-24 rounded-xl border border-stone-200 bg-stone-50 p-3"><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 break-words text-lg font-bold capitalize tabular-nums text-slate-950">{value}</p></div>)}
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigate("send")} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold text-white">Send Reminders</button>
+        <button type="button" onClick={() => navigate("send")} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold text-white">{t("reminders.send")}</button>
         {[["Send Thank You", "thank-you"], ["View Operations", "operations"], ["Open Settings", "settings"]].map(([label, value]) => <button key={value} type="button" onClick={() => navigate(value as ReminderSection)} className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 font-semibold text-slate-700 hover:bg-stone-50">{label}</button>)}
       </div>
     </section>}

@@ -9,6 +9,8 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
+import LanguageSwitch from "@/components/LanguageSwitch";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 
 import {
   getCurrentUserProfile,
@@ -79,9 +81,12 @@ function createHeaderUser(
 export default function Header({
   onMenuClick,
 }: HeaderProps) {
+  const { t } = useAppLanguage();
   const router = useRouter();
   const pathname = usePathname();
-  const pageTitle = getAuthenticatedHeaderTitle(pathname);
+  const pageTitle = /^\/events\/[^/]+\/contributions(?:\/|$)/.test(pathname)
+    ? t("financial.title")
+    : getAuthenticatedHeaderTitle(pathname);
 
   const supabase = useMemo(
     () => createClient(),
@@ -229,7 +234,7 @@ export default function Header({
             </h2>
 
             <p className="mt-1 hidden text-sm text-slate-500 sm:block">
-              Welcome back to Smart Event Pass
+              {t("header.welcome")}
             </p>
           </div>
         </div>
@@ -238,12 +243,14 @@ export default function Header({
           <button
             type="button"
             className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
-            aria-label="Notifications"
+            aria-label={t("header.notifications")}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
           </button>
 
-          <div className="flex items-center gap-3">
+          <LanguageSwitch />
+
+          <div className="hidden items-center gap-3 md:flex">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 font-bold text-white">
               {isUserLoading
                 ? "..."
@@ -280,7 +287,7 @@ export default function Header({
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
-            aria-label="Logout"
+            aria-label={t("header.logout")}
           >
             <span className="sm:hidden">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -290,8 +297,8 @@ export default function Header({
 
             <span className="hidden sm:inline">
               {isLoggingOut
-                ? "Logging out..."
-                : "Logout"}
+                ? t("header.loggingOut")
+                : t("header.logout")}
             </span>
           </button>
         </div>

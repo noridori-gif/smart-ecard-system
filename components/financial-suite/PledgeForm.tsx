@@ -1,44 +1,33 @@
 "use client";
 import { useState } from "react";
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import type { FinancialPledge, PledgeInput } from "@/services/financialSuiteService";
 
 type Guest = { id: number; full_name: string; phone: string | null; email: string | null };
-export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }: {
-  eventId: number; guests: Guest[]; pledge?: FinancialPledge | null;
-  onSave: (input: PledgeInput) => Promise<void>; onClose: () => void;
-}) {
-  const [form, setForm] = useState(() => pledge ? {
-    guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone,
-    email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "",
-  } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "" });
-  const [saving, setSaving] = useState(false); const [error, setError] = useState("");
-  function chooseGuest(value: string) {
-    const guest = guests.find((item) => item.id === Number(value));
-    setForm((old) => ({ ...old, guestId: value, ...(guest ? { fullName: guest.full_name, phone: guest.phone ?? "", email: guest.email ?? "" } : {}) }));
-  }
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setError("");
-    if (!form.fullName.trim() || !/^\d+(\.\d{1,2})?$/.test(form.amount) || Number(form.amount) <= 0) {
-      setError("Jina na kiasi chanya vinahitajika."); return;
-    }
+export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }: { eventId: number; guests: Guest[]; pledge?: FinancialPledge | null; onSave: (input: PledgeInput) => Promise<void>; onClose: () => void }) {
+  const { t } = useAppLanguage();
+  const [form, setForm] = useState(() => pledge ? { guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone, email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "" } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  function chooseGuest(value: string) { const guest = guests.find((item) => item.id === Number(value)); setForm((old) => ({ ...old, guestId: value, ...(guest ? { fullName: guest.full_name, phone: guest.phone ?? "", email: guest.email ?? "" } : {}) })); }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setError("");
+    if (!form.fullName.trim() || !/^\d+(\.\d{1,2})?$/.test(form.amount) || Number(form.amount) <= 0) { setError(t("pledge.validation")); return; }
     try { setSaving(true); await onSave({ eventId, guestId: form.guestId ? Number(form.guestId) : null, fullName: form.fullName, phone: form.phone, email: form.email, pledgedAmount: form.amount, notes: form.notes }); }
-    catch (err) { setError(err instanceof Error ? err.message : "Ahadi haikuhifadhiwa."); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : t("pledge.saveError")); }
     finally { setSaving(false); }
   }
-  return (
-    <form onSubmit={submit} className="space-y-4">
-      <label className="block text-sm font-semibold">Unganisha na Mgeni Aliyepo (Hiari)
-        <select value={form.guestId} onChange={(e) => chooseGuest(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Mchangiaji Mpya</option>{guests.map((g) => <option key={g.id} value={g.id}>{g.full_name}</option>)}</select>
-      </label>
-      <label className="block text-sm font-semibold">Jina kamili<input required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" /></label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-semibold">Namba ya simu (Hiari)<input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" /><span className="mt-1 block text-xs font-normal text-slate-500">Namba ya simu unaweza kuongeza baadaye.</span></label>
-        <label className="block text-sm font-semibold">Barua pepe (Hiari)<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" /></label>
-      </div>
-      <label className="block text-sm font-semibold">Kiasi kilichoahidiwa (TZS)<input required inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value.replace(/,/g, "") })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" /></label>
-      <label className="block text-sm font-semibold">Maelezo (Hiari)<textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" /></label>
-      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">Ghairi</button><button disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? "Inahifadhi..." : "Hifadhi ahadi"}</button></div>
-    </form>
-  );
+  const field = "mt-1 w-full rounded-xl border border-slate-300 px-3 py-2";
+  return <form onSubmit={submit} className="space-y-4">
+    <label className="block text-sm font-semibold">{t("pledge.linkGuest")}<select value={form.guestId} onChange={(event) => chooseGuest(event.target.value)} className={field}><option value="">{t("pledge.standalone")}</option>{guests.map((guest) => <option key={guest.id} value={guest.id}>{guest.full_name}</option>)}</select></label>
+    <label className="block text-sm font-semibold">{t("pledge.fullName")}<input required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className={field} /></label>
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className="block text-sm font-semibold">{t("pledge.phone")}<input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className={field} /><span className="mt-1 block text-xs font-normal text-slate-500">{t("pledge.phoneHelper")}</span></label>
+      <label className="block text-sm font-semibold">{t("pledge.email")}<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={field} /></label>
+    </div>
+    <label className="block text-sm font-semibold">{t("pledge.amount")}<input required inputMode="decimal" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value.replace(/,/g, "") })} className={field} /></label>
+    <label className="block text-sm font-semibold">{t("pledge.notes")}<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className={field} /></label>
+    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button><button disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? t("common.saving") : t("pledge.save")}</button></div>
+  </form>;
 }
