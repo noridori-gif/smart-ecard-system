@@ -73,8 +73,10 @@ export async function getFinancialSuite(eventId: number) {
 
 export async function createPledge(input: PledgeInput) {
   const normalizedPhone = normalizeTanzanianPhone(input.phone);
-  const { data: duplicate } = await supabase.from("event_pledges").select("id,full_name")
-    .eq("event_id", input.eventId).eq("normalized_phone", normalizedPhone).is("cancelled_at", null).limit(1);
+  const { data: duplicate } = normalizedPhone
+    ? await supabase.from("event_pledges").select("id,full_name")
+        .eq("event_id", input.eventId).eq("normalized_phone", normalizedPhone).is("cancelled_at", null).limit(1)
+    : { data: null };
   if (duplicate?.length) throw new Error(`Possible duplicate: ${duplicate[0].full_name} already uses this phone.`);
   const { error } = await supabase.from("event_pledges").insert({
     event_id: input.eventId, guest_id: input.guestId || null, full_name: input.fullName.trim(),

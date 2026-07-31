@@ -418,8 +418,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
                     : mode === "history"
                       ? `Payment history · ${selected?.full_name}`
                       : selected
-                        ? "Edit pledge"
-                        : "Create pledge"}
+                        ? "Hariri ahadi"
+                        : "Tengeneza ahadi"}
                 </h2>
                 {mode === "pledge" ? (
                   <PledgeForm

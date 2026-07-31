@@ -133,8 +133,8 @@ export function FinancialContributorsWorkspace({
               <table className="w-full min-w-[1240px] text-left text-[15px]">
                 <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="min-w-56 px-5 py-4">Contributor</th>
-                    <th className="min-w-40 px-5 py-4">Phone</th>
+                    <th className="min-w-56 px-5 py-4">Mchangiaji</th>
+                    <th className="min-w-40 px-5 py-4">Simu</th>
                     {["Pledged", "Paid", "Balance"].map((heading) => (
                       <th key={heading} className="min-w-40 px-5 py-4 text-right">
                         {heading}

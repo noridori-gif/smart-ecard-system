@@ -21,6 +21,7 @@ export function formatTzs(value: string | number) {
 
 export function normalizeTanzanianPhone(phone: string) {
   let value = phone.trim().replace(/\D/g, "");
+  if (!value) return "";
   if (value.startsWith("2550")) value = `255${value.slice(4)}`;
   else if (value.startsWith("0")) value = `255${value.slice(1)}`;
   else if (/^[67]\d{8}$/.test(value)) value = `255${value}`;

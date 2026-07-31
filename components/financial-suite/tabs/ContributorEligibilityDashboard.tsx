@@ -44,14 +44,14 @@ export default function ContributorEligibilityDashboard({
 
   const count = (predicate: (row: typeof rows[number]) => boolean) => rows.filter(predicate).length;
   const metrics = [
-    ["Total Contributors", rows.length],
-    ["Eligible Contributors", count(({ pledge }) => ["single", "double"].includes(pledge.guest_eligibility_status))],
-    ["Below Minimum", count(({ pledge }) => pledge.guest_eligibility_status === "below_minimum")],
-    ["Single Card Eligible", count(({ pledge }) => pledge.guest_eligibility_status === "single")],
-    ["Double Card Eligible", count(({ pledge }) => pledge.guest_eligibility_status === "double")],
-    ["Linked Guests", count(({ guest }) => Boolean(guest))],
-    ["Needs Review", count(({ pledge }) => pledge.guest_eligibility_status === "needs_review" || pledge.guest_eligibility_status === "sync_failed")],
-    ["Pending Guests", count(({ pledge }) => pledge.guest_eligibility_status === "pending_guest")],
+    ["Wachangiaji Wote", rows.length],
+    ["Wachangiaji Wanaostahiki", count(({ pledge }) => ["single", "double"].includes(pledge.guest_eligibility_status))],
+    ["Hajafikia Kiwango", count(({ pledge }) => pledge.guest_eligibility_status === "below_minimum")],
+    ["Kadi ya Mtu Mmoja", count(({ pledge }) => pledge.guest_eligibility_status === "single")],
+    ["Kadi ya Watu Wawili", count(({ pledge }) => pledge.guest_eligibility_status === "double")],
+    ["Wageni Waliounganishwa", count(({ guest }) => Boolean(guest))],
+    ["Inahitaji Ukaguzi", count(({ pledge }) => pledge.guest_eligibility_status === "needs_review" || pledge.guest_eligibility_status === "sync_failed")],
+    ["Wageni Wanaosubiri", count(({ pledge }) => pledge.guest_eligibility_status === "pending_guest")],
   ] as const;
   async function recalculate(pledge: FinancialPledge) {
     try { setBusyId(pledge.id); setError(""); await recalculateContributorGuest(pledge.id); await onRefresh(); }
@@ -65,7 +65,7 @@ export default function ContributorEligibilityDashboard({
   return <div className="space-y-5">
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <section aria-labelledby="eligibility-summary-title">
-      <div><h2 id="eligibility-summary-title" className="sep-section-title">Contributor Eligibility</h2><p className="sep-secondary mt-1">Live invitation eligibility from the event&apos;s authoritative financial settings.</p></div>
+      <div><h2 id="eligibility-summary-title" className="sep-section-title">Ustahiki wa Wachangiaji</h2><p className="sep-secondary mt-1">Hali ya sasa ya wanaostahiki mwaliko kulingana na mipangilio ya fedha ya tukio.</p></div>
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">{metrics.map(([label, value]) => <article key={label} className="sep-card p-4"><p className="text-xs font-semibold leading-5 text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-slate-500">{rows.length ? `${((value / rows.length) * 100).toFixed(1)}%` : "0.0%"}</p></article>)}</div>
     </section>
     <section className="sep-card p-4 sm:p-5" aria-labelledby="settings-summary-title"><div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start"><div><h2 id="settings-summary-title" className="sep-card-title">Current Event Settings</h2><p className="sep-secondary mt-1">{settings.contributor_guest_sync_enabled ? "Contributor guest synchronization is enabled." : "Contributor guest synchronization is disabled."}</p></div><Link href={`/events/${eventId}/contributions?tab=settings`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#e7e1d7] px-4 text-sm font-semibold">Open Settings</Link></div><dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">{[
@@ -76,9 +76,9 @@ export default function ContributorEligibilityDashboard({
     ].map(([label,value]) => <div key={label} className="rounded-xl bg-stone-50 p-3"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 font-bold">{value}</dd></div>)}</dl></section>
     <section className="sep-card overflow-hidden">
       <div className="border-b border-[#e7e1d7] p-4"><label className="text-sm font-semibold">Filter eligibility<select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} className="mt-1 min-h-12 w-full rounded-xl border border-[#e7e1d7] px-3 md:max-w-xs">{[
-        ["all","All"],["eligible","Eligible"],["single","Single"],["double","Double"],["below_minimum","Below Minimum"],["needs_review","Needs Review"],["linked","Linked"],["not_linked","Not Linked"],["invitation_sent","Invitation Sent"],["invitation_not_sent","Invitation Not Sent"],
+        ["all","Wote"],["eligible","Wanastahiki"],["single","Kadi ya Mtu Mmoja"],["double","Kadi ya Watu Wawili"],["below_minimum","Hajafikia Kiwango"],["needs_review","Inahitaji Ukaguzi"],["linked","Ameunganishwa"],["not_linked","Hajaunganishwa"],["invitation_sent","Mwaliko Umetumwa"],["invitation_not_sent","Mwaliko Haujatumwa"],
       ].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-      <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1500px] text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>{["Contributor","Phone","Paid Amount","Pledged Amount","Classification Basis","Eligibility Status","Card Type","Allowed Guests","Linked Guest","Invitation Status","Actions"].map((heading) => <th key={heading} className="p-3">{heading}</th>)}</tr></thead><tbody className="divide-y divide-stone-200">{filtered.map((row) => <EligibilityTableRow key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</tbody></table></div>
+      <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1500px] text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>{["Mchangiaji","Simu","Kiasi Kilicholipwa","Kiasi Kilichoahidiwa","Msingi wa Uainishaji","Hali ya Ustahiki","Aina ya Kadi","Wageni Wanaoruhusiwa","Mgeni Aliyeunganishwa","Hali ya Mwaliko","Vitendo"].map((heading) => <th key={heading} className="p-3">{heading}</th>)}</tr></thead><tbody className="divide-y divide-stone-200">{filtered.map((row) => <EligibilityTableRow key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</tbody></table></div>
       <div className="grid gap-3 p-3 lg:hidden">{filtered.map((row) => <EligibilityMobileCard key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</div>
       {!filtered.length && <p className="p-10 text-center text-sm text-slate-500">No contributors match this filter.</p>}
     </section>
@@ -88,7 +88,8 @@ export default function ContributorEligibilityDashboard({
 type Row = { pledge: FinancialPledge; guest: FinancialGuest | null; invitation: { id: number; invitation_status: string; rsvp_status: string; viewed_at: string | null } | null; invitationSent: boolean };
 function EligibilityBadge({ value }: { value: string }) {
   const tone = ["single","double","eligible"].includes(value) ? "bg-emerald-50 text-emerald-700" : ["needs_review","pending_guest","sync_failed"].includes(value) ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700";
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold capitalize ${tone}`}>{value.replaceAll("_", " ")}</span>;
+  const labels: Record<string,string> = { eligible:"Anastahiki", single:"Kadi ya Mtu Mmoja", double:"Kadi ya Watu Wawili", below_minimum:"Hajafikia Kiwango", needs_review:"Inahitaji Ukaguzi", pending_guest:"Mgeni Anasubiri", not_linked:"Hajaunganishwa", sync_failed:"Inahitaji Ukaguzi" };
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>{labels[value] ?? value.replaceAll("_", " ")}</span>;
 }
 function Actions({ row, eventId, busy, onEdit, onUnlink, onRecalculate }: { row: Row; eventId: number; busy: boolean; onEdit: (pledge: FinancialPledge) => void; onUnlink: (pledge: FinancialPledge) => Promise<void>; onRecalculate: (pledge: FinancialPledge) => Promise<void> }) {
   const button = "min-h-9 rounded-lg border border-[#e7e1d7] px-2.5 text-xs font-semibold hover:bg-stone-50 disabled:opacity-50";

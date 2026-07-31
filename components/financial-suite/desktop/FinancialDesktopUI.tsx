@@ -229,7 +229,7 @@ export function FinancialOverviewContent({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">{actions}</div>
       <section>
-        <h2 className="text-xl font-bold text-slate-950">Contributor status</h2>
+        <h2 className="text-xl font-bold text-slate-950">Hali ya wachangiaji</h2>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
           {statusCards.map(([label, value, style]) => (
             <article key={label} className={`rounded-2xl border border-transparent p-5 ${style}`}>
