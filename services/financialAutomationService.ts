@@ -41,7 +41,7 @@ export function getReminderEligibility(pledges:FinancialPledge[],eventDate:strin
   const eventPassed=new Date(`${eventDate}T23:59:59`).getTime()<Date.now();
   const deadlinePassed=deadline?new Date(`${deadline}T23:59:59`).getTime()<Date.now():false;
   return pledges.map((pledge)=>{
-    let reason="";if(!settings.reminders_enabled)reason="Reminders disabled";else if(pledge.calculated_status==="cancelled")reason="Cancelled";else if(Number(pledge.balance)<=0)reason="Completed";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="Invalid phone";else if(deadlinePassed&&!settings.allow_after_deadline)reason="Contribution deadline has passed";else if(eventPassed&&settings.stop_after_event_date&&!settings.allow_after_event_date)reason="Event has passed";
+    let reason="";if(!settings.reminders_enabled)reason="Reminders disabled";else if(pledge.calculated_status==="cancelled")reason="Cancelled";else if(Number(pledge.balance)<=0)reason="Completed";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone ?? ""))reason="Invalid phone";else if(deadlinePassed&&!settings.allow_after_deadline)reason="Contribution deadline has passed";else if(eventPassed&&settings.stop_after_event_date&&!settings.allow_after_event_date)reason="Event has passed";
     return {pledge,eligible:!reason,reason};
   });
 }

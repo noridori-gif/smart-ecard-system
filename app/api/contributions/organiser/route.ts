@@ -15,8 +15,12 @@ type Body = {
   channel?: unknown; confirmed?: unknown; language?: unknown;
 };
 function text(value: unknown, max = 500) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
+function optionalPhone(value: unknown) {
+  const phone = text(value, 30);
+  return { phone: phone || null, normalizedPhone: phone ? normalizeTanzanianPhone(phone) : null };
+}
 function safeError(message: string) {
-  const known = ["Access denied", "Pledge not found", "Payment exceeds the remaining pledge balance", "Payment is not allowed"];
+  const known = ["Access denied", "Pledge not found", "A contribution already exists for this event and phone", "Payment exceeds the remaining pledge balance", "Payment is not allowed"];
   return known.some((item) => message.includes(item)) ? message : "The request could not be completed.";
 }
 
@@ -91,11 +95,11 @@ export async function POST(request: Request) {
       }, { headers: noStoreHeaders });
     }
     if (action === "create_pledge") {
-      const phone = text(body?.phone, 30); const amount = text(body?.pledgedAmount, 30);
+      const { phone, normalizedPhone } = optionalPhone(body?.phone); const amount = text(body?.pledgedAmount, 30);
       if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) throw new Error("Invalid amount");
       const { data, error } = await client.rpc("organiser_create_pledge", {
         supplied_token_hash, contributor_name: text(body?.fullName, 160), contributor_phone: phone,
-        contributor_normalized_phone: normalizeTanzanianPhone(phone), contributor_email: text(body?.email, 254),
+        contributor_normalized_phone: normalizedPhone, contributor_email: text(body?.email, 254),
         amount, pledge_notes: text(body?.notes, 1000),
       });
       if (error) throw error; return Response.json({ pledge: data }, { status: 201, headers: noStoreHeaders });
@@ -131,10 +135,10 @@ export async function POST(request: Request) {
       return Response.json(await sendFinancialReminders(db, preview, { type: "organiser_link", linkId: accessLink.id }), { headers: noStoreHeaders });
     }
     if (action === "edit_pledge") {
-      const phone = text(body?.phone, 30);
+      const { phone, normalizedPhone } = optionalPhone(body?.phone);
       const { data, error } = await client.rpc("organiser_update_pledge", {
         supplied_token_hash, target_pledge_id: pledgeId, contributor_name: text(body?.fullName, 160),
-        contributor_phone: phone, contributor_normalized_phone: normalizeTanzanianPhone(phone),
+        contributor_phone: phone, contributor_normalized_phone: normalizedPhone,
         contributor_email: text(body?.email, 254), pledge_notes: text(body?.notes, 1000),
       });
       if (error) throw error; return Response.json({ pledge: data }, { headers: noStoreHeaders });
@@ -170,6 +174,7 @@ export async function POST(request: Request) {
     }
     return Response.json({ error: "Unsupported action." }, { status: 400, headers: noStoreHeaders });
   } catch (error) {
+    console.error("Organiser contribution request failed:", error);
     const message = error instanceof Error ? error.message : "";
     return Response.json({ error: safeError(message) }, { status: 400, headers: noStoreHeaders });
   }

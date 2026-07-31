@@ -4,8 +4,8 @@ import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
 
 export type PledgeStatus = "pledged" | "partial" | "completed" | "cancelled";
 export type FinancialPledge = {
-  id: number; event_id: number; guest_id: number | null; full_name: string; phone: string;
-  normalized_phone: string; email: string | null; pledged_amount: string; currency_code: string;
+  id: number; event_id: number; guest_id: number | null; full_name: string; phone: string | null;
+  normalized_phone: string | null; email: string | null; pledged_amount: string; currency_code: string;
   notes: string | null; total_paid: string; balance: string; calculated_status: PledgeStatus;
   payment_count: number; last_payment_at: string | null; cancelled_at: string | null;
   cancellation_reason: string | null; created_at: string; updated_at: string;
@@ -49,6 +49,33 @@ export type PledgeInput = {
   eventId: number; guestId?: number | null; fullName: string; phone: string;
   email?: string; pledgedAmount: string; notes?: string;
 };
+
+type OptionalPledgePhone = { phone: string | null; normalizedPhone: string | null };
+
+export function normalizeOptionalPledgePhone(phone: string | null | undefined): OptionalPledgePhone {
+  const trimmedPhone = phone?.trim() ?? "";
+  if (!trimmedPhone) return { phone: null, normalizedPhone: null };
+  try {
+    return { phone: trimmedPhone, normalizedPhone: normalizeTanzanianPhone(trimmedPhone) };
+  } catch {
+    throw new Error("INVALID_TZ_PHONE");
+  }
+}
+
+async function assertPledgePhoneAvailable(eventId: number, normalizedPhone: string | null, excludedPledgeId?: number) {
+  if (!normalizedPhone) return;
+  let query = supabase.from("event_pledges").select("id,full_name")
+    .eq("event_id", eventId).eq("normalized_phone", normalizedPhone).is("cancelled_at", null);
+  if (excludedPledgeId !== undefined) query = query.neq("id", excludedPledgeId);
+  const { data, error } = await query.limit(1);
+  if (error) throwPledgePersistenceError(error);
+  if (data?.length) throw new Error(`Possible duplicate: ${data[0].full_name} already uses this phone.`);
+}
+
+function throwPledgePersistenceError(error: { message: string }) {
+  console.error("Pledge persistence error:", error);
+  throw new Error("PLEDGE_SAVE_FAILED");
+}
 export type PaymentCorrectionInput = {
   amount: string; date: string; method: string; reference: string;
   provider: string; notes: string; reason: string;
@@ -72,18 +99,14 @@ export async function getFinancialSuite(eventId: number) {
 }
 
 export async function createPledge(input: PledgeInput) {
-  const normalizedPhone = normalizeTanzanianPhone(input.phone);
-  const { data: duplicate } = normalizedPhone
-    ? await supabase.from("event_pledges").select("id,full_name")
-        .eq("event_id", input.eventId).eq("normalized_phone", normalizedPhone).is("cancelled_at", null).limit(1)
-    : { data: null };
-  if (duplicate?.length) throw new Error(`Possible duplicate: ${duplicate[0].full_name} already uses this phone.`);
+  const { phone, normalizedPhone } = normalizeOptionalPledgePhone(input.phone);
+  await assertPledgePhoneAvailable(input.eventId, normalizedPhone);
   const { error } = await supabase.from("event_pledges").insert({
     event_id: input.eventId, guest_id: input.guestId || null, full_name: input.fullName.trim(),
-    phone: input.phone.trim(), normalized_phone: normalizedPhone, email: input.email?.trim() || null,
+    phone, normalized_phone: normalizedPhone, email: input.email?.trim() || null,
     pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
   });
-  if (error) throw new Error(error.message);
+  if (error) throwPledgePersistenceError(error);
 }
 
 export async function saveFinanceTarget(eventId:number,target:FinanceTarget) {
@@ -100,12 +123,14 @@ export async function updatePledge(id: number, input: PledgeInput, paid: string)
   if (BigInt(input.pledgedAmount) < BigInt(String(paid).split(".")[0])) {
     throw new Error("Pledged amount cannot be lower than the amount already paid.");
   }
+  const { phone, normalizedPhone } = normalizeOptionalPledgePhone(input.phone);
+  await assertPledgePhoneAvailable(input.eventId, normalizedPhone, id);
   const { error } = await supabase.from("event_pledges").update({
-    guest_id: input.guestId || null, full_name: input.fullName.trim(), phone: input.phone.trim(),
-    normalized_phone: normalizeTanzanianPhone(input.phone), email: input.email?.trim() || null,
+    guest_id: input.guestId || null, full_name: input.fullName.trim(), phone,
+    normalized_phone: normalizedPhone, email: input.email?.trim() || null,
     pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
   }).eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throwPledgePersistenceError(error);
 }
 
 export async function recordPayment(pledgeId: number, values: {

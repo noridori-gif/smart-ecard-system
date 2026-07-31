@@ -1,20 +1,28 @@
 "use client";
 import { useState } from "react";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
-import type { FinancialPledge, PledgeInput } from "@/services/financialSuiteService";
+import { normalizeOptionalPledgePhone, type FinancialPledge, type PledgeInput } from "@/services/financialSuiteService";
 
 type Guest = { id: number; full_name: string; phone: string | null; email: string | null };
 export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }: { eventId: number; guests: Guest[]; pledge?: FinancialPledge | null; onSave: (input: PledgeInput) => Promise<void>; onClose: () => void }) {
   const { t } = useAppLanguage();
-  const [form, setForm] = useState(() => pledge ? { guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone, email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "" } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "" });
+  const [form, setForm] = useState(() => pledge ? { guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone ?? "", email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "" } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   function chooseGuest(value: string) { const guest = guests.find((item) => item.id === Number(value)); setForm((old) => ({ ...old, guestId: value, ...(guest ? { fullName: guest.full_name, phone: guest.phone ?? "", email: guest.email ?? "" } : {}) })); }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError("");
     if (!form.fullName.trim() || !/^\d+(\.\d{1,2})?$/.test(form.amount) || Number(form.amount) <= 0) { setError(t("pledge.validation")); return; }
-    try { setSaving(true); await onSave({ eventId, guestId: form.guestId ? Number(form.guestId) : null, fullName: form.fullName, phone: form.phone, email: form.email, pledgedAmount: form.amount, notes: form.notes }); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : t("pledge.saveError")); }
+    try {
+      normalizeOptionalPledgePhone(form.phone);
+      setSaving(true);
+      await onSave({ eventId, guestId: form.guestId ? Number(form.guestId) : null, fullName: form.fullName, phone: form.phone, email: form.email, pledgedAmount: form.amount, notes: form.notes });
+    }
+    catch (cause) {
+      if (cause instanceof Error && cause.message === "INVALID_TZ_PHONE") setError(t("pledge.invalidPhone"));
+      else if (cause instanceof Error && cause.message !== "PLEDGE_SAVE_FAILED") setError(cause.message);
+      else setError(t("pledge.saveError"));
+    }
     finally { setSaving(false); }
   }
   const field = "mt-1 w-full rounded-xl border border-slate-300 px-3 py-2";

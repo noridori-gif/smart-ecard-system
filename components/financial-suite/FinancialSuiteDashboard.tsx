@@ -147,7 +147,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   async function unlinkGuest(pledge: FinancialPledge) {
     if (!window.confirm(`Unlink ${pledge.full_name} from the current guest? The guest and invitation will be preserved.`)) return;
     await updatePledge(pledge.id, {
-      eventId: pledge.event_id, guestId: null, fullName: pledge.full_name, phone: pledge.phone,
+      eventId: pledge.event_id, guestId: null, fullName: pledge.full_name, phone: pledge.phone ?? "",
       email: pledge.email ?? undefined, pledgedAmount: pledge.pledged_amount, notes: pledge.notes ?? undefined,
     }, pledge.total_paid);
     setNotice("Guest link removed. Guest and invitation records were preserved.");
