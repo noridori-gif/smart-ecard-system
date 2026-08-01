@@ -224,8 +224,8 @@ export async function POST(
     if(!body.user_id||!body.password||body.password.length<8)return NextResponse.json({error:"Temporary password lazima iwe characters 8 au zaidi."},{status:400});
     const {error:resetError}=await adminClient.auth.admin.updateUserById(body.user_id,{password:body.password});
     if(resetError)return NextResponse.json({error:"Password haikuweza kuwekwa upya."},{status:400});
-    const {error:flagError}=await adminClient.from("profiles").update({force_password_change:true,updated_at:new Date().toISOString()}).eq("id",body.user_id);
-    if(flagError)return NextResponse.json({error:"Password reset status haikuweza kuhifadhiwa."},{status:500});
+    const {data:flaggedProfiles,error:flagError}=await adminClient.from("profiles").update({force_password_change:true,updated_at:new Date().toISOString()}).eq("id",body.user_id).select("id,force_password_change");
+    if(flagError||flaggedProfiles?.length!==1||flaggedProfiles[0]?.force_password_change!==true)return NextResponse.json({error:"Password imewekwa upya, lakini status yake inahitaji kusawazishwa."},{status:409,headers:{"Cache-Control":"no-store, max-age=0"}});
     return NextResponse.json({message:"Temporary password imewekwa. User atalazimika kuibadilisha."});
   }
   if(body.phone&&!phone)return NextResponse.json({error:"Weka namba halali ya Tanzania (+255)."},{status:400});

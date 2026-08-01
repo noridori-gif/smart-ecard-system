@@ -86,6 +86,10 @@ export default function ChangePasswordPage() {
   ) {
     event.preventDefault();
 
+    if (isSaving) {
+      return;
+    }
+
     setErrorMessage("");
     setSuccessMessage("");
 
@@ -126,8 +130,8 @@ export default function ChangePasswordPage() {
 
     try {
       const response=await fetch("/api/auth/change-password",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({currentPassword:formData.currentPassword,newPassword:formData.newPassword})});
-      const text=await response.text();let result:{success?:boolean;error?:string}={};if(text&&response.headers.get("content-type")?.includes("application/json")){try{result=JSON.parse(text) as typeof result;}catch(error){if(process.env.NODE_ENV==="development")console.error("Invalid change-password JSON",error);}}
-      if(!response.ok||!result.success)throw new Error(result.error==="invalid-current-password"?"Current password si sahihi.":"Nenosiri halikuweza kubadilishwa. Tafadhali jaribu tena.");
+      const text=await response.text();let result:{success?:boolean;redirectTo?:string;error?:string}={};if(text&&response.headers.get("content-type")?.includes("application/json")){try{result=JSON.parse(text) as typeof result;}catch(error){if(process.env.NODE_ENV==="development")console.error("Invalid change-password JSON",error);}}
+      if(!response.ok||!result.success)throw new Error(result.error==="invalid-current-password"?"Current password si sahihi.":result.error?.includes("reconciliation")||result.error?.includes("session-refresh")?"Password imebadilishwa, lakini account inahitaji kusawazishwa. Tafadhali wasiliana na administrator.":"Nenosiri halikuweza kubadilishwa. Tafadhali jaribu tena.");
 
       setFormData(
         initialForm
@@ -136,7 +140,8 @@ export default function ChangePasswordPage() {
       setSuccessMessage(
         "Password imebadilishwa vizuri. Tumia password mpya utakapo-login tena."
       );
-      router.replace("/dashboard");router.refresh();
+      router.replace(result.redirectTo??"/dashboard");
+      router.refresh();
     } catch (error) {
       console.error(
         "Password change error:",

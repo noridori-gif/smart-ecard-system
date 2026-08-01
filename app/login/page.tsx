@@ -163,9 +163,10 @@ export default function LoginPage() {
       setIsLoading(true);
 
       const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({identity,password})});
-      const result=await response.json() as {success?:boolean;mustChangePassword?:boolean;error?:string};
+      const result=await response.json() as {success?:boolean;mustChangePassword?:boolean;redirectTo?:string;error?:string};
       if(!response.ok||!result.success){setErrorMessage(getLoginErrorMessage(result.error??"Taarifa za kuingia si sahihi."));return;}
-      const redirectPath=result.mustChangePassword?"/change-password":getSafeRedirectPath();
+      const requestedPath=getSafeRedirectPath();
+      const redirectPath=result.mustChangePassword?"/change-password":requestedPath!=="/dashboard"?requestedPath:result.redirectTo??"/dashboard";
 
       router.replace(
         redirectPath

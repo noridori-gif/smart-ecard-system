@@ -29,7 +29,10 @@ export async function POST(request:Request){
   if(!internalEmail)return response({error:genericError},401);
   const supabase=await createClient();const {data,error}=await supabase.auth.signInWithPassword({email:internalEmail,password});
   if(error||!data.user)return response({error:genericError},401);
-  const {data:profile}=await admin.from("profiles").select("is_active,force_password_change").eq("id",data.user.id).maybeSingle();
+  const {data:profile,error:profileError}=await admin.from("profiles").select("role,is_active,force_password_change").eq("id",data.user.id).maybeSingle();
+  if(profileError||!profile){await supabase.auth.signOut();return response({error:genericError},500);}
   if(!profile?.is_active){await supabase.auth.signOut();return response({error:genericError},401);}
-  attempts.delete(key);return response({success:true,mustChangePassword:Boolean(profile.force_password_change)});
+  const mustChangePassword=profile.force_password_change===true;
+  const redirectTo=mustChangePassword?"/change-password":profile.role==="scanner"?"/check-in":"/dashboard";
+  attempts.delete(key);return response({success:true,mustChangePassword,redirectTo});
 }

@@ -118,6 +118,11 @@ function copyResponseCookies(
       destinationResponse.cookies.set(cookie);
     });
 
+  destinationResponse.headers.set(
+    "Cache-Control",
+    "no-store, max-age=0"
+  );
+
   return destinationResponse;
 }
 
@@ -202,19 +207,20 @@ export async function updateSession(
     }
   );
 
-  const {
-    data: claimsData,
-    error: claimsError,
-  } = await supabase.auth.getClaims();
+  supabaseResponse.headers.set(
+    "Cache-Control",
+    "no-store, max-age=0"
+  );
 
-  const claims = claimsError
-    ? null
-    : claimsData?.claims ?? null;
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
   const pathname =
     request.nextUrl.pathname;
 
-  if (!claims) {
+  if (userError || !user) {
     if (isProtectedRoute(pathname)) {
       const loginUrl =
         request.nextUrl.clone();
@@ -238,12 +244,11 @@ export async function updateSession(
     return supabaseResponse;
   }
 
-  const userId =
-    typeof claims.sub === "string"
-      ? claims.sub
-      : null;
+  const userId = user.id;
 
   let profile: ProxyProfile | null = null;
+
+  let profileLookupFailed = false;
 
   if (userId) {
     const {
@@ -259,13 +264,47 @@ export async function updateSession(
       .eq("id", userId)
       .maybeSingle();
 
+    profileLookupFailed = Boolean(profileError);
+
     if (!profileError && profileData) {
       profile =
         profileData as ProxyProfile;
     }
   }
 
-  if (!profile || !profile.is_active) {
+  if (profileLookupFailed || !profile || !profile.is_active) {
+    if (process.env.NODE_ENV === "development") {
+      console.info("Proxy profile lookup decision", {
+        userId,
+        pathname,
+        decision: profileLookupFailed
+          ? "profile-query-error"
+          : !profile
+            ? "profile-not-found"
+            : "account-inactive",
+      });
+    }
+
+    if (profileLookupFailed) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "authentication-profile-unavailable",
+          },
+          {
+            status: 503,
+            headers: { "Cache-Control": "no-store, max-age=0" },
+          }
+        );
+      }
+
+      return new NextResponse("Authentication profile is temporarily unavailable.", {
+        status: 503,
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      });
+    }
+
     await supabase.auth.signOut({
       scope: "local",
     });
@@ -295,7 +334,21 @@ export async function updateSession(
     );
   }
 
-  if(profile.force_password_change&&isProtectedRoute(pathname)&&pathname!=="/change-password")return createRedirectResponse(request,"/change-password",supabaseResponse);
+  const requiresPasswordChange = profile.force_password_change === true;
+
+  if (process.env.NODE_ENV === "development") {
+    console.info("Proxy force-password decision", {
+      userId,
+      pathname,
+      forcePasswordChange: requiresPasswordChange,
+      decision:
+        requiresPasswordChange && isProtectedRoute(pathname)
+          ? "redirect-change-password"
+          : "allow",
+    });
+  }
+
+  if(requiresPasswordChange&&isProtectedRoute(pathname))return createRedirectResponse(request,"/change-password",supabaseResponse);
 
   if (pathname === "/login") {
     return createRedirectResponse(
