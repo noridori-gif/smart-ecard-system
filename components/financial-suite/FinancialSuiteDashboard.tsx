@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import FinancialSummaryStrip from "./FinancialSummaryStrip";
 import FinancialTabNavigation from "./FinancialTabNavigation";
+import PublicPledgeLinksPanel from "./PublicPledgeLinksPanel";
 import type { FinancialTab } from "@/lib/financialTabs";
 import PledgeForm from "./PledgeForm";
 import RecordPaymentDialog from "./RecordPaymentDialog";
@@ -361,6 +362,12 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           description="Analyse collections and produce the financial closing package."
         >
           <FinancialReportsTab eventId={eventId} />
+        </TabSection>
+      )}
+
+      {activeTab === "pledge_links" && (
+        <TabSection title="Pledge Link" description="Manage secure public pledge capture and review its automation timeline.">
+          <PublicPledgeLinksPanel eventId={eventId} />
         </TabSection>
       )}
 

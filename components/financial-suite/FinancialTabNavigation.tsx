@@ -5,7 +5,7 @@ import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const labels: Record<FinancialTab, TranslationKey> = {
-  overview: "financial.overview", contributors: "financial.contributors", eligibility: "financial.eligibility", invitation_queue: "financial.invitationQueue", payments: "financial.payments", reminders: "financial.reminders", reports: "financial.reports", settings: "financial.settings",
+  overview: "financial.overview", contributors: "financial.contributors", eligibility: "financial.eligibility", invitation_queue: "financial.invitationQueue", payments: "financial.payments", reminders: "financial.reminders", pledge_links: "financial.pledgeLinks", reports: "financial.reports", settings: "financial.settings",
 };
 
 export default function FinancialTabNavigation({active,onChange}:{active:FinancialTab;onChange:(tab:FinancialTab)=>void}) {

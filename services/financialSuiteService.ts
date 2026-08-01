@@ -12,6 +12,8 @@ export type FinancialPledge = {
   guest_eligibility_status: "not_linked" | "below_minimum" | "pending_guest" | "single" | "double" | "needs_review" | "sync_failed";
   linked_guest_allowed_guests: number | null;
   payment_row_count: number; has_protected_financial_history: boolean;
+  source: "internal"|"import"|"organiser_link"|"public_pledge_link";
+  public_pledge_link_id: number|null; expected_completion_date: string|null;
 };
 export type NumericInput = string | number | null | undefined;
 export type FinanceSummary = {

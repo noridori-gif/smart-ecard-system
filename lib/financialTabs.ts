@@ -5,6 +5,7 @@ export const FINANCIAL_TABS = [
   "invitation_queue",
   "payments",
   "reminders",
+  "pledge_links",
   "reports",
   "settings",
 ] as const;
