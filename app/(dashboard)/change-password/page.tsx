@@ -126,8 +126,8 @@ export default function ChangePasswordPage() {
 
     try {
       const response=await fetch("/api/auth/change-password",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({currentPassword:formData.currentPassword,newPassword:formData.newPassword})});
-      const result=await response.json() as {success?:boolean;error?:string};
-      if(!response.ok||!result.success)throw new Error(result.error??"Password haikuweza kubadilishwa.");
+      const text=await response.text();let result:{success?:boolean;error?:string}={};if(text&&response.headers.get("content-type")?.includes("application/json")){try{result=JSON.parse(text) as typeof result;}catch(error){if(process.env.NODE_ENV==="development")console.error("Invalid change-password JSON",error);}}
+      if(!response.ok||!result.success)throw new Error(result.error==="invalid-current-password"?"Current password si sahihi.":"Nenosiri halikuweza kubadilishwa. Tafadhali jaribu tena.");
 
       setFormData(
         initialForm
@@ -136,6 +136,7 @@ export default function ChangePasswordPage() {
       setSuccessMessage(
         "Password imebadilishwa vizuri. Tumia password mpya utakapo-login tena."
       );
+      router.replace("/dashboard");router.refresh();
     } catch (error) {
       console.error(
         "Password change error:",

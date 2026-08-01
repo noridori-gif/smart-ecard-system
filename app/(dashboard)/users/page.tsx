@@ -17,6 +17,7 @@ import {
   updateUserActiveStatus,
   updateUserRole,
   resetManagedUserPassword,
+  deleteManagedUser,
   type UserProfile,
   type UserRole,
 } from "@/services/profileService";
@@ -95,6 +96,7 @@ export default function UsersPage() {
 
   const [successMessage, setSuccessMessage] =
     useState("");
+  const [deleteTarget,setDeleteTarget]=useState<UserProfile|null>(null);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -653,6 +655,7 @@ export default function UsersPage() {
                               ? "Deactivate"
                               : "Activate"}
                         </button>
+                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={()=>setDeleteTarget(profile)} className="ml-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">Delete Permanently</button>
                       </td>
                     </tr>
                   );
@@ -663,6 +666,10 @@ export default function UsersPage() {
         )}
       </div>
 
+      {deleteTarget&&<PermanentDeleteDialog profile={deleteTarget} busy={updatingUserId===deleteTarget.id} onClose={()=>setDeleteTarget(null)} onDelete={async(confirmation,password)=>{try{setUpdatingUserId(deleteTarget.id);setErrorMessage("");await deleteManagedUser(deleteTarget.id,confirmation,password);setProfiles(current=>current.filter(item=>item.id!==deleteTarget.id));setDeleteTarget(null);setSuccessMessage("User deleted successfully.");}catch(error){const code=error instanceof Error?error.message:"delete-failed";setErrorMessage(code==="user-owns-protected-records"?"User owns protected records.":code==="cannot-delete-last-administrator"?"Cannot delete the last administrator.":code==="administrator-reauthentication-failed"?"Administrator password is incorrect.":"User could not be deleted.");}finally{setUpdatingUserId("");}}}/>}
+
     </section>
   );
 }
+
+function PermanentDeleteDialog({profile,busy,onClose,onDelete}:{profile:UserProfile;busy:boolean;onClose:()=>void;onDelete:(confirmation:string,password:string)=>Promise<void>}){const identifier=profile.login_username||profile.login_email?.split("@")[0]||profile.id;const phrase=`DELETE ${identifier}`;const [confirmation,setConfirmation]=useState("");const [password,setPassword]=useState("");useEffect(()=>{const handler=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!busy)onClose();};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler);},[busy,onClose]);return <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 sm:items-center sm:p-6" role="presentation" onMouseDown={event=>event.target===event.currentTarget&&!busy&&onClose()}><section role="dialog" aria-modal="true" aria-labelledby="delete-user-title" aria-describedby="delete-user-description" className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-xl sm:rounded-2xl sm:p-6"><h2 id="delete-user-title" className="text-xl font-black text-red-700">Confirm permanent deletion</h2><p id="delete-user-description" className="mt-2 text-sm text-slate-600">Disabling is recommended if this account has historical activity. Permanent deletion cannot be undone.</p><dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-sm"><div><dt className="text-slate-500">Full name</dt><dd className="font-bold">{profile.full_name||"—"}</dd></div><div><dt className="text-slate-500">Username</dt><dd className="font-bold">{profile.login_username||"—"}</dd></div><div><dt className="text-slate-500">Phone</dt><dd className="font-bold">{profile.login_phone||"—"}</dd></div><div><dt className="text-slate-500">Real email</dt><dd className="font-bold">{profile.login_email||"—"}</dd></div><div><dt className="text-slate-500">Role</dt><dd className="font-bold">{getRoleLabel(profile.role)}</dd></div><div><dt className="text-slate-500">Status</dt><dd className="font-bold">{profile.is_active?"Active":"Disabled"}</dd></div></dl><label className="mt-4 block text-sm font-bold">Type confirmation phrase <span className="font-mono text-red-700">{phrase}</span><input autoFocus value={confirmation} onChange={event=>setConfirmation(event.target.value)} className="mt-1.5 w-full rounded-xl border px-3 py-3"/></label><label className="mt-4 block text-sm font-bold">Re-enter administrator password<input type="password" value={password} onChange={event=>setPassword(event.target.value)} className="mt-1.5 w-full rounded-xl border px-3 py-3"/></label><div className="mt-5 flex justify-end gap-2"><button type="button" disabled={busy} onClick={onClose} className="rounded-xl border px-4 py-3 font-bold">Cancel</button><button type="button" disabled={busy||confirmation!==phrase||!password} onClick={()=>void onDelete(confirmation,password)} className="rounded-xl bg-red-700 px-4 py-3 font-bold text-white disabled:opacity-40">{busy?"Deleting…":"Delete Permanently"}</button></div></section></div>}

@@ -295,7 +295,7 @@ export async function updateSession(
     );
   }
 
-  if(profile.force_password_change&&pathname!=="/change-password")return createRedirectResponse(request,"/change-password",supabaseResponse);
+  if(profile.force_password_change&&isProtectedRoute(pathname)&&pathname!=="/change-password")return createRedirectResponse(request,"/change-password",supabaseResponse);
 
   if (pathname === "/login") {
     return createRedirectResponse(
