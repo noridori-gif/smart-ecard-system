@@ -19,7 +19,7 @@ import FinancialImportWizard from "./FinancialImportWizard";
 import ContributorGuestEligibilitySettings from "./ContributorGuestEligibilitySettings";
 import BudgetDeadlineEditor from "./BudgetDeadlineEditor";
 import ContributionBulkActionsDialog from "./ContributionBulkActionsDialog";
-import FinancialReminderDialog from "./FinancialReminderDialog";
+import FinancialCommunicationDialog from "./FinancialCommunicationDialog";
 import EditPaymentDialog from "./EditPaymentDialog";
 import VoidPaymentDialog from "./VoidPaymentDialog";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
@@ -33,6 +33,7 @@ import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsW
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
 import { getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
+import { getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
 import {
   cancelPledge, correctPayment, createPledge, exportPledges, getFinancialSuite, getPayments, recordPayment,
   updatePledge, downloadPledgeTemplate, permanentlyDeletePledge, restorePledge, type FinancialPledge, type PledgeInput,
@@ -47,8 +48,10 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const router=useRouter();const pathname=usePathname();const activeTab=initialTab;
   const [data, setData] = useState<Awaited<ReturnType<typeof getFinancialSuite>> | null>(null);
   const [eligibilitySettings, setEligibilitySettings] = useState<ContributorGuestSettings | null>(null);
+  const [communicationHistory, setCommunicationHistory] = useState<ReminderHistoryRow[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState("");
-  const [notice, setNotice] = useState(""); const [mode, setMode] = useState<"pledge" | "payment" | "history" | "correct-payment" | "void-payment" | "import" | "bulk" | "reminder" | null>(null);
+  const [notice, setNotice] = useState(""); const [mode, setMode] = useState<"pledge" | "payment" | "history" | "correct-payment" | "void-payment" | "import" | "bulk" | "communication" | null>(null);
+  const [communication, setCommunication] = useState<{kind:"reminder"|"thank-you";channel?:"sms"|"whatsapp"}>({kind:"reminder"});
   const [selected, setSelected] = useState<FinancialPledge | null>(null);
   const [payments,setPayments]=useState<PledgePayment[]>([]);
   const [selectedPayment,setSelectedPayment]=useState<PledgePayment|null>(null);
@@ -64,8 +67,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     }
     try {
       setLoading(true); setError("");
-      const [suite, settings] = await Promise.all([getFinancialSuite(eventId), getContributorGuestSettings(eventId)]);
-      setData(suite); setEligibilitySettings(settings);
+      const [suite, settings, history] = await Promise.all([getFinancialSuite(eventId), getContributorGuestSettings(eventId), getReminderHistory(eventId)]);
+      setData(suite); setEligibilitySettings(settings); setCommunicationHistory(history);
     }
     catch (err) { setError(err instanceof Error ? err.message : "Financial data could not be loaded."); }
     finally { setLoading(false); }
@@ -246,6 +249,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           pages={pages}
           total={filtered.length}
           actionPledgeId={actionPledgeId}
+          communicationHistory={communicationHistory}
           onQuery={(value) => {
             setQuery(value);
             setPage(1);
@@ -268,9 +272,10 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             setSelected(pledge);
             setMode("payment");
           }}
-          onRemind={(pledge) => {
+          onCommunicate={(pledge, kind, channel) => {
             setSelected(pledge);
-            setMode("reminder");
+            setCommunication({kind,channel});
+            setMode("communication");
           }}
           onHistory={(pledge) => void openHistory(pledge)}
           onEdit={(pledge) => {
@@ -395,8 +400,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
               <FinancialImportWizard eventId={eventId} onClose={() => setMode(null)} onImported={load} />
             ) : mode === "bulk" ? (
               <ContributionBulkActionsDialog eventId={eventId} onClose={() => setMode(null)} onCompleted={load} />
-            ) : mode === "reminder" && selected ? (
-              <FinancialReminderDialog eventId={eventId} pledge={selected} onClose={() => setMode(null)} onSent={load} />
+            ) : mode === "communication" && selected ? (
+              <FinancialCommunicationDialog eventId={eventId} pledge={selected} kind={communication.kind} initialChannel={communication.channel} onClose={() => setMode(null)} onSent={load} />
             ) : mode === "correct-payment" && selected && selectedPayment ? (
               <EditPaymentDialog
                 payment={selectedPayment}

@@ -1,19 +1,22 @@
 "use client";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
-import type { TranslationKey } from "@/lib/i18n/translations";
 
 export type ReminderSection =
   | "overview"
   | "send"
   | "thank-you"
-  | "operations"
+  | "sent"
+  | "delivered"
+  | "failed"
+  | "logs"
+  | "templates"
   | "settings";
 
 export const reminderSections: Array<{
   value: ReminderSection;
-  label: TranslationKey;
+  label: string;
 }> = [
-  { value: "overview", label: "reminders.overview" }, { value: "send", label: "reminders.send" }, { value: "thank-you", label: "reminders.thankYou" }, { value: "operations", label: "reminders.operations" }, { value: "settings", label: "reminders.settings" },
+  { value: "overview", label: "Overview" }, { value: "send", label: "Pending Reminders" }, { value: "sent", label: "Sent" }, { value: "delivered", label: "Delivered" }, { value: "failed", label: "Failed" }, { value: "thank-you", label: "Thank You" }, { value: "templates", label: "Templates" }, { value: "logs", label: "Logs" }, { value: "settings", label: "Settings" },
 ];
 
 export function isReminderSection(value: string | null): value is ReminderSection {
@@ -48,7 +51,7 @@ export default function ReminderSectionNavigation({
                 : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"
             }`}
           >
-            {t(section.label)}
+              {section.label}
           </button>
         ))}
       </div>
