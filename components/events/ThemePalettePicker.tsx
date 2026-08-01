@@ -1,5 +1,7 @@
 "use client";
 
+import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+
 export type EventThemePalette = {
   id: string;
   name: string;
@@ -155,17 +157,21 @@ export default function ThemePalettePicker({
   disabled = false,
   onSelect,
 }: ThemePalettePickerProps) {
+  const { language } = useAppLanguage();
+
   return (
     <div>
       <div className="mb-4">
         <h3 className="font-bold text-gray-900">
-          Dress Code Colour Palette
+          {language === "sw"
+            ? "Palette ya Rangi za Dress Code"
+            : "Dress Code Colour Palette"}
         </h3>
 
         <p className="mt-1 text-sm leading-6 text-gray-500">
-          Chagua palette ili rangi
-          za card na dress code
-          zibadilike pamoja.
+          {language === "sw"
+            ? "Chagua palette ili rangi za kadi na dress code zibadilike pamoja."
+            : "Choose a palette to update the card colours and dress code together."}
         </p>
       </div>
 

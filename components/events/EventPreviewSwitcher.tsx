@@ -8,8 +8,8 @@ import type { EventLanguage, InvitationTemplate } from "@/services/eventService"
 export type EventPreviewData = {
   title:string; eventType:string; brideName:string; groomName:string; language:EventLanguage;
   template:InvitationTemplate; invitationMessage?:string; coverImageUrl:string|null;
-  eventDate:string; eventTime:string; venue:string; ceremonyTitle:string; ceremonyTime:string;
-  ceremonyVenue:string; dressCode:string; primary:string; secondary:string; accent:string;
+  eventDate:string; eventTime:string; venue:string; ceremonyTitle:string; ceremonyDate:string; ceremonyTime:string;
+  ceremonyVenue:string; ceremonyMapUrl?:string; receptionMapUrl?:string; dressCode:string; primary:string; secondary:string; accent:string;
 };
 
 type Mode="invitation"|"whatsapp"|"pass";
