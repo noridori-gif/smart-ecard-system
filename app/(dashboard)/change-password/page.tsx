@@ -152,9 +152,9 @@ export default function ChangePasswordPage() {
         );
       }
 
-      if (!user.email) {
+      if (!user.email && !user.phone) {
         throw new Error(
-          "Email ya account haijapatikana."
+          "Login identity ya account haijapatikana."
         );
       }
 
@@ -164,14 +164,7 @@ export default function ChangePasswordPage() {
       } =
         await supabase
           .auth
-          .signInWithPassword({
-            email:
-              user.email,
-
-            password:
-              formData
-                .currentPassword,
-          });
+          .signInWithPassword(user.email?{email:user.email,password:formData.currentPassword}:{phone:user.phone!,password:formData.currentPassword});
 
       if (
         verificationError
@@ -198,6 +191,9 @@ export default function ChangePasswordPage() {
           updateError.message
         );
       }
+
+      const {error:profileUpdateError}=await supabase.from("profiles").update({force_password_change:false,updated_at:new Date().toISOString()}).eq("id",user.id);
+      if(profileUpdateError)throw new Error(profileUpdateError.message);
 
       setFormData(
         initialForm

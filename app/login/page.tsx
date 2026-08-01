@@ -86,6 +86,8 @@ function getLoginErrorMessage(
   return message;
 }
 
+function normalizeTanzanianPhone(value:string){const digits=value.replace(/\D/g,"");const national=digits.startsWith("255")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return /^[67]\d{8}$/.test(national)?`+255${national}`:"";}
+
 export default function LoginPage() {
   const router =
     useRouter();
@@ -101,7 +103,7 @@ export default function LoginPage() {
     setFormData,
   ] =
     useState({
-      email: "",
+      identity: "",
       password: "",
     });
 
@@ -153,20 +155,20 @@ export default function LoginPage() {
       return;
     }
 
-    const email =
-      formData.email
-        .trim()
-        .toLowerCase();
+    const identity=formData.identity.trim();
+    const isEmail=identity.includes("@");
+    const email=isEmail?identity.toLowerCase():"";
+    const phone=isEmail?"":normalizeTanzanianPhone(identity);
 
     const password =
       formData.password;
 
     if (
-      !email ||
+      (!email&&!phone) ||
       !password
     ) {
       setErrorMessage(
-        "Weka email na password."
+        "Weka email au namba halali ya simu pamoja na password."
       );
 
       return;
@@ -181,10 +183,7 @@ export default function LoginPage() {
       } =
         await supabase
           .auth
-          .signInWithPassword({
-            email,
-            password,
-          });
+          .signInWithPassword(isEmail?{email,password}:{phone,password});
 
       if (error) {
         setErrorMessage(
@@ -196,8 +195,9 @@ export default function LoginPage() {
         return;
       }
 
-      const redirectPath =
-        getSafeRedirectPath();
+      const {data:{user}}=await supabase.auth.getUser();
+      const {data:profile}=user?await supabase.from("profiles").select("force_password_change").eq("id",user.id).maybeSingle():{data:null};
+      const redirectPath=profile?.force_password_change?"/change-password":getSafeRedirectPath();
 
       router.replace(
         redirectPath
@@ -242,13 +242,13 @@ export default function LoginPage() {
           className="mt-8 space-y-5"
         >
           <Input
-            label="Email"
-            name="email"
-            type="email"
+            label="Email or Mobile Number"
+            name="identity"
+            type="text"
             value={
-              formData.email
+              formData.identity
             }
-            placeholder="Enter your email"
+            placeholder="Email address or mobile number"
             required
             onChange={
               handleChange

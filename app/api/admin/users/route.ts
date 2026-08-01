@@ -7,15 +7,20 @@ type AllowedRole =
 
 type CreateUserRequest = {
   full_name?: string;
+  authentication_type?: "EMAIL" | "PHONE";
   email?: string;
+  phone?: string;
   password?: string;
   role?: AllowedRole;
+  force_password_change?: boolean;
 };
 
 const allowedRoles: AllowedRole[] = [
   "organizer",
   "scanner",
 ];
+
+function normalizeTanzanianPhone(value:string){const digits=value.replace(/\D/g,"");const national=digits.startsWith("255")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return /^[67]\d{8}$/.test(national)?`+255${national}`:"";}
 
 function getBearerToken(
   request: Request
@@ -178,6 +183,8 @@ export async function POST(
     body.email
       ?.trim()
       .toLowerCase() ?? "";
+  const authenticationType=body.authentication_type??"EMAIL";
+  const phone=normalizeTanzanianPhone(body.phone??"");
 
   const password =
     body.password ?? "";
@@ -197,10 +204,7 @@ export async function POST(
     );
   }
 
-  if (
-    !email ||
-    !email.includes("@")
-  ) {
+  if (authenticationType==="EMAIL"&&(!email||!email.includes("@"))) {
     return NextResponse.json(
       {
         error:
@@ -211,6 +215,7 @@ export async function POST(
       }
     );
   }
+  if(authenticationType==="PHONE"&&!phone)return NextResponse.json({error:"Weka namba halali ya Tanzania (+255)."},{status:400});
 
   if (password.length < 8) {
     return NextResponse.json(
@@ -245,13 +250,13 @@ export async function POST(
   } =
     await adminClient.auth.admin.createUser(
       {
-        email,
+        ...(authenticationType==="EMAIL"?{email,email_confirm:true}:{phone,phone_confirm:true}),
         password,
-        email_confirm: true,
 
         user_metadata: {
           full_name: fullName,
           role,
+          authentication_type:authenticationType,
         },
       }
     );
@@ -284,6 +289,10 @@ export async function POST(
       full_name: fullName,
       role,
       is_active: true,
+      authentication_type:authenticationType,
+      login_email:authenticationType==="EMAIL"?email:null,
+      login_phone:authenticationType==="PHONE"?phone:null,
+      force_password_change:body.force_password_change!==false,
       updated_at:
         new Date().toISOString(),
     })
@@ -295,6 +304,7 @@ export async function POST(
       is_active,
       created_at,
       updated_at
+      ,authentication_type,login_email,login_phone,force_password_change
     `)
     .single();
 

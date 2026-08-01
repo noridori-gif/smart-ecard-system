@@ -14,6 +14,10 @@ export type UserProfile = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  authentication_type:"EMAIL"|"PHONE";
+  login_email:string|null;
+  login_phone:string|null;
+  force_password_change:boolean;
 };
 
 export type CurrentUserProfile =
@@ -23,8 +27,11 @@ export type CurrentUserProfile =
 
 export type CreateManagedUserInput = {
   full_name: string;
-  email: string;
+  authentication_type:"EMAIL"|"PHONE";
+  email?: string;
+  phone?: string;
   password: string;
+  force_password_change:boolean;
 
   role:
     | "organizer"
@@ -123,6 +130,7 @@ export async function getCurrentUserProfile(): Promise<
       is_active,
       created_at,
       updated_at
+      ,authentication_type,login_email,login_phone,force_password_change
     `)
     .eq("id", user.id)
     .maybeSingle();
@@ -164,6 +172,7 @@ export async function getAllUserProfiles(): Promise<
       is_active,
       created_at,
       updated_at
+      ,authentication_type,login_email,login_phone,force_password_change
     `)
     .order(
       "created_at",
@@ -209,6 +218,7 @@ export async function updateUserRole(
       is_active,
       created_at,
       updated_at
+      ,authentication_type,login_email,login_phone,force_password_change
     `)
     .single();
 
@@ -248,6 +258,7 @@ export async function updateUserActiveStatus(
       is_active,
       created_at,
       updated_at
+      ,authentication_type,login_email,login_phone,force_password_change
     `)
     .single();
 
@@ -306,16 +317,16 @@ export async function createManagedUser(
               input.full_name
                 .trim(),
 
-            email:
-              input.email
-                .trim()
-                .toLowerCase(),
+            authentication_type:input.authentication_type,
+            email:input.email?.trim().toLowerCase(),
+            phone:input.phone?.trim(),
 
             password:
               input.password,
 
             role:
               input.role,
+            force_password_change:input.force_password_change,
           }),
       }
     );

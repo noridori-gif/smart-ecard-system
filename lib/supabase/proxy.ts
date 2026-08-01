@@ -13,6 +13,7 @@ type UserRole =
 type ProxyProfile = {
   role: UserRole;
   is_active: boolean;
+  force_password_change:boolean;
 };
 
 const protectedRoutes = [
@@ -253,6 +254,7 @@ export async function updateSession(
       .select(`
         role,
         is_active
+        ,force_password_change
       `)
       .eq("id", userId)
       .maybeSingle();
@@ -292,6 +294,8 @@ export async function updateSession(
       redirectResponse
     );
   }
+
+  if(profile.force_password_change&&pathname!=="/change-password")return createRedirectResponse(request,"/change-password",supabaseResponse);
 
   if (pathname === "/login") {
     return createRedirectResponse(
