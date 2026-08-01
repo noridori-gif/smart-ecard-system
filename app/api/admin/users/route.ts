@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 type AllowedRole =
   | "organizer"
   | "scanner";
 
 type CreateUserRequest = {
+  action?:"reset_password";
+  user_id?:string;
   full_name?: string;
-  authentication_type?: "EMAIL" | "PHONE";
+  username?:string;
   email?: string;
   phone?: string;
   password?: string;
@@ -21,6 +24,7 @@ const allowedRoles: AllowedRole[] = [
 ];
 
 function normalizeTanzanianPhone(value:string){const digits=value.replace(/\D/g,"");const national=digits.startsWith("255")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return /^[67]\d{8}$/.test(national)?`+255${national}`:"";}
+function normalizeUsername(value:string){const normalized=value.trim().toLowerCase();return /^[a-z0-9][a-z0-9._-]{3,29}$/.test(normalized)?normalized:"";}
 
 function getBearerToken(
   request: Request
@@ -183,7 +187,7 @@ export async function POST(
     body.email
       ?.trim()
       .toLowerCase() ?? "";
-  const authenticationType=body.authentication_type??"EMAIL";
+  const username=normalizeUsername(body.username??"");
   const phone=normalizeTanzanianPhone(body.phone??"");
 
   const password =
@@ -204,7 +208,7 @@ export async function POST(
     );
   }
 
-  if (authenticationType==="EMAIL"&&(!email||!email.includes("@"))) {
+  if (email&&!email.includes("@")) {
     return NextResponse.json(
       {
         error:
@@ -215,7 +219,18 @@ export async function POST(
       }
     );
   }
-  if(authenticationType==="PHONE"&&!phone)return NextResponse.json({error:"Weka namba halali ya Tanzania (+255)."},{status:400});
+
+  if(body.action==="reset_password"){
+    if(!body.user_id||!body.password||body.password.length<8)return NextResponse.json({error:"Temporary password lazima iwe characters 8 au zaidi."},{status:400});
+    const {error:resetError}=await adminClient.auth.admin.updateUserById(body.user_id,{password:body.password});
+    if(resetError)return NextResponse.json({error:"Password haikuweza kuwekwa upya."},{status:400});
+    const {error:flagError}=await adminClient.from("profiles").update({force_password_change:true,updated_at:new Date().toISOString()}).eq("id",body.user_id);
+    if(flagError)return NextResponse.json({error:"Password reset status haikuweza kuhifadhiwa."},{status:500});
+    return NextResponse.json({message:"Temporary password imewekwa. User atalazimika kuibadilisha."});
+  }
+  if(body.phone&&!phone)return NextResponse.json({error:"Weka namba halali ya Tanzania (+255)."},{status:400});
+  if(body.username&&!username)return NextResponse.json({error:"Username lazima iwe characters 4–30 na itumie herufi, namba, nukta, underscore au hyphen."},{status:400});
+  if(!email&&!username)return NextResponse.json({error:"Username inahitajika wakati email haijawekwa."},{status:400});
 
   if (password.length < 8) {
     return NextResponse.json(
@@ -250,13 +265,13 @@ export async function POST(
   } =
     await adminClient.auth.admin.createUser(
       {
-        ...(authenticationType==="EMAIL"?{email,email_confirm:true}:{phone,phone_confirm:true}),
+        email:email||`user-${randomUUID()}@internal.smarteventpass.co.tz`,
+        email_confirm:true,
         password,
 
         user_metadata: {
           full_name: fullName,
           role,
-          authentication_type:authenticationType,
         },
       }
     );
@@ -279,6 +294,9 @@ export async function POST(
 
   const newUserId =
     createdUserData.user.id;
+  const internalAuthEmail=createdUserData.user.email!;
+  const {error:identityError}=await adminClient.from("user_login_identities").insert({user_id:newUserId,username:username||null,normalized_username:username||null,normalized_phone:phone?phone.slice(1):null,real_email:email||null,normalized_real_email:email||null,internal_auth_email:internalAuthEmail});
+  if(identityError){await adminClient.auth.admin.deleteUser(newUserId);return NextResponse.json({error:identityError.code==="23505"?"Username, phone au email tayari inatumika.":"Login identity haikuweza kutengenezwa."},{status:400});}
 
   const {
     data: updatedProfile,
@@ -289,9 +307,10 @@ export async function POST(
       full_name: fullName,
       role,
       is_active: true,
-      authentication_type:authenticationType,
-      login_email:authenticationType==="EMAIL"?email:null,
-      login_phone:authenticationType==="PHONE"?phone:null,
+      authentication_type:email?"EMAIL":phone?"PHONE":"USERNAME",
+      login_email:email||null,
+      login_phone:phone||null,
+      login_username:username||null,
       force_password_change:body.force_password_change!==false,
       updated_at:
         new Date().toISOString(),
@@ -304,7 +323,7 @@ export async function POST(
       is_active,
       created_at,
       updated_at
-      ,authentication_type,login_email,login_phone,force_password_change
+      ,authentication_type,login_email,login_phone,login_username,force_password_change
     `)
     .single();
 

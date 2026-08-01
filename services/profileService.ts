@@ -14,9 +14,10 @@ export type UserProfile = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  authentication_type:"EMAIL"|"PHONE";
+  authentication_type:"EMAIL"|"PHONE"|"USERNAME";
   login_email:string|null;
   login_phone:string|null;
+  login_username:string|null;
   force_password_change:boolean;
 };
 
@@ -27,7 +28,7 @@ export type CurrentUserProfile =
 
 export type CreateManagedUserInput = {
   full_name: string;
-  authentication_type:"EMAIL"|"PHONE";
+  username:string;
   email?: string;
   phone?: string;
   password: string;
@@ -130,7 +131,7 @@ export async function getCurrentUserProfile(): Promise<
       is_active,
       created_at,
       updated_at
-      ,authentication_type,login_email,login_phone,force_password_change
+      ,authentication_type,login_email,login_phone,login_username,force_password_change
     `)
     .eq("id", user.id)
     .maybeSingle();
@@ -172,7 +173,7 @@ export async function getAllUserProfiles(): Promise<
       is_active,
       created_at,
       updated_at
-      ,authentication_type,login_email,login_phone,force_password_change
+      ,authentication_type,login_email,login_phone,login_username,force_password_change
     `)
     .order(
       "created_at",
@@ -218,7 +219,7 @@ export async function updateUserRole(
       is_active,
       created_at,
       updated_at
-      ,authentication_type,login_email,login_phone,force_password_change
+      ,authentication_type,login_email,login_phone,login_username,force_password_change
     `)
     .single();
 
@@ -258,7 +259,7 @@ export async function updateUserActiveStatus(
       is_active,
       created_at,
       updated_at
-      ,authentication_type,login_email,login_phone,force_password_change
+      ,authentication_type,login_email,login_phone,login_username,force_password_change
     `)
     .single();
 
@@ -317,7 +318,7 @@ export async function createManagedUser(
               input.full_name
                 .trim(),
 
-            authentication_type:input.authentication_type,
+            username:input.username?.trim().toLowerCase(),
             email:input.email?.trim().toLowerCase(),
             phone:input.phone?.trim(),
 
@@ -356,3 +357,5 @@ export async function createManagedUser(
 
   return result.profile;
 }
+
+export async function resetManagedUserPassword(userId:string,password:string){const supabase=getSupabaseClient();const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error("Session haijapatikana.");const response=await fetch("/api/admin/users",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({action:"reset_password",user_id:userId,password})});const result=await response.json() as {message?:string;error?:string};if(!response.ok)throw new Error(result.error??"Password reset failed.");return result.message??"Temporary password updated.";}

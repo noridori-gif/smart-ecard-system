@@ -16,6 +16,7 @@ import {
   getRoleLabel,
   updateUserActiveStatus,
   updateUserRole,
+  resetManagedUserPassword,
   type UserProfile,
   type UserRole,
 } from "@/services/profileService";
@@ -28,7 +29,7 @@ const availableRoles: UserRole[] = [
 
 const initialCreateForm = {
   full_name: "",
-  authentication_type:"EMAIL" as "EMAIL"|"PHONE",
+  username:"",
   email: "",
   phone:"",
   password: "",
@@ -160,7 +161,7 @@ export default function UsersPage() {
       const createdProfile =
         await createManagedUser({
           full_name: createForm.full_name,
-          authentication_type:createForm.authentication_type,
+          username:createForm.username,
           email:createForm.email,
           phone:createForm.phone,
           password: createForm.password,
@@ -377,9 +378,10 @@ export default function UsersPage() {
             />
           </div>
 
-          <fieldset><legend className="mb-2 text-sm font-semibold text-slate-700">Login Method</legend><div className="flex gap-4 rounded-xl border p-3"><label className="flex items-center gap-2"><input type="radio" checked={createForm.authentication_type==="EMAIL"} onChange={()=>setCreateForm(current=>({...current,authentication_type:"EMAIL"}))}/>Email Address</label><label className="flex items-center gap-2"><input type="radio" checked={createForm.authentication_type==="PHONE"} onChange={()=>setCreateForm(current=>({...current,authentication_type:"PHONE"}))}/>Mobile Phone Number</label></div></fieldset>
-
-          <div><label className="mb-2 block text-sm font-semibold text-slate-700">{createForm.authentication_type==="EMAIL"?"Email Address":"Mobile Number (+255 format)"}</label><input type={createForm.authentication_type==="EMAIL"?"email":"tel"} value={createForm.authentication_type==="EMAIL"?createForm.email:createForm.phone} required disabled={isCreating} autoComplete="off" placeholder={createForm.authentication_type==="EMAIL"?"user@example.com":"+255758003927"} onChange={(event)=>setCreateForm(current=>({...current,[current.authentication_type==="EMAIL"?"email":"phone"]:event.target.value}))} className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"/></div>
+          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Username</label><input value={createForm.username} disabled={isCreating} placeholder="organizer-01" onChange={event=>setCreateForm(current=>({...current,username:event.target.value}))} className="w-full rounded-xl border border-slate-300 px-4 py-3"/></div>
+          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Mobile Number (optional)</label><input type="tel" value={createForm.phone} disabled={isCreating} placeholder="+255715631284" onChange={event=>setCreateForm(current=>({...current,phone:event.target.value}))} className="w-full rounded-xl border border-slate-300 px-4 py-3"/></div>
+          <div><label className="mb-2 block text-sm font-semibold text-slate-700">Email Address (optional)</label><input type="email" value={createForm.email} disabled={isCreating} placeholder="user@example.com" onChange={event=>setCreateForm(current=>({...current,email:event.target.value}))} className="w-full rounded-xl border border-slate-300 px-4 py-3"/></div>
+          <div className="rounded-xl bg-slate-50 p-3 text-sm"><b>Login methods</b><p className="mt-1 text-slate-600">{[createForm.username,createForm.phone,createForm.email].filter(Boolean).join(" · ")||"Add a username, phone or email."}</p></div>
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -564,6 +566,7 @@ export default function UsersPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">{profile.authentication_type==="PHONE"?"📱 Phone":"📧 Email"} · {profile.login_phone?profile.login_phone.replace(/^(\+255)(\d{3})(\d{3})(\d{3})$/,"$1 $2 $3 $4"):profile.login_email||"—"}</p>
+                            {profile.login_username&&<p className="mt-1 text-xs font-semibold text-slate-600">👤 {profile.login_username}</p>}
 
                             {isCurrentUser && (
                               <p className="mt-0.5 text-xs font-semibold text-blue-600">
@@ -626,6 +629,7 @@ export default function UsersPage() {
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-4 text-right">
+                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={async()=>{const password=window.prompt("Enter a new temporary password (minimum 8 characters):");if(!password)return;try{setUpdatingUserId(profile.id);setSuccessMessage(await resetManagedUserPassword(profile.id,password));setProfiles(current=>current.map(item=>item.id===profile.id?{...item,force_password_change:true}:item));}catch(error){setErrorMessage(error instanceof Error?error.message:"Password reset failed.");}finally{setUpdatingUserId("");}}} className="mr-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 disabled:opacity-50">Reset Password</button>
                         <button
                           type="button"
                           disabled={

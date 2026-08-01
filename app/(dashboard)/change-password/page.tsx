@@ -9,10 +9,6 @@ import {
   useRouter,
 } from "next/navigation";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
-
 type PasswordForm = {
   currentPassword: string;
   newPassword: string;
@@ -129,71 +125,9 @@ export default function ChangePasswordPage() {
     setIsSaving(true);
 
     try {
-      const supabase =
-        createClient();
-
-      const {
-        data: {
-          user,
-        },
-        error:
-          userError,
-      } =
-        await supabase
-          .auth
-          .getUser();
-
-      if (
-        userError ||
-        !user
-      ) {
-        throw new Error(
-          "Session haijapatikana. Tafadhali login tena."
-        );
-      }
-
-      if (!user.email && !user.phone) {
-        throw new Error(
-          "Login identity ya account haijapatikana."
-        );
-      }
-
-      const {
-        error:
-          verificationError,
-      } =
-        await supabase
-          .auth
-          .signInWithPassword(user.email?{email:user.email,password:formData.currentPassword}:{phone:user.phone!,password:formData.currentPassword});
-
-      if (
-        verificationError
-      ) {
-        throw new Error(
-          "Current password si sahihi."
-        );
-      }
-
-      const {
-        error:
-          updateError,
-      } =
-        await supabase
-          .auth
-          .updateUser({
-            password:
-              formData
-                .newPassword,
-          });
-
-      if (updateError) {
-        throw new Error(
-          updateError.message
-        );
-      }
-
-      const {error:profileUpdateError}=await supabase.from("profiles").update({force_password_change:false,updated_at:new Date().toISOString()}).eq("id",user.id);
-      if(profileUpdateError)throw new Error(profileUpdateError.message);
+      const response=await fetch("/api/auth/change-password",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({currentPassword:formData.currentPassword,newPassword:formData.newPassword})});
+      const result=await response.json() as {success?:boolean;error?:string};
+      if(!response.ok||!result.success)throw new Error(result.error??"Password haikuweza kubadilishwa.");
 
       setFormData(
         initialForm

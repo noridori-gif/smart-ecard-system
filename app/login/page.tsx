@@ -3,7 +3,6 @@
 import {
   type ChangeEvent,
   type FormEvent,
-  useMemo,
   useState,
 } from "react";
 
@@ -16,9 +15,6 @@ import {
 import Button from "@/components/Button";
 import Input from "@/components/Input";
 
-import {
-  createClient,
-} from "@/lib/supabase/client";
 
 function getSafeRedirectPath() {
   if (
@@ -86,17 +82,9 @@ function getLoginErrorMessage(
   return message;
 }
 
-function normalizeTanzanianPhone(value:string){const digits=value.replace(/\D/g,"");const national=digits.startsWith("255")?digits.slice(3):digits.startsWith("0")?digits.slice(1):digits;return /^[67]\d{8}$/.test(national)?`+255${national}`:"";}
-
 export default function LoginPage() {
   const router =
     useRouter();
-
-  const supabase =
-    useMemo(
-      () => createClient(),
-      []
-    );
 
   const [
     formData,
@@ -156,15 +144,11 @@ export default function LoginPage() {
     }
 
     const identity=formData.identity.trim();
-    const isEmail=identity.includes("@");
-    const email=isEmail?identity.toLowerCase():"";
-    const phone=isEmail?"":normalizeTanzanianPhone(identity);
-
     const password =
       formData.password;
 
     if (
-      (!email&&!phone) ||
+      !identity ||
       !password
     ) {
       setErrorMessage(
@@ -178,26 +162,10 @@ export default function LoginPage() {
       setErrorMessage("");
       setIsLoading(true);
 
-      const {
-        error,
-      } =
-        await supabase
-          .auth
-          .signInWithPassword(isEmail?{email,password}:{phone,password});
-
-      if (error) {
-        setErrorMessage(
-          getLoginErrorMessage(
-            error.message
-          )
-        );
-
-        return;
-      }
-
-      const {data:{user}}=await supabase.auth.getUser();
-      const {data:profile}=user?await supabase.from("profiles").select("force_password_change").eq("id",user.id).maybeSingle():{data:null};
-      const redirectPath=profile?.force_password_change?"/change-password":getSafeRedirectPath();
+      const response=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({identity,password})});
+      const result=await response.json() as {success?:boolean;mustChangePassword?:boolean;error?:string};
+      if(!response.ok||!result.success){setErrorMessage(getLoginErrorMessage(result.error??"Taarifa za kuingia si sahihi."));return;}
+      const redirectPath=result.mustChangePassword?"/change-password":getSafeRedirectPath();
 
       router.replace(
         redirectPath
@@ -242,13 +210,13 @@ export default function LoginPage() {
           className="mt-8 space-y-5"
         >
           <Input
-            label="Email or Mobile Number"
+            label="Username, phone or email"
             name="identity"
             type="text"
             value={
               formData.identity
             }
-            placeholder="Email address or mobile number"
+            placeholder="elia, 0715631284 or elia@example.com"
             required
             onChange={
               handleChange
