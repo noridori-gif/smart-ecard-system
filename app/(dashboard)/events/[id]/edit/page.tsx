@@ -17,6 +17,7 @@ import Input from "@/components/Input";
 import ThemePalettePicker, {
   type EventThemePalette,
 } from "@/components/events/ThemePalettePicker";
+import EventPreviewSwitcher from "@/components/events/EventPreviewSwitcher";
 
 import {
   DEFAULT_EVENT_THEME,
@@ -1446,28 +1447,12 @@ export default function EditEventPage() {
               />
             </div>
 
-            <ThemePreview
-              template={formData.invitation_template}
-              title={
-                formData.title
-              }
-              dressCode={
-                formData
-                  .dress_code
-              }
-              primaryColor={
-                formData
-                  .theme_primary_color
-              }
-              secondaryColor={
-                formData
-                  .theme_secondary_color
-              }
-              accentColor={
-                formData
-                  .theme_accent_color
-              }
-            />
+            <div className="mt-7 max-w-xl">
+              <EventPreviewSwitcher
+                data={{title:formData.title,eventType:formData.event_type,brideName:formData.bride_name,groomName:formData.groom_name,language:formData.language,template:formData.invitation_template,invitationMessage:displayedMessage,coverImageUrl:imagePreview||(!removeCurrentCover?(currentEvent.cover_image_url??null):null),eventDate:formData.event_date,eventTime:formData.event_time,venue:formData.venue,ceremonyTitle:formData.ceremony_title,ceremonyTime:formData.ceremony_time,ceremonyVenue:formData.ceremony_venue,dressCode:formData.dress_code,primary:formData.theme_primary_color,secondary:formData.theme_secondary_color,accent:formData.theme_accent_color}}
+                invitationPreview={<ThemePreview template={formData.invitation_template} title={formData.title} dressCode={formData.dress_code} primaryColor={formData.theme_primary_color} secondaryColor={formData.theme_secondary_color} accentColor={formData.theme_accent_color}/>}
+              />
+            </div>
           </section>
 
           <section>

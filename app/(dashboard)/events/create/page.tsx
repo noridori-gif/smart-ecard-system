@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import ThemePalettePicker, {
   type EventThemePalette,
 } from "@/components/events/ThemePalettePicker";
+import EventPreviewSwitcher from "@/components/events/EventPreviewSwitcher";
 
 import {
   DEFAULT_EVENT_THEME,
@@ -203,6 +204,8 @@ export default function CreateEventPage() {
     window.addEventListener("keydown", handleKey);
     return () => { window.removeEventListener("keydown", handleKey); previous?.focus(); };
   }, [themeModalOpen]);
+
+  useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
 
   function handleChange(
     event:
@@ -439,7 +442,9 @@ function WizardSection({index,title,description,active,complete,onOpen,children}
 
 function PaletteDots({colors}:{colors:string[]}) { return <span className="flex -space-x-1">{colors.map(color=><span key={color} className="h-5 w-5 rounded-full border-2 border-white shadow" style={{backgroundColor:color}}/>)}</span>; }
 
-function LiveInvitationPreview({form,imagePreview,templateName}:{form:CreateEventForm;imagePreview:string;templateName:string}) { return <div className="rounded-[26px] border border-stone-200 bg-[#f4f1eb] p-5 shadow-[0_18px_50px_rgba(28,25,23,.12)]"><div className="mb-4 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-slate-400">Live Preview</p><p className="font-bold">{templateName}</p></div><PaletteDots colors={[form.theme_primary_color,form.theme_secondary_color,form.theme_accent_color]}/></div><div className="mx-auto w-full max-w-[300px] rounded-[38px] bg-slate-950 p-2 shadow-2xl"><div className="relative min-h-[560px] overflow-hidden rounded-[31px] bg-white text-center transition-colors duration-200" style={{backgroundColor:form.theme_secondary_color,color:form.theme_primary_color}}><div className="mx-auto mt-3 h-5 w-24 rounded-full bg-slate-950"/>{imagePreview?<img src={imagePreview} alt="" className="mt-3 h-52 w-full object-cover transition-opacity duration-200"/>:<div className="mt-3 grid h-52 place-items-center bg-black/5 text-xs font-bold uppercase tracking-wide">Cover photo</div>}<div className="p-6"><p className="text-[10px] font-black uppercase tracking-[.2em]" style={{color:form.theme_accent_color}}>You are invited</p><h2 className="mt-4 font-serif text-3xl font-black">{form.bride_name||"Bride"}<span className="block text-lg">&</span>{form.groom_name||"Groom"}</h2><p className="mt-4 text-sm font-bold">{form.title||"Your Event"}</p><div className="mx-auto my-5 h-px w-16" style={{backgroundColor:form.theme_accent_color}}/><p className="text-xs">{form.event_date||"Event date"} · {form.event_time||"Time"}</p><p className="mt-2 text-xs font-bold">{form.venue||"Reception venue"}</p><div className="mx-auto mt-6 grid h-16 w-16 place-items-center bg-white text-[9px] font-black text-slate-900 shadow">QR</div></div></div></div></div>; }
+function LiveInvitationPreview({form,imagePreview,templateName}:{form:CreateEventForm;imagePreview:string;templateName:string}) { const data={title:form.title,eventType:form.event_type,brideName:form.bride_name,groomName:form.groom_name,language:form.language,template:form.invitation_template,coverImageUrl:imagePreview||null,eventDate:form.event_date,eventTime:form.event_time,venue:form.venue,ceremonyTitle:form.ceremony_title,ceremonyTime:form.ceremony_time,ceremonyVenue:form.ceremony_venue,dressCode:form.dress_code,primary:form.theme_primary_color,secondary:form.theme_secondary_color,accent:form.theme_accent_color}; return <EventPreviewSwitcher data={data} invitationPreview={<InvitationPhonePreview form={form} imagePreview={imagePreview} templateName={templateName}/>}/>; }
+
+function InvitationPhonePreview({form,imagePreview,templateName}:{form:CreateEventForm;imagePreview:string;templateName:string}) { return <div><div className="mb-4 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-slate-400">Live Preview</p><p className="font-bold">{templateName}</p></div><PaletteDots colors={[form.theme_primary_color,form.theme_secondary_color,form.theme_accent_color]}/></div><div className="mx-auto w-full max-w-[300px] rounded-[38px] bg-slate-950 p-2 shadow-2xl"><div className="relative min-h-[560px] overflow-hidden rounded-[31px] bg-white text-center transition-colors duration-200" style={{backgroundColor:form.theme_secondary_color,color:form.theme_primary_color}}><div className="mx-auto mt-3 h-5 w-24 rounded-full bg-slate-950"/>{imagePreview?<img src={imagePreview} alt="" className="mt-3 h-52 w-full object-cover transition-opacity duration-200"/>:<div className="mt-3 grid h-52 place-items-center bg-black/5 text-xs font-bold uppercase tracking-wide">Cover photo</div>}<div className="p-6"><p className="text-[10px] font-black uppercase tracking-[.2em]" style={{color:form.theme_accent_color}}>You are invited</p><h2 className="mt-4 font-serif text-3xl font-black">{form.bride_name||"Bride / Celebrant"}<span className="block text-lg">&</span>{form.groom_name||"Groom"}</h2><p className="mt-4 text-sm font-bold">{form.title||"Your Event"}</p><div className="mx-auto my-5 h-px w-16" style={{backgroundColor:form.theme_accent_color}}/><p className="text-xs">{form.event_date||"Event date"} · {form.event_time||"Event time"}</p><p className="mt-2 text-xs font-bold">{form.venue||"Reception venue"}</p><div className="mx-auto mt-6 grid h-16 w-16 place-items-center bg-white text-[9px] font-black text-slate-900 shadow">QR</div></div></div></div></div>; }
 
 type FieldProps = {
   label: string;
