@@ -26,18 +26,20 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
   const [sendError, setSendError] = useState("");
   const firstControl = useRef<HTMLSelectElement>(null);
   const channels = useMemo<ReminderChannel[]>(() => channel === "both" ? ["sms", "whatsapp"] : [channel], [channel]);
-  const previewKey = JSON.stringify({ channel, recipient: pledge.id, phone: pledge.normalized_phone || pledge.phone || "", language, template: kind, message });
+  const previewKey = JSON.stringify({ channel, recipient: pledge.id, phone: pledge.normalized_phone ?? "", language, template: kind, message });
 
   const preview = useCallback(async () => {
     try {
       setBusy(true); setPreviewError(""); setSendError(""); setApprovedPreviewKey("");
-      let nextMessage = "", nextProviderMessage = "", nextReady = false, nextConfigured = false;
+      let nextMessage = "", nextProviderMessage = "", nextFailure = "", nextReady = false, nextConfigured = false;
       if (kind === "reminder") {
         const result = await previewReminders(eventId, channels, pledge.id);
         const rows = result.rows.filter((row) => row.pledgeId === pledge.id);
         nextMessage = rows[0]?.message ?? "No eligible reminder preview is available.";
         nextConfigured = channels.every((value) => result.provider[value].configured);
         nextReady = rows.some((row) => row.eligible) && nextConfigured;
+        if (!rows.some((row) => row.eligible)) nextFailure = previewFailure(rows[0]?.skippedReason ?? "unavailable", language);
+        else if (!nextConfigured) nextFailure = previewFailure("provider_unavailable", language);
         nextProviderMessage = channels.map((value) => `${value === "sms" ? "SMS" : "WhatsApp"}: ${result.provider[value].message}`).join(" · ");
       } else {
         const result = await previewPledgeThankYous(eventId, channels, pledge.id);
@@ -45,15 +47,17 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
         nextMessage = row?.message ?? "No eligible thank-you preview is available.";
         nextConfigured = channels.every((value) => result.provider[value].configured);
         nextReady = Boolean(row?.eligible) && nextConfigured;
+        if (!row?.eligible) nextFailure = previewFailure(row?.skippedReason ?? "unavailable", language);
+        else if (!nextConfigured) nextFailure = previewFailure("provider_unavailable", language);
         nextProviderMessage = channels.map((value) => `${value === "sms" ? "SMS" : "WhatsApp"}: ${result.provider[value].message}`).join(" · ");
       }
-      setMessage(nextMessage); setProviderConfigured(nextConfigured); setProviderReady(nextReady); setProviderMessage(nextProviderMessage); setPreviewed(true);
-      if (nextReady) setApprovedPreviewKey(JSON.stringify({ channel, recipient: pledge.id, phone: pledge.normalized_phone || pledge.phone || "", language, template: kind, message: nextMessage }));
+      setMessage(nextMessage); setProviderConfigured(nextConfigured); setProviderReady(nextReady); setProviderMessage(nextProviderMessage); setPreviewed(true); setPreviewError(nextFailure);
+      if (nextReady) setApprovedPreviewKey(JSON.stringify({ channel, recipient: pledge.id, phone: pledge.normalized_phone ?? "", language, template: kind, message: nextMessage }));
     } catch (err) {
       setPreviewed(false); setProviderReady(false); setProviderConfigured(false);
       setPreviewError(err instanceof Error ? err.message : language === "sw" ? "Hakiki ya ujumbe imeshindikana." : "Message preview failed.");
     } finally { setBusy(false); }
-  }, [channel, channels, eventId, kind, language, pledge.id, pledge.normalized_phone, pledge.phone]);
+  }, [channel, channels, eventId, kind, language, pledge.id, pledge.normalized_phone]);
 
   useEffect(() => { firstControl.current?.focus(); }, []);
   useEffect(() => { const close = (event: KeyboardEvent) => event.key === "Escape" && onClose(); window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [onClose]);
@@ -81,4 +85,25 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
     {sendError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{sendError}</p>}
     <div><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className="min-h-11 rounded-xl border px-4 font-semibold">Cancel</button><button type="button" disabled={busy} onClick={() => void preview()} className="min-h-11 rounded-xl border border-emerald-600 px-4 font-bold text-emerald-700">{busy ? "Loading…" : "Preview"}</button><button type="button" disabled={busy || !providerReady || previewRequired} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-600 px-5 font-bold text-white disabled:opacity-40">Send</button></div>{previewError && <p role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">{previewError}</p>}{!busy && previewRequired && !previewError && <p className="mt-2 text-sm text-slate-600">{language === "sw" ? "Bonyeza Preview kwanza kuthibitisha ujumbe kabla ya kutuma." : "Preview the message before sending."}</p>}</div>
   </section>;
+}
+
+function previewFailure(reason: string, language: "en" | "sw") {
+  const messages: Record<string, { en: string; sw: string }> = {
+    missing_phone: { en: "This contributor has no phone number available for messaging.", sw: "Mchangiaji huyu hana namba ya simu ya kutumiwa ujumbe." },
+    invalid_phone: { en: "This contributor's phone number is not a valid Tanzanian mobile number.", sw: "Namba ya simu ya mchangiaji huyu si namba halali ya simu ya Tanzania." },
+    reminders_disabled: { en: "Financial reminders are disabled for this event.", sw: "Vikumbusho vya fedha vimezimwa kwa tukio hili." },
+    channel_disabled: { en: "The selected messaging channel is disabled for this event.", sw: "Njia ya ujumbe iliyochaguliwa imezimwa kwa tukio hili." },
+    completed: { en: "This contribution is already completed.", sw: "Mchango huu tayari umekamilika." },
+    no_balance: { en: "This contribution has no outstanding balance.", sw: "Mchango huu hauna salio linalodaiwa." },
+    cooldown_active: { en: "A reminder was sent recently. Wait until the cooldown ends.", sw: "Kikumbusho kilitumwa hivi karibuni. Subiri muda wa kusubiri uishe." },
+    duplicate_window: { en: "This reminder was already requested in the current delivery window.", sw: "Kikumbusho hiki tayari kiliombwa katika kipindi hiki cha utumaji." },
+    event_passed: { en: "Reminder sending is stopped because the event date has passed.", sw: "Utumaji wa vikumbusho umesimamishwa kwa sababu tarehe ya tukio imepita." },
+    cancelled: { en: "This contribution is cancelled.", sw: "Mchango huu umefutwa." },
+    archived: { en: "This event is archived.", sw: "Tukio hili limehifadhiwa kwenye kumbukumbu." },
+    already_thanked: { en: "A thank-you message has already been sent successfully.", sw: "Ujumbe wa shukrani tayari umetumwa kwa mafanikio." },
+    not_completed: { en: "A thank-you message requires a completed contribution.", sw: "Ujumbe wa shukrani unahitaji mchango uliokamilika." },
+    provider_unavailable: { en: "The selected messaging provider is not ready.", sw: "Mtoa huduma wa ujumbe aliyechaguliwa hayuko tayari." },
+    unavailable: { en: "No eligible provider-backed preview is available for this contributor.", sw: "Hakuna hakiki halali ya mtoa huduma kwa mchangiaji huyu." },
+  };
+  return messages[reason]?.[language] ?? messages.unavailable[language];
 }
