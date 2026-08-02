@@ -367,7 +367,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
 
       {activeTab === "pledge_links" && (
         <TabSection title="Pledge Link" description="Manage secure public pledge capture and review its automation timeline.">
-          <PublicPledgeLinksPanel eventId={eventId} />
+          <PublicPledgeLinksPanel eventId={eventId} eventName={data.event.title} />
         </TabSection>
       )}
 
