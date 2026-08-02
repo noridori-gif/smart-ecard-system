@@ -49,7 +49,7 @@ export type PledgePayment = {
 };
 export type PledgeInput = {
   eventId: number; guestId?: number | null; fullName: string; phone: string;
-  email?: string; pledgedAmount: string; notes?: string;
+  email?: string; pledgedAmount: string; notes?: string; expectedCompletionDate?: string|null;
 };
 
 type OptionalPledgePhone = { phone: string | null; normalizedPhone: string | null };
@@ -78,6 +78,7 @@ function throwPledgePersistenceError(error: { message: string }) {
   console.error("Pledge persistence error:", error);
   throw new Error("PLEDGE_SAVE_FAILED");
 }
+function validateExpectedCompletionDate(value:string|null|undefined){if(!value)return null;if(!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new Error("Enter a valid expected completion date.");const date=new Date(`${value}T00:00:00`),minimum=new Date();minimum.setHours(0,0,0,0);minimum.setDate(minimum.getDate()-31);if(Number.isNaN(date.getTime())||date<minimum)throw new Error("Expected completion date is too far in the past.");return value}
 export type PaymentCorrectionInput = {
   amount: string; date: string; method: string; reference: string;
   provider: string; notes: string; reason: string;
@@ -102,11 +103,12 @@ export async function getFinancialSuite(eventId: number) {
 
 export async function createPledge(input: PledgeInput) {
   const { phone, normalizedPhone } = normalizeOptionalPledgePhone(input.phone);
+  const expectedCompletionDate=validateExpectedCompletionDate(input.expectedCompletionDate);
   await assertPledgePhoneAvailable(input.eventId, normalizedPhone);
   const { error } = await supabase.from("event_pledges").insert({
     event_id: input.eventId, guest_id: input.guestId || null, full_name: input.fullName.trim(),
     phone, normalized_phone: normalizedPhone, email: input.email?.trim() || null,
-    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
+    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null, expected_completion_date: expectedCompletionDate,
   });
   if (error) throwPledgePersistenceError(error);
 }
@@ -126,11 +128,12 @@ export async function updatePledge(id: number, input: PledgeInput, paid: string)
     throw new Error("Pledged amount cannot be lower than the amount already paid.");
   }
   const { phone, normalizedPhone } = normalizeOptionalPledgePhone(input.phone);
+  const expectedCompletionDate=validateExpectedCompletionDate(input.expectedCompletionDate);
   await assertPledgePhoneAvailable(input.eventId, normalizedPhone, id);
   const { error } = await supabase.from("event_pledges").update({
     guest_id: input.guestId || null, full_name: input.fullName.trim(), phone,
     normalized_phone: normalizedPhone, email: input.email?.trim() || null,
-    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null,
+    pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null, expected_completion_date: expectedCompletionDate,
   }).eq("id", id);
   if (error) throwPledgePersistenceError(error);
 }

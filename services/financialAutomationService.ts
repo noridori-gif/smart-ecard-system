@@ -11,6 +11,8 @@ export type AutomationSettings = {
   daily_summary_enabled:boolean; daily_summary_channel:"sms"|"whatsapp"|"both"; daily_summary_time:string;
   allow_after_deadline:boolean;
 };
+export type PledgeReminderPolicy={event_id:number;reminder_mode:"manual"|"automatic"|"hybrid";date_based_enabled:boolean;before_due_days:number;on_due_date_enabled:boolean;after_due_days:number;repeat_after_due_days:number|null;maximum_automatic_reminders:number;no_date_behavior:"manual_only"|"recommend_after_days"|"automatic_after_days";no_date_delay_days:number;stop_after_event:boolean;is_enabled:boolean};
+export type PledgeReminderSchedule={id:number;event_id:number;pledge_id:number;schedule_type:"before_due"|"due_date"|"after_due"|"repeat_after_due"|"no_date_follow_up"|"manual";scheduled_for:string;status:"scheduled"|"recommended"|"queued"|"processing"|"sent"|"delivered"|"failed"|"cancelled"|"skipped";sequence_number:number;delivery_id:number|null;cancel_reason:string|null;last_error:string|null;event_pledges:{full_name:string;normalized_phone:string|null;expected_completion_date:string|null;reminder_paused_at:string|null}|Array<{full_name:string;normalized_phone:string|null;expected_completion_date:string|null;reminder_paused_at:string|null}>|null};
 export type TrendPoint={date:string;amount:number;transactions:number};
 export type FinanceTargetReport={budget:number|null;deadline:string|null;remaining:number|null;progress:number|null;daysRemaining:number|null;deadlineStatus:string};
 export type DailySummary={date:string;amount:number;transactions:number;contributors:number;totalContributors:number;totalPledged:number;totalCollected:number;outstanding:number;percentage:number;target:FinanceTargetReport};
@@ -27,6 +29,7 @@ export type ClosingReport={
   pledges:FinancialPledge[];payments:PledgePayment[];trend:TrendPoint[];paymentMethods:{method:string;amount:number}[];
 };
 const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false});
+const policyDefaults=(eventId:number):PledgeReminderPolicy=>({event_id:eventId,reminder_mode:"manual",date_based_enabled:true,before_due_days:3,on_due_date_enabled:true,after_due_days:3,repeat_after_due_days:null,maximum_automatic_reminders:3,no_date_behavior:"manual_only",no_date_delay_days:14,stop_after_event:true,is_enabled:false});
 
 export async function getAutomationSettings(eventId:number){
   const {data,error}=await supabase.from("event_finance_automation_settings").select("*").eq("event_id",eventId).maybeSingle();
@@ -85,6 +88,10 @@ async function safeJson(response:Response):Promise<Record<string,unknown>>{
   try{return JSON.parse(text) as Record<string,unknown>;}
   catch{throw new Error(`The reminder service returned an invalid response (${response.status}).`);}
 }
+export async function getPledgeReminderPolicy(eventId:number){const {data,error}=await supabase.from("event_pledge_reminder_settings").select("*").eq("event_id",eventId).maybeSingle();if(error)throw new Error(error.message);return (data as PledgeReminderPolicy|null)??policyDefaults(eventId)}
+export async function savePledgeReminderPolicy(policy:PledgeReminderPolicy){const {data,error}=await supabase.rpc("save_pledge_reminder_settings",{target_event_id:policy.event_id,settings:policy});if(error)throw new Error(error.message);return data as PledgeReminderPolicy}
+export async function getPledgeReminderSchedules(eventId:number){const {data,error}=await supabase.from("pledge_reminder_schedules").select("id,event_id,pledge_id,schedule_type,scheduled_for,status,sequence_number,delivery_id,cancel_reason,last_error,event_pledges(full_name,normalized_phone,expected_completion_date,reminder_paused_at)").eq("event_id",eventId).order("scheduled_for",{ascending:true});if(error)throw new Error(error.message);return (data??[]) as unknown as PledgeReminderSchedule[]}
+export async function setPledgeReminderPause(pledgeId:number,paused:boolean,reason?:string){const {error}=await supabase.rpc("set_pledge_reminder_pause",{target_pledge_id:pledgeId,paused,reason:reason??null});if(error)throw new Error(error.message)}
 async function notificationRequest(eventId:number,body:Record<string,unknown>){
   const {data}=await supabase.auth.getSession();if(!data.session?.access_token)throw new Error("Your session has expired.");
   const response=await fetch(`/api/contributions/reminders/${eventId}`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify(body)});

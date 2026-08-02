@@ -6,7 +6,7 @@ import { normalizeOptionalPledgePhone, type FinancialPledge, type PledgeInput } 
 type Guest = { id: number; full_name: string; phone: string | null; email: string | null };
 export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }: { eventId: number; guests: Guest[]; pledge?: FinancialPledge | null; onSave: (input: PledgeInput) => Promise<void>; onClose: () => void }) {
   const { t } = useAppLanguage();
-  const [form, setForm] = useState(() => pledge ? { guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone ?? "", email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "" } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "" });
+  const [form, setForm] = useState(() => pledge ? { guestId: String(pledge.guest_id ?? ""), fullName: pledge.full_name, phone: pledge.phone ?? "", email: pledge.email ?? "", amount: pledge.pledged_amount, notes: pledge.notes ?? "", expectedDate:pledge.expected_completion_date??"" } : { guestId: "", fullName: "", phone: "", email: "", amount: "", notes: "", expectedDate:"" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   function chooseGuest(value: string) { const guest = guests.find((item) => item.id === Number(value)); setForm((old) => ({ ...old, guestId: value, ...(guest ? { fullName: guest.full_name, phone: guest.phone ?? "", email: guest.email ?? "" } : {}) })); }
@@ -16,7 +16,7 @@ export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }:
     try {
       normalizeOptionalPledgePhone(form.phone);
       setSaving(true);
-      await onSave({ eventId, guestId: form.guestId ? Number(form.guestId) : null, fullName: form.fullName, phone: form.phone, email: form.email, pledgedAmount: form.amount, notes: form.notes });
+      await onSave({ eventId, guestId: form.guestId ? Number(form.guestId) : null, fullName: form.fullName, phone: form.phone, email: form.email, pledgedAmount: form.amount, notes: form.notes, expectedCompletionDate:form.expectedDate||null });
     }
     catch (cause) {
       if (cause instanceof Error && cause.message === "INVALID_TZ_PHONE") setError(t("pledge.invalidPhone"));
@@ -34,6 +34,7 @@ export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }:
       <label className="block text-sm font-semibold">{t("pledge.email")}<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className={field} /></label>
     </div>
     <label className="block text-sm font-semibold">{t("pledge.amount")}<input required inputMode="decimal" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value.replace(/,/g, "") })} className={field} /></label>
+    <label className="block text-sm font-semibold">{t("pledge.expectedDate")}<input type="date" value={form.expectedDate} onChange={(event)=>setForm({...form,expectedDate:event.target.value})} className={field}/><span className="mt-1 block text-xs font-normal text-slate-500">{t("pledge.expectedDateHelper")}</span></label>
     <label className="block text-sm font-semibold">{t("pledge.notes")}<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className={field} /></label>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button><button disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? t("common.saving") : t("pledge.save")}</button></div>

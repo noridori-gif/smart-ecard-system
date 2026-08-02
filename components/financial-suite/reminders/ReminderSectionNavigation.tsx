@@ -4,6 +4,7 @@ import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 export type ReminderSection =
   | "overview"
   | "send"
+  | "schedule"
   | "thank-you"
   | "sent"
   | "delivered"
@@ -16,7 +17,7 @@ export const reminderSections: Array<{
   value: ReminderSection;
   label: string;
 }> = [
-  { value: "overview", label: "Overview" }, { value: "send", label: "Pending Reminders" }, { value: "sent", label: "Sent" }, { value: "delivered", label: "Delivered" }, { value: "failed", label: "Failed" }, { value: "thank-you", label: "Thank You" }, { value: "templates", label: "Templates" }, { value: "logs", label: "Logs" }, { value: "settings", label: "Settings" },
+  { value: "overview", label: "Overview" }, { value: "send", label: "Ready to Send" }, { value: "schedule", label: "Schedule" }, { value: "sent", label: "Sent" }, { value: "delivered", label: "Delivered" }, { value: "failed", label: "Failed" }, { value: "thank-you", label: "Thank You" }, { value: "templates", label: "Templates" }, { value: "logs", label: "Logs" }, { value: "settings", label: "Settings" },
 ];
 
 export function isReminderSection(value: string | null): value is ReminderSection {
