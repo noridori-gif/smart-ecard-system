@@ -110,6 +110,12 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    href: "/automation",
+    label: "Automation Center",
+    icon: "settings",
+    allowedRoles: ["admin", "organizer"],
+  },
+  {
     href: "/import-history",
     label: "Import History",
     icon: "import",
