@@ -52,10 +52,6 @@ export default function ImportHistoryPage() {
     loadImportHistory();
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   async function loadImportHistory() {
     try {
       setIsLoading(true);
@@ -225,9 +221,10 @@ export default function ImportHistoryPage() {
           id="history-search"
           type="search"
           value={searchTerm}
-          onChange={(event) =>
-            setSearchTerm(event.target.value)
-          }
+          onChange={(event) => {
+            setSearchTerm(event.target.value);
+            setCurrentPage(1);
+          }}
           placeholder="Tafuta event, file au imported by..."
           className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />

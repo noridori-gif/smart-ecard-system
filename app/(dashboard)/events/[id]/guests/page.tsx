@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   FormEvent,
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -51,7 +52,7 @@ export default function EventGuestsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  async function loadGuests() {
+  const loadGuests = useCallback(async () => {
     try {
       setIsLoading(true);
       setErrorMessage("");
@@ -81,16 +82,12 @@ export default function EventGuestsPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [eventId]);
 
   useEffect(() => {
-    if (Number.isInteger(eventId)) {
-      loadGuests();
-    } else {
-      setErrorMessage("Event ID si sahihi.");
-      setIsLoading(false);
-    }
-  }, [eventId]);
+    const timer = setTimeout(() => void loadGuests(), 0);
+    return () => clearTimeout(timer);
+  }, [loadGuests]);
 
   function handleChange(
     event: React.ChangeEvent<HTMLInputElement>

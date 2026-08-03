@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { buildPledgeMessage } from "@/services/pledgeMessageService";
-import { previewFinancialReminders, sendFinancialReminders, type FinancialChannel } from "@/services/financialNotificationEngine";
+import { previewFinancialReminders, sendDailyFinancialSummary, sendFinancialReminders, type FinancialChannel } from "@/services/financialNotificationEngine";
 import { processMakeDeliveries, queueMakeDeliveries } from "@/lib/makeConnectorServer";
 
 export const runtime="nodejs";export const dynamic="force-dynamic";
@@ -20,6 +20,15 @@ export async function GET(request:Request){
      const pledgeId=Number(event.payload?.pledge_id);
      if(Number.isInteger(pledgeId)&&pledgeId>0){const recalculated=await db.rpc("recalculate_pledge_reminder_schedules",{target_pledge_id:pledgeId,recalculation_source:event.payload?.source||"policy"});if(recalculated.error)throw recalculated.error;}
      else if(event.entity_type==="event"){const {data:pledges}=await db.from("event_pledges").select("id").eq("event_id",event.event_id);for(const pledge of pledges??[]){const recalculated=await db.rpc("recalculate_pledge_reminder_schedules",{target_pledge_id:pledge.id,recalculation_source:"manager"});if(recalculated.error)throw recalculated.error;}}
+   } else if(event.event_type==="owner.summary.daily_requested"){
+     const {data:setting,error:settingError}=await db.from("event_finance_automation_settings").select("daily_summary_channel,daily_summary_enabled,owner_summary_phone").eq("event_id",event.event_id).single();
+     if(settingError)throw settingError;
+     if(!setting.daily_summary_enabled||!setting.owner_summary_phone)throw new Error("Daily summary is no longer enabled or has no owner phone.");
+     const requestedChannels:FinancialChannel[]=setting.daily_summary_channel==="both"?["sms","whatsapp"]:[setting.daily_summary_channel];
+     const summaryDate=typeof event.payload?.summary_date==="string"?event.payload.summary_date:new Date().toISOString().slice(0,10);
+     const summary=await sendDailyFinancialSummary(db,{eventId:event.event_id,date:summaryDate,requestedChannels,requireEnabled:true});
+     if(summary.failed>0||summary.sent===0)throw new Error(summary.errors.join("; ")||"Daily summary was not delivered.");
+     const next=await db.rpc("schedule_owner_daily_summary",{target_event_id:event.event_id});if(next.error)throw next.error;
    } else if(event.event_type==="pledge.reminder.cancel_requested"){
      const pledgeId=Number(event.payload?.pledge_id);if(pledgeId>0)await db.from("pledge_reminder_schedules").update({status:"cancelled",cancelled_at:new Date().toISOString(),cancel_reason:event.payload?.reason||"manager_paused"}).eq("pledge_id",pledgeId).in("status",["scheduled","recommended","queued"]);
    } else if(event.event_type==="message.acknowledgement.requested"){

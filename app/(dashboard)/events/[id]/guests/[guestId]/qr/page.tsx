@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { getGuestById } from "@/services/guestService";
+import { getGuestById, type Guest } from "@/services/guestService";
 
 export default function GuestQRPage() {
   const params = useParams();
 
   const guestId = Number(params.guestId);
 
-  const [guest, setGuest] = useState<any>(null);
+  const [guest, setGuest] = useState<Guest | null>(null);
 
   useEffect(() => {
     async function loadGuest() {
