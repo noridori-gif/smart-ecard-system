@@ -24,11 +24,14 @@ export type BeemSmsResult = {
 };
 
 type BeemPayload = {
-  sender?: string;
-  recipient?: string;
-  message?: string;
-  to?: string;
-  text?: string;
+  source_addr: string;
+  encoding: 0;
+  schedule_time: string;
+  message: string;
+  recipients: Array<{
+    recipient_id: number;
+    dest_addr: string;
+  }>;
 };
 
 type BeemApiResponse = {
@@ -167,10 +170,24 @@ export async function sendBeemSms({
     );
   }
 
+  if (!config.senderName) {
+    return buildErrorResult(
+      "BEEM Sender Name has not been configured yet.",
+      "configuration"
+    );
+  }
+
   const payload: BeemPayload = {
-    sender: config.senderName || undefined,
-    recipient: normalizedPhone,
+    source_addr: config.senderName,
+    encoding: 0,
+    schedule_time: "",
     message: message.trim(),
+    recipients: [
+      {
+        recipient_id: 1,
+        dest_addr: normalizedPhone,
+      },
+    ],
   };
 
   const boundedAttempts = Math.min(Math.max(Math.trunc(maxAttempts), 1), 3);
