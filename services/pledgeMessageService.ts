@@ -1,6 +1,7 @@
 export type PledgeMessageLanguage = "sw" | "en";
 export type PledgeMessageType =
   | "pledge_reminder"
+  | "pledge_acknowledgement"
   | "pledge_thank_you"
   | "partial_thank_you"
   | "completed_thank_you";
@@ -12,6 +13,7 @@ export type PledgeMessageValues = {
   totalPaid: string;
   balance: string;
   paymentAmount?: string;
+  completionDate?: string | null;
 };
 
 export function formatTzs(value: string | number) {
@@ -43,6 +45,12 @@ export function buildPledgeMessage(
   const payment = formatTzs(values.paymentAmount ?? "0");
 
   if (language === "en") {
+    if (type === "pledge_acknowledgement") {
+      const timing = values.completionDate
+        ? `The completion date you selected is ${values.completionDate}.`
+        : "You can complete your contribution whenever you are ready.";
+      return `Hello ${name},\nThank you for making a contribution pledge of ${pledge} for ${values.eventTitle}.\nWe have received your pledge successfully. ${timing}\nWe truly appreciate your support.\nSmart Event Pass`;
+    }
     if (type === "partial_thank_you") {
       return `Hello ${name},\n\nThank you for your contribution of ${payment} towards ${values.eventTitle}.\n\nTotal received: ${paid}\nYour pledge balance: ${balance}\n\nWe truly appreciate your contribution.\nSmart Event Pass`;
     }
@@ -54,6 +62,12 @@ export function buildPledgeMessage(
 
   if (type === "partial_thank_you") {
     return `Habari ${name},\n\nAsante kwa mchango wako wa ${payment} kwa ajili ya ${values.eventTitle}.\n\nJumla iliyopokelewa: ${paid}\nSalio la ahadi yako: ${balance}\n\nTunathamini sana mchango wako.\nSmart Event Pass`;
+  }
+  if (type === "pledge_acknowledgement") {
+    const timing = values.completionDate
+      ? `Tarehe uliyochagua kukamilisha mchango ni ${values.completionDate}.`
+      : "Unaweza kukamilisha mchango wako wakati utakapokuwa tayari.";
+    return `Habari ${name},\nAsante kwa kuweka ahadi yako ya mchango wa ${pledge} kwa ajili ya ${values.eventTitle}.\nTumepokea ahadi yako kwa mafanikio. ${timing}\nTunathamini sana ushirikiano wako.\nSmart Event Pass`;
   }
   if (type === "completed_thank_you" || type === "pledge_thank_you") {
     return `Habari ${name},\n\nAsante sana kwa kukamilisha ahadi yako ya mchango kwa ajili ya\n${values.eventTitle}.\n\nJumla ya ahadi: ${pledge}\nJumla iliyopokelewa: ${paid}\nSalio: ${balance}\n\nTunathamini sana ushirikiano na mchango wako.\n\nSmart Event Pass`;
