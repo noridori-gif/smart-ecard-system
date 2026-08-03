@@ -6,18 +6,14 @@ export type ReminderSection =
   | "send"
   | "schedule"
   | "thank-you"
-  | "sent"
-  | "delivered"
-  | "failed"
-  | "logs"
-  | "templates"
+  | "activity"
   | "settings";
 
 export const reminderSections: Array<{
   value: ReminderSection;
   label: string;
 }> = [
-  { value: "overview", label: "Overview" }, { value: "send", label: "Ready to Send" }, { value: "schedule", label: "Schedule" }, { value: "sent", label: "Sent" }, { value: "delivered", label: "Delivered" }, { value: "failed", label: "Failed" }, { value: "thank-you", label: "Thank You" }, { value: "templates", label: "Templates" }, { value: "logs", label: "Logs" }, { value: "settings", label: "Settings" },
+  { value: "overview", label: "Overview" }, { value: "send", label: "Send Reminders" }, { value: "schedule", label: "Schedule" }, { value: "thank-you", label: "Thank You" }, { value: "activity", label: "Activity" }, { value: "settings", label: "Settings" },
 ];
 
 export function isReminderSection(value: string | null): value is ReminderSection {

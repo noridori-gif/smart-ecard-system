@@ -93,11 +93,11 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
     reminder_cooldown_hours: 24, owner_summary_phone: null, daily_summary_enabled: false,
     daily_summary_channel: "sms", daily_summary_time: "18:00",
   }) as SettingRow;
-  let pledgeQuery = db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id", input.eventId);
+  let pledgeQuery = db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id", input.eventId).in("calculated_status", ["pledged", "partial"]).gt("balance", 0);
   if (input.pledgeId) pledgeQuery = pledgeQuery.eq("id", input.pledgeId);
   const { data: pledgeData, error: pledgeError } = await pledgeQuery;
   if (pledgeError) throw new Error("Contributors could not be loaded.");
-  const pledges = (pledgeData ?? []) as PledgeRow[];
+  const pledges = ((pledgeData ?? []) as PledgeRow[]).filter((pledge) => ["pledged", "partial"].includes(pledge.calculated_status) && Number(pledge.balance) > 0);
   const pledgeIds = pledges.map((pledge) => pledge.id);
   const { data: history } = pledgeIds.length
     ? await db.from("pledge_reminders").select("pledge_id,channel,created_at,idempotency_key").in("pledge_id", pledgeIds).order("created_at", { ascending: false })
