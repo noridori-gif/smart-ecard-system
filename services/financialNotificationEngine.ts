@@ -183,7 +183,7 @@ function safeThankYouFailure(log:{
 export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number;language?:"sw"|"en"}):Promise<ThankYouPreview>{
   const {data:event,error:eventError}=await db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single();
   if(eventError||!event)throw new Error("Event could not be loaded.");
-  let query=db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id",input.eventId);
+  let query=db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id",input.eventId).eq("calculated_status","completed").eq("balance",0);
   if(input.pledgeId)query=query.eq("id",input.pledgeId);
   const {data,error}=await query;if(error)throw new Error("Completed contributors could not be loaded.");
   const pledges=(data??[]) as PledgeRow[];const ids=pledges.map(item=>item.id);
