@@ -366,19 +366,32 @@ export async function sendDailyFinancialSummary(db: SupabaseClient, input: {
   ]);
   const aggregate: SendAggregate = { queued: 0, sent: 0, failed: 0, skipped: 0, errors: [] };
   if (!setting?.owner_summary_phone || (input.requireEnabled && !setting.daily_summary_enabled) || built.event.archived_at) {
-    aggregate.skipped = input.requestedChannels.length; return aggregate;
+    aggregate.skipped = input.requestedChannels.length;
+    aggregate.errors.push(!setting?.owner_summary_phone ? "Daily Summary has no valid owner phone." : built.event.archived_at ? "Daily Summary is unavailable for an archived event." : "Daily Summary is not enabled.");
+    return aggregate;
   }
   for (const channel of input.requestedChannels) {
-    if (!channels(setting.daily_summary_channel).includes(channel)) { aggregate.skipped += 1; continue; }
+    const channelLabel=channel==="sms"?"SMS":"WhatsApp";
+    if (!channels(setting.daily_summary_channel).includes(channel)) { aggregate.skipped += 1; aggregate.errors.push(`Daily Summary ${channelLabel} is not enabled.`); continue; }
     const provider = built.provider[channel];
     if (!provider.configured) { aggregate.skipped += 1; aggregate.errors.push(provider.message); continue; }
     const idempotencyKey = `daily-summary:${input.eventId}:${input.date}:${channel}`;
-    const { data: log, error } = await db.from("finance_automation_delivery_logs").insert({
-      event_id: input.eventId, delivery_type: "daily_summary", channel,
-      recipient_phone: setting.owner_summary_phone, message_body: built.message,
-      delivery_status: "processing", idempotency_key: idempotencyKey, retry_count: 1, last_attempt_at: new Date().toISOString(),
-    }).select("id").maybeSingle();
-    if (error || !log) { aggregate.skipped += 1; continue; }
+    const existingResult=await db.from("finance_automation_delivery_logs").select("id,delivery_status,retry_count").eq("idempotency_key",idempotencyKey).maybeSingle();
+    if(existingResult.error){aggregate.failed+=1;aggregate.errors.push(`Daily Summary ${channelLabel} delivery history could not be checked.`);continue}
+    const existing=existingResult.data;
+    if(existing&&["sent","delivered","read"].includes(existing.delivery_status)){aggregate.skipped+=1;aggregate.errors.push(`Daily Summary was already sent through ${channelLabel} for this date.`);continue}
+    if(existing&&["queued","processing"].includes(existing.delivery_status)){aggregate.skipped+=1;aggregate.errors.push(`Daily Summary ${channelLabel} delivery is already in progress.`);continue}
+    let log:{id:number}|null=null;
+    if(existing?.delivery_status==="failed"){
+      const retried=await db.from("finance_automation_delivery_logs").update({delivery_status:"processing",retry_count:Number(existing.retry_count??0)+1,last_attempt_at:new Date().toISOString(),error_message:null,failure_type:null,next_retry_at:null,recipient_phone:setting.owner_summary_phone,message_body:built.message}).eq("id",existing.id).eq("delivery_status","failed").select("id").maybeSingle();
+      if(retried.error||!retried.data){aggregate.failed+=1;aggregate.errors.push(`Daily Summary ${channelLabel} retry could not be prepared.`);continue}
+      log=retried.data;
+    }else if(existing){aggregate.skipped+=1;aggregate.errors.push(`Daily Summary ${channelLabel} cannot be retried while its delivery is ${existing.delivery_status}.`);continue}
+    else{
+      const inserted=await db.from("finance_automation_delivery_logs").insert({event_id:input.eventId,delivery_type:"daily_summary",channel,recipient_phone:setting.owner_summary_phone,message_body:built.message,delivery_status:"processing",idempotency_key:idempotencyKey,retry_count:1,last_attempt_at:new Date().toISOString()}).select("id").maybeSingle();
+      if(inserted.error||!inserted.data){aggregate.failed+=1;aggregate.errors.push(`Daily Summary ${channelLabel} delivery could not be recorded.`);continue}
+      log=inserted.data;
+    }
     aggregate.queued += 1;
     try {
       let providerMessageId: string | undefined;
@@ -393,13 +406,15 @@ export async function sendDailyFinancialSummary(db: SupabaseClient, input: {
           parameters: [built.event.title, formatTzs(built.summary.dailyCollected), String(built.summary.transactionCount), String(built.summary.contributorsCount), formatTzs(built.summary.totalPledged), formatTzs(built.summary.totalCollected), formatTzs(built.summary.outstandingBalance), String(built.summary.collectionPercentage), String(built.summary.outstandingContributors), String(built.summary.completedPledges), built.summary.topContributor ? `${built.summary.topContributor.name} (${formatTzs(built.summary.topContributor.amount)})` : "—"],
         })).messageId;
       }
-      await db.from("finance_automation_delivery_logs").update({ delivery_status: "sent", provider_message_id: providerMessageId ?? null, sent_at: new Date().toISOString(), error_message: null }).eq("id", log.id);
+      const recorded=await db.from("finance_automation_delivery_logs").update({ delivery_status: "sent", provider_message_id: providerMessageId ?? null, sent_at: new Date().toISOString(), error_message: null }).eq("id", log.id);
+      if(recorded.error){aggregate.failed+=1;aggregate.errors.push(`Daily Summary ${channelLabel} was accepted, but its delivery result could not be recorded.`);continue}
       aggregate.sent += 1;
     } catch (errorValue) {
       const failed = failure(errorValue);
-      await db.from("finance_automation_delivery_logs").update({ delivery_status: "failed", failure_type: failed.type, error_message: failed.message, next_retry_at: null }).eq("id", log.id);
+      const recorded=await db.from("finance_automation_delivery_logs").update({ delivery_status: "failed", failure_type: failed.type, error_message: failed.message, next_retry_at: null }).eq("id", log.id);
       aggregate.failed += 1;
       aggregate.errors.push(failed.message);
+      if(recorded.error)aggregate.errors.push(`Daily Summary ${channelLabel} failure could not be recorded.`);
     }
   }
   return aggregate;
