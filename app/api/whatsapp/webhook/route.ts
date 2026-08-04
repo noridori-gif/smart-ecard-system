@@ -669,9 +669,18 @@ export async function POST(
         error_message: status === "failed" ? getFailureMessage(statusRecord.errors) : null,
         next_retry_at: status === "failed" ? undefined : null,
       };
-      const [{ data: updatedReminder, error: reminderStatusError }, { error: summaryStatusError }] = await Promise.all([
+      const meetingUpdate = {
+        delivery_status: status,
+        sent_at: status === "sent" ? statusTime : undefined,
+        delivered_at: status === "delivered" ? statusTime : undefined,
+        read_at: status === "read" ? statusTime : undefined,
+        failed_at: status === "failed" ? statusTime : undefined,
+        error_message: status === "failed" ? getFailureMessage(statusRecord.errors) : null,
+      };
+      const [{ data: updatedReminder, error: reminderStatusError }, { error: summaryStatusError }, { error: meetingStatusError }] = await Promise.all([
         supabase.from("pledge_reminders").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp").select("id,event_id,pledge_id,retry_count").maybeSingle(),
         supabase.from("finance_automation_delivery_logs").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp"),
+        supabase.from("meeting_invitation_deliveries").update(meetingUpdate).eq("provider_message_id",messageId).eq("channel","whatsapp"),
       ]);
       if (status === "failed" && updatedReminder) {
         const transient = statusRecord.errors?.some((item) => [130429, 131000, 131016].includes(item.code ?? 0)) ?? false;
@@ -689,12 +698,13 @@ export async function POST(
           metadata: { channel: "whatsapp", reminder_id: updatedReminder.id, source: "meta_webhook" },
         });
       }
-      if (reminderStatusError || summaryStatusError) {
+      if (reminderStatusError || summaryStatusError || meetingStatusError) {
         console.error("Financial WhatsApp status update failed:", {
           messageId,
           status,
           reminderError: reminderStatusError?.message,
           summaryError: summaryStatusError?.message,
+          meetingError: meetingStatusError?.message,
         });
       }
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CompletedThankYouPanel from "./CompletedThankYouPanel";
+import MeetingInvitationsPanel from "./MeetingInvitationsPanel";
 import MessagePreviewDialog from "../reminders/MessagePreviewDialog";
 import ReminderSectionNavigation, { isReminderSection, type ReminderSection } from "../reminders/ReminderSectionNavigation";
 import {
@@ -190,6 +191,8 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
     </section>}
 
     {section === "thank-you" && <CompletedThankYouPanel eventId={eventId} onShowReminders={()=>navigate("send")} />}
+
+    {section === "meetings"&&<MeetingInvitationsPanel eventId={eventId} pledges={pledges}/>}
 
     {section === "schedule"&&<section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6"><h2 className="text-xl font-bold">Reminder Schedule</h2><p className="mt-1 text-sm text-slate-600">Scheduled, recommended, paused, stopped, and completed reminder activity remains visible here.</p><div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">{[["Due today",schedules.filter(item=>item.status==="scheduled"&&item.scheduled_for.slice(0,10)===new Date().toISOString().slice(0,10)).length],["Upcoming",schedules.filter(item=>item.status==="scheduled"&&new Date(item.scheduled_for)>new Date()).length],["Recommended",schedules.filter(item=>item.status==="recommended").length],["Failed",schedules.filter(item=>item.status==="failed").length],["No date",pledges.filter(item=>!item.expected_completion_date).length],["Paused",schedules.filter(item=>item.cancel_reason==="paused").length],["Completed / Stopped",schedules.filter(item=>["cancelled","skipped","sent","delivered"].includes(item.status)).length]].map(([label,value])=><article key={label} className="rounded-xl border bg-stone-50 p-3"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-xl font-bold">{value}</p></article>)}</div><div className="mt-5 grid gap-3">{schedules.map(item=>{const relation=Array.isArray(item.event_pledges)?item.event_pledges[0]:item.event_pledges;return <article key={item.id} className="rounded-xl border p-4"><div className="flex flex-col justify-between gap-3 sm:flex-row"><div><h3 className="font-bold">{relation?.full_name??"Contributor"}</h3><p className="mt-1 text-sm text-slate-500">{item.schedule_type.replaceAll("_"," ")} · {new Date(item.scheduled_for).toLocaleString()}</p><p className="mt-1 text-xs text-slate-500">{relation?.expected_completion_date?`Expected completion: ${relation.expected_completion_date}`:"Manual reminder · No completion date"}</p>{!relation?.normalized_phone&&<p className="mt-2 text-sm font-semibold text-amber-800">{language==="sw"?"Hakuna namba ya simu ya kutuma ujumbe.":"No phone number is available for messaging."}</p>}</div><StatusBadge value={item.status}/></div></article>})}{!schedules.length&&<p className="rounded-xl border border-dashed p-8 text-center text-sm text-slate-500">No reminder schedules yet. Manual reminders remain available.</p>}</div></section>}
 

@@ -41,14 +41,15 @@ export type SendAggregate = { queued: number; sent: number; failed: number; skip
 function channels(value: "sms" | "whatsapp" | "both"): FinancialChannel[] {
   return value === "both" ? ["sms", "whatsapp"] : [value];
 }
-export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_thank_you" = "reminder") {
+export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_thank_you" | "meeting_invitation" = "reminder") {
   if (channel === "sms") {
     const configured = Boolean(process.env.BEEM_API_KEY && process.env.BEEM_SECRET_KEY && process.env.BEEM_SENDER_NAME);
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
   }
   const template = getFinancialWhatsAppTemplate(templateKind, language);
+  if(templateKind==="meeting_invitation"&&!template.configured)return {configured:false,message:"Template not configured."};
   const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && template.configured);
-  const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : "daily summary";
+  const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : templateKind === "meeting_invitation" ? "meeting invitation" : "daily summary";
   const languageLabel = language === "sw" ? "Swahili" : "English";
   return { configured, message: configured ? `Approved ${languageLabel} WhatsApp ${label} template configured.` : `The approved ${languageLabel} WhatsApp ${label} template is not configured.` };
 }

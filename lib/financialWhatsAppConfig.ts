@@ -4,7 +4,8 @@ export type FinancialMessageLanguage = "sw" | "en";
 export type FinancialWhatsAppTemplateKind =
   | "reminder"
   | "daily_summary"
-  | "pledge_thank_you";
+  | "pledge_thank_you"
+  | "meeting_invitation";
 
 type TemplateConfig = {
   configured: boolean;
@@ -36,9 +37,10 @@ export function getFinancialWhatsAppTemplate(
     return { configured: Boolean(templateName), languageCode, templateName };
   }
 
-  const prefix =
-    kind === "reminder"
-      ? "WHATSAPP_FINANCIAL_REMINDER_TEMPLATE"
+  const prefix = kind === "reminder"
+    ? "WHATSAPP_FINANCIAL_REMINDER_TEMPLATE"
+    : kind === "meeting_invitation"
+      ? "WHATSAPP_MEETING_INVITATION_TEMPLATE"
       : "WHATSAPP_DAILY_SUMMARY_TEMPLATE";
   const templateName = value(`${prefix}_${suffix}`);
   return {
