@@ -41,13 +41,13 @@ function shortGreetingName(fullName:string){
   const meaningful=normalized.split(" ").find(part=>! /^(mr|mrs|miss|ms|dr|prof|rev|sheikh|shekhe)\.?$/i.test(part)&&part!=="&");return meaningful?.replace(/^[,.;]+|[,.;]+$/g,"")||"Mgeni";
 }
 function compactCountdown(eventDate:string,now=new Date()){
-  const standard=mainEventCountdown(eventDate,now),match=standard.match(/^Zimebaki siku (\d+)/);return match?`Siku ${match[1]} kufikia harusi.`:standard;
+  const standard=mainEventCountdown(eventDate,now),match=standard.match(/^Zimebaki siku (\d+)/);return match?`Zimebakia siku ${match[1]} kufikia harusi.`:standard;
 }
 function normalizeRequiredText(value:string,fallback:string){return value.trim().replace(/\s+/g," ")||fallback}
 function shortenAtWords(value:string,maxWords:number){const words=value.split(" ");return words.length<=maxWords?value:`${words.slice(0,maxWords).join(" ")}...`}
 export function buildMeetingInvitationSms(input:{name:string;meeting:MeetingRow;eventTitle:string;eventDate:string;now?:Date}){
-  const name=shortGreetingName(input.name),meetingTitle=normalizeRequiredText(input.meeting.title,"Kikao"),eventTitle=normalizeRequiredText(input.eventTitle,"Tukio"),date=compactDate(input.meeting.meeting_date),time=input.meeting.meeting_time.slice(0,5),venue=normalizeRequiredText(input.meeting.venue,"Mahali haijatajwa"),countdown=compactCountdown(input.eventDate,input.now);
-  const compose=(eventName:string)=>`Habari ${name},\n${meetingTitle} ya ${eventName}: ${date} saa ${time}, ${venue}.\n${countdown}\nSmart Event Pass`;
+  const name=shortGreetingName(input.name),eventTitle=normalizeRequiredText(input.eventTitle,"Tukio"),date=compactDate(input.meeting.meeting_date),time=input.meeting.meeting_time.slice(0,5),venue=normalizeRequiredText(input.meeting.venue,"Mahali haijatajwa"),countdown=compactCountdown(input.eventDate,input.now);
+  const compose=(eventName:string)=>`Habari ${name},\nUnakaribishwa kwenye kikao cha maandalizi ya harusi ya ${eventName}: ${date}, ${time}, ${venue}.\n${countdown}`;
   let message=compose(eventTitle);
   if(analyzeSms(message).segments>1){const words=eventTitle.split(" ");for(let count=words.length-1;count>=1;count-=1){const candidate=compose(shortenAtWords(eventTitle,count));message=candidate;if(analyzeSms(candidate).segments===1)break}}
   return message;
