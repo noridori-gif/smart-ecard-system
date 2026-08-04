@@ -8,7 +8,7 @@ export type MeetingAudience="all"|"pledged"|"partial"|"completed"|"manual";
 export type MeetingRow={id:number;event_id:number;title:string;meeting_date:string;meeting_time:string;venue:string;map_url:string|null;note:string|null;status:"draft"|"active"|"completed"|"cancelled";created_at:string;updated_at:string};
 type Pledge={id:number;event_id:number;full_name:string;normalized_phone:string|null;calculated_status:"pledged"|"partial"|"completed"|"cancelled"};
 type Delivery={id:number;pledge_id:number;channel:FinancialChannel;delivery_status:string;retry_count:number;error_message:string|null;idempotency_key:string};
-export type MeetingInvitationRow={pledgeId:number;contributor:string;phone:string|null;paymentStatus:Pledge["calculated_status"];channel:FinancialChannel;message:string;smsSegments:number;eligible:boolean;skippedReason:string|null;deliveryStatus:string|null;idempotencyKey:string;errorMessage:string|null};
+export type MeetingInvitationRow={pledgeId:number;contributor:string;phone:string|null;paymentStatus:Pledge["calculated_status"];channel:FinancialChannel;message:string;smsSegments:number;smsEncoding:"GSM-7"|"UCS-2";smsCharacters:number;smsUnits:number;eligible:boolean;skippedReason:string|null;deliveryStatus:string|null;idempotencyKey:string;errorMessage:string|null};
 export type MeetingInvitationPreview={meeting:MeetingRow;event:{id:number;title:string;event_date:string;language:"sw"|"en"};rows:MeetingInvitationRow[];provider:Record<FinancialChannel,{configured:boolean;message:string}>};
 
 function tanzaniaDate(now=new Date()){
@@ -24,7 +24,34 @@ export function mainEventCountdown(eventDate:string,now=new Date()){
   return `Zimebaki siku ${difference} kufikia siku ya tukio.`;
 }
 function meetingDateLabel(date:string){return new Intl.DateTimeFormat("sw-TZ",{day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Dar_es_Salaam"}).format(new Date(`${date}T12:00:00Z`))}
-export function estimateSmsSegments(message:string){const gsm=/^[\x0A\x0D\x20-\x7E£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉÄÖÑÜ§¿äöñüà]*$/;const single=gsm.test(message)?160:70,continued=gsm.test(message)?153:67;return message.length<=single?1:Math.ceil(message.length/continued)}
+const GSM_BASIC=new Set(Array.from("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"));
+const GSM_EXTENSION=new Set(Array.from("^{}\\[~]|€"));
+export type SmsAnalysis={encoding:"GSM-7"|"UCS-2";units:number;segments:number;singleLimit:number;multipartLimit:number};
+export function analyzeSms(message:string):SmsAnalysis{
+  let gsmUnits=0,gsm=true;
+  for(const character of Array.from(message)){if(GSM_BASIC.has(character))gsmUnits+=1;else if(GSM_EXTENSION.has(character))gsmUnits+=2;else{gsm=false;break}}
+  const encoding=gsm?"GSM-7":"UCS-2",units=gsm?gsmUnits:Array.from(message).reduce((total,character)=>total+(character.codePointAt(0)!>0xffff?2:1),0),singleLimit=gsm?160:70,multipartLimit=gsm?153:67;
+  return {encoding,units,segments:units<=singleLimit?1:Math.ceil(units/multipartLimit),singleLimit,multipartLimit};
+}
+export function estimateSmsSegments(message:string){return analyzeSms(message).segments}
+function compactDate(date:string){const [year,month,day]=date.split("-");return `${day}/${month}/${year}`}
+function shortGreetingName(fullName:string){
+  const normalized=fullName.trim().replace(/\s+/g," ");if(!normalized)return "Mgeni";
+  const couple=normalized.match(/^(Mr\.?\s*&\s*Mrs\.?|Mrs\.?\s*&\s*Mr\.?)\s+([^\s,]+)/i);if(couple)return `${couple[1]} ${couple[2]}`;
+  const meaningful=normalized.split(" ").find(part=>! /^(mr|mrs|miss|ms|dr|prof|rev|sheikh|shekhe)\.?$/i.test(part)&&part!=="&");return meaningful?.replace(/^[,.;]+|[,.;]+$/g,"")||"Mgeni";
+}
+function compactCountdown(eventDate:string,now=new Date()){
+  const standard=mainEventCountdown(eventDate,now),match=standard.match(/^Zimebaki siku (\d+)/);return match?`Siku ${match[1]} kufikia harusi.`:standard;
+}
+function normalizeRequiredText(value:string,fallback:string){return value.trim().replace(/\s+/g," ")||fallback}
+function shortenAtWords(value:string,maxWords:number){const words=value.split(" ");return words.length<=maxWords?value:`${words.slice(0,maxWords).join(" ")}...`}
+export function buildMeetingInvitationSms(input:{name:string;meeting:MeetingRow;eventTitle:string;eventDate:string;now?:Date}){
+  const name=shortGreetingName(input.name),meetingTitle=normalizeRequiredText(input.meeting.title,"Kikao"),eventTitle=normalizeRequiredText(input.eventTitle,"Tukio"),date=compactDate(input.meeting.meeting_date),time=input.meeting.meeting_time.slice(0,5),venue=normalizeRequiredText(input.meeting.venue,"Mahali haijatajwa"),countdown=compactCountdown(input.eventDate,input.now);
+  const compose=(eventName:string)=>`Habari ${name}, ${meetingTitle} ya ${eventName} ni ${date} saa ${time}, ${venue}. ${countdown} Smart Event Pass`;
+  let message=compose(eventTitle);
+  if(analyzeSms(message).segments>1){const words=eventTitle.split(" ");for(let count=words.length-1;count>=1;count-=1){const candidate=compose(shortenAtWords(eventTitle,count));message=candidate;if(analyzeSms(candidate).segments===1)break}}
+  return message;
+}
 export function buildMeetingInvitationMessage(input:{name:string;meeting:MeetingRow;eventTitle:string;eventDate:string}){
   const optional=[input.meeting.map_url?`Ramani: ${input.meeting.map_url}`:"",input.meeting.note?`Maelezo: ${input.meeting.note.trim()}`:""].filter(Boolean).join("\n");
   return [`Habari ${input.name.trim()||"Mchangiaji"},`,`Unakaribishwa kwenye ${input.meeting.title} kwa ajili ya maandalizi ya ${input.eventTitle}.`,`Tarehe: ${meetingDateLabel(input.meeting.meeting_date)}`,`Muda: ${input.meeting.meeting_time.slice(0,5)}`,`Mahali: ${input.meeting.venue}`,optional,mainEventCountdown(input.eventDate),"Smart Event Pass"].filter(Boolean).join("\n\n").replace(/\n{3,}/g,"\n\n").trim();
@@ -52,8 +79,9 @@ export async function previewMeetingInvitations(db:SupabaseClient,input:{eventId
     const key=`meeting-invitation:v1:${meeting.id}:${pledge.id}:${channel}`,existing=(history as Delivery[]).find(item=>item.idempotency_key===key);
     let reason:string|null=null;
     if(meeting.status==="cancelled")reason="meeting_cancelled";else if(!pledge.normalized_phone)reason="missing_phone";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="invalid_phone";else if(!provider[channel].configured)reason="provider_unavailable";else if(existing&&["sent","delivered","read"].includes(existing.delivery_status))reason="already_sent";else if(existing&&["queued","processing"].includes(existing.delivery_status))reason="in_progress";
-    const message=buildMeetingInvitationMessage({name:pledge.full_name,meeting:meeting as MeetingRow,eventTitle:event.title,eventDate:event.event_date});
-    rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,paymentStatus:pledge.calculated_status,channel,message,smsSegments:channel==="sms"?estimateSmsSegments(message):0,eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,idempotencyKey:key,errorMessage:existing?.error_message??null});
+    const message=channel==="sms"?buildMeetingInvitationSms({name:pledge.full_name,meeting:meeting as MeetingRow,eventTitle:event.title,eventDate:event.event_date}):buildMeetingInvitationMessage({name:pledge.full_name,meeting:meeting as MeetingRow,eventTitle:event.title,eventDate:event.event_date});
+    const sms=channel==="sms"?analyzeSms(message):{encoding:"GSM-7" as const,units:0,segments:0};
+    rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,paymentStatus:pledge.calculated_status,channel,message,smsSegments:sms.segments,smsEncoding:sms.encoding,smsCharacters:channel==="sms"?Array.from(message).length:0,smsUnits:sms.units,eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,idempotencyKey:key,errorMessage:existing?.error_message??null});
   }
   return {meeting:meeting as MeetingRow,event:{id:event.id,title:event.title,event_date:event.event_date,language},rows,provider};
 }

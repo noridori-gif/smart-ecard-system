@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 export default function MessagePreviewDialog({
   open,
@@ -12,6 +12,7 @@ export default function MessagePreviewDialog({
   confirmed,
   busy,
   canSend = true,
+  previewDetails,
   confirmationLabel,
   sendLabel,
   onConfirmedChange,
@@ -27,6 +28,7 @@ export default function MessagePreviewDialog({
   confirmed: boolean;
   busy: boolean;
   canSend?: boolean;
+  previewDetails?: ReactNode;
   confirmationLabel: string;
   sendLabel: string;
   onConfirmedChange: (confirmed: boolean) => void;
@@ -69,6 +71,7 @@ export default function MessagePreviewDialog({
         <pre className="mt-5 whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50 p-4 font-sans text-[15px] leading-6 text-slate-800">
           {message}
         </pre>
+        {previewDetails}
         <p className={`mt-4 rounded-xl p-3 text-sm ${providerReady ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
           <b>Provider readiness:</b> {providerMessage}
         </p>
