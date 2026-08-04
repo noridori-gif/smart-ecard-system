@@ -416,6 +416,7 @@ export type FinancialWhatsAppTemplateInput = {
   language: "sw" | "en";
   templateKind: FinancialWhatsAppTemplateKind;
   parameters: string[];
+  urlButtonSuffix?: string;
 };
 
 export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemplateInput) {
@@ -425,6 +426,9 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
   if (!template.templateName) {
     const languageLabel = input.language === "sw" ? "Swahili" : "English";
     throw new Error(`The approved ${languageLabel} WhatsApp ${input.templateKind.replaceAll("_", " ")} template is not configured.`);
+  }
+  if(input.templateKind==="meeting_invitation"&&(input.parameters.length!==8||!input.urlButtonSuffix||!/^[a-f0-9]{36}$/i.test(input.urlButtonSuffix))){
+    throw new Error("The meeting invitation template payload is incomplete.");
   }
   const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
   const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
@@ -442,7 +446,12 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
         components: [{
           type: "body",
           parameters: input.parameters.map((parameter) => ({ type: "text", text: parameter })),
-        }],
+        }, ...(input.urlButtonSuffix ? [{
+          type: "button",
+          sub_type: "url",
+          index: "0",
+          parameters: [{ type: "text", text: input.urlButtonSuffix }],
+        }] : [])],
       },
     }),
     cache: "no-store",

@@ -47,11 +47,11 @@ export function financialProviderStatus(channel: FinancialChannel, language: "sw
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
   }
   const template = getFinancialWhatsAppTemplate(templateKind, language);
-  if(templateKind==="meeting_invitation"&&!template.configured)return {configured:false,message:"Template not configured."};
+  if(templateKind==="meeting_invitation"&&!template.configured)return {configured:false,message:language==="en"?"English template unavailable.":"Template not configured."};
   const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && template.configured);
   const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : templateKind === "meeting_invitation" ? "meeting invitation" : "daily summary";
   const languageLabel = language === "sw" ? "Swahili" : "English";
-  return { configured, message: configured ? `Approved ${languageLabel} WhatsApp ${label} template configured.` : `The approved ${languageLabel} WhatsApp ${label} template is not configured.` };
+  return { configured, message: configured ? (templateKind==="meeting_invitation"?`${languageLabel} WhatsApp meeting template configured; verify Meta approval status before sending.`:`Approved ${languageLabel} WhatsApp ${label} template configured.`) : templateKind==="meeting_invitation"?`${languageLabel} WhatsApp meeting template or credentials are not configured.`:`The approved ${languageLabel} WhatsApp ${label} template is not configured.` };
 }
 function windowKey(pledgeId: number, channel: FinancialChannel, cooldownHours: number, now: Date) {
   const windowNumber = Math.floor(now.getTime() / (Math.max(1, cooldownHours) * 3_600_000));
