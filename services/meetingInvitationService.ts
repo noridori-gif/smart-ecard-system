@@ -47,7 +47,7 @@ function normalizeRequiredText(value:string,fallback:string){return value.trim()
 function shortenAtWords(value:string,maxWords:number){const words=value.split(" ");return words.length<=maxWords?value:`${words.slice(0,maxWords).join(" ")}...`}
 export function buildMeetingInvitationSms(input:{name:string;meeting:MeetingRow;eventTitle:string;eventDate:string;now?:Date}){
   const name=shortGreetingName(input.name),meetingTitle=normalizeRequiredText(input.meeting.title,"Kikao"),eventTitle=normalizeRequiredText(input.eventTitle,"Tukio"),date=compactDate(input.meeting.meeting_date),time=input.meeting.meeting_time.slice(0,5),venue=normalizeRequiredText(input.meeting.venue,"Mahali haijatajwa"),countdown=compactCountdown(input.eventDate,input.now);
-  const compose=(eventName:string)=>`Habari ${name}, ${meetingTitle} ya ${eventName} ni ${date} saa ${time}, ${venue}. ${countdown} Smart Event Pass`;
+  const compose=(eventName:string)=>`Habari ${name},\n${meetingTitle} ya ${eventName}: ${date} saa ${time}, ${venue}.\n${countdown}\nSmart Event Pass`;
   let message=compose(eventTitle);
   if(analyzeSms(message).segments>1){const words=eventTitle.split(" ");for(let count=words.length-1;count>=1;count-=1){const candidate=compose(shortenAtWords(eventTitle,count));message=candidate;if(analyzeSms(candidate).segments===1)break}}
   return message;
