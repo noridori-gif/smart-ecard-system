@@ -58,3 +58,16 @@ deployments must use the canonical language-specific names.
 
 All variables above are server-only. Never expose the cron secret, service-role key, provider keys,
 or WhatsApp access token through `NEXT_PUBLIC_` variables, browser code, logs, or API responses.
+
+## Automatic payment acknowledgement SMS
+
+Each positive row inserted into `pledge_payments` queues one `payment.recorded` workflow keyed by
+the immutable payment ID. The workflow sends SMS only when acknowledgement automation is
+`automatic`, the event channel includes SMS, BEEM is configured, and the contributor has a valid
+normalized phone. Partial payments use `payment_received`; a transaction that completes the pledge
+uses `pledge_thank_you`. Idempotency is independent per payment, message type, and channel.
+
+Payment edits, corrections, voids, and non-payment pledge edits do not create payment-message
+workflows. Provider retries retain the originally generated transaction snapshot and message body,
+so a later payment cannot change an earlier transaction's acknowledgement. SMS audit metadata
+records only safe IDs, message/channel/source labels, and segment estimates.
