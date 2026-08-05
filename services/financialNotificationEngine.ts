@@ -205,10 +205,16 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
 }
 
 function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: string; retry: boolean } {
-  const message = (error instanceof Error ? error.message : "Provider request failed.")
+  const record=typeof error==="object"&&error!==null?error as Record<string,unknown>:null;
+  let message = (error instanceof Error ? error.message : typeof record?.message==="string"?record.message:"Provider request failed.")
+    .replace(/[\u0000-\u001f\u007f]+/g," ")
+    .replace(/\b(?:postgres(?:ql)?|https?):\/\/\S+/gi,"[redacted URL]")
     .replace(/Bearer\s+[^\s,)]+/gi, "Bearer [redacted]")
-    .replace(/(access[_ -]?token|authorization)\s*[:=]\s*[^\s,)]+/gi, "$1=[redacted]")
-    .slice(0, 500);
+    .replace(/\b(?:Basic)\s+\S+/gi,"Basic [redacted]")
+    .replace(/(access[_ -]?token|authorization|api[_ -]?key|secret|password|credential)\s*[:=]\s*[^\s,)]+/gi, "$1=[redacted]")
+    .replace(/\s+/g," ").trim();
+  if(/\b(?:request payload|request body|response payload|response body|provider response)\b/i.test(message))message="Provider request failed.";
+  message=message.slice(0,500);
   const configuration = /environment|configured|configuration|template/i.test(message);
   const validation = /phone|invalid/i.test(message);
   return { type: configuration ? "configuration" : validation ? "validation" : "provider", message: message.slice(0, 500), retry: !configuration && !validation };
@@ -217,9 +223,13 @@ function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: 
 async function deliverReminder(db: SupabaseClient, reminder: {
   id: number; pledge_id: number; event_id: number; channel: FinancialChannel; recipient_phone: string;
   message_body: string; retry_count: number; reminder_type?: string;
-}, event: EventRow, pledge: PledgeRow, actor: { type: "system" | "authenticated_user" | "organiser_link"; userId?: string | null; linkId?: string | null }) {
+}, event: EventRow, pledge: PledgeRow, actor: { type: "system" | "authenticated_user" | "organiser_link"; userId?: string | null; linkId?: string | null }, alreadyClaimed = false) {
   const attempt = reminder.retry_count + 1;
-  await db.from("pledge_reminders").update({ delivery_status: "processing", retry_count: attempt, last_attempt_at: new Date().toISOString(), next_retry_at: null }).eq("id", reminder.id);
+  const attemptUpdate={ delivery_status: "processing", retry_count: attempt, last_attempt_at: new Date().toISOString(), next_retry_at: null };
+  if(alreadyClaimed){
+    const prepared=await db.from("pledge_reminders").update(attemptUpdate).eq("id",reminder.id).eq("delivery_status","processing").select("id").maybeSingle();
+    if(prepared.error||!prepared.data)return {status:"failed" as const,error:"Delivery attempt could not be prepared."};
+  }else await db.from("pledge_reminders").update(attemptUpdate).eq("id",reminder.id);
   try {
     let providerMessageId: string | undefined;
     if (reminder.channel === "sms") {
@@ -248,6 +258,57 @@ async function deliverReminder(db: SupabaseClient, reminder: {
     await db.from("finance_audit_logs").insert({ event_id: reminder.event_id, pledge_id: reminder.pledge_id, actor_type: actor.type, actor_user_id: actor.userId ?? null, organiser_access_link_id: actor.linkId ?? null, action: "reminder_failed", metadata: { channel: reminder.channel, reminder_id: reminder.id, failure_type: failed.type, safe_provider_error: failed.message } });
     return { status: "failed" as const, error: failed.message };
   }
+}
+
+export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,eventId?:number):Promise<SendAggregate>{
+  let query=db.from("pledge_reminders")
+    .select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type")
+    .eq("delivery_status","queued")
+    .eq("reminder_type","pledge_thank_you")
+    .like("idempotency_key","pledge-acknowledgement:%")
+    .order("id",{ascending:true})
+    .limit(100);
+  if(eventId)query=query.eq("event_id",eventId);
+  const {data,error}=await query;
+  if(error)throw new Error("Queued pledge acknowledgements could not be loaded.");
+  const aggregate:SendAggregate={queued:0,sent:0,failed:0,skipped:0,errors:[]};
+  for(const candidate of data??[]){
+    const claimed=await db.from("pledge_reminders")
+      .update({delivery_status:"processing"})
+      .eq("id",candidate.id)
+      .eq("delivery_status","queued")
+      .select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type")
+      .maybeSingle();
+    if(claimed.error){aggregate.failed+=1;aggregate.errors.push("A queued pledge acknowledgement could not be claimed.");continue}
+    if(!claimed.data){aggregate.skipped+=1;continue}
+    aggregate.queued+=1;
+    const reminder=claimed.data;
+    const [eventResult,pledgeResult,settingResult]=await Promise.all([
+      db.from("events").select("id,title,event_date,language,archived_at").eq("id",reminder.event_id).maybeSingle(),
+      db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("id",reminder.pledge_id).eq("event_id",reminder.event_id).maybeSingle(),
+      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel").eq("event_id",reminder.event_id).maybeSingle(),
+    ]);
+    if(eventResult.error||pledgeResult.error||settingResult.error){
+      await db.from("pledge_reminders").update({delivery_status:"queued"}).eq("id",reminder.id).eq("delivery_status","processing");
+      aggregate.failed+=1;aggregate.errors.push("A queued pledge acknowledgement could not be validated.");continue;
+    }
+    const event=eventResult.data,pledge=pledgeResult.data,setting=settingResult.data;
+    const channel=reminder.channel as FinancialChannel;
+    const validStatus=pledge&&["pledged","partial","completed"].includes(pledge.calculated_status);
+    const validPhone=pledge?.normalized_phone&&/^255[67]\d{8}$/.test(pledge.normalized_phone)&&/^255[67]\d{8}$/.test(reminder.recipient_phone);
+    const validChannel=(channel==="sms"||channel==="whatsapp")&&setting&&channels(setting.reminder_channel).includes(channel);
+    if(!event||!pledge||!setting||setting.pledge_acknowledgement_mode!=="automatic"||!validStatus||!validPhone||!validChannel){
+      const message="Automatic pledge acknowledgement is no longer eligible for delivery.";
+      await db.from("pledge_reminders").update({delivery_status:"failed",error_message:message,failure_type:"validation",next_retry_at:null}).eq("id",reminder.id).eq("delivery_status","processing");
+      await db.from("finance_audit_logs").insert({event_id:reminder.event_id,pledge_id:reminder.pledge_id,actor_type:"system",action:"reminder_failed",metadata:{channel:reminder.channel,reminder_id:reminder.id,failure_type:"validation",safe_provider_error:message}});
+      aggregate.skipped+=1;aggregate.errors.push(message);continue;
+    }
+    const currentReminder={...reminder,channel,recipient_phone:pledge.normalized_phone};
+    const delivery=await deliverReminder(db,currentReminder,event as EventRow,pledge as PledgeRow,{type:"system"},true);
+    aggregate[delivery.status]+=1;
+    if(delivery.error)aggregate.errors.push(delivery.error);
+  }
+  return aggregate;
 }
 
 export async function sendFinancialReminders(db: SupabaseClient, preview: ReminderPreview, actor: {
