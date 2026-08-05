@@ -11,6 +11,7 @@ It is not enabled automatically. Configure these server-only environment variabl
 - `BEEM_API_KEY`, `BEEM_SECRET_KEY`, `BEEM_SENDER_NAME`: BEEM Africa SMS credentials and approved sender.
 - `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`: Meta WhatsApp Cloud API server credentials.
 - `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_SW`, `WHATSAPP_FINANCIAL_REMINDER_TEMPLATE_EN`: approved pledge-reminder template names.
+- `WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_SW`, `WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_EN`: exact approved Meta template name for newly submitted pledge acknowledgements.
 - `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_SW`, `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_EN`: exact approved Meta template names for completed-pledge thank-you messages.
 - `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_LANGUAGE_SW=sw`, `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_LANGUAGE_EN=en_US`: exact language codes approved with those Meta templates.
 - `WHATSAPP_DAILY_SUMMARY_TEMPLATE_SW`, `WHATSAPP_DAILY_SUMMARY_TEMPLATE_EN`: approved daily-summary template names.
@@ -40,6 +41,13 @@ event title, total pledge, total received, outstanding balance. Daily-summary te
 event title, collected today, transaction count, contributors today, total pledged, total collected,
 outstanding balance, collection percentage, contributors with balances, completed pledges, and top
 contributor. Keep the Swahili and English templates structurally aligned with these variables.
+
+The dedicated pledge acknowledgement Meta template name is `financial_pledge_acknowledgement`,
+with `sw` and `en_US` language variants. Set both
+`WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_SW` and
+`WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_EN` to that exact name. It accepts body variables in
+this order: contributor name, event title, total pledge, total received, and balance. It must not
+reuse or fall back to the completed-pledge thank-you template.
 
 The canonical completed-pledge configuration is `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_SW`
 and `WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_EN`. Each value must be the exact Meta template name

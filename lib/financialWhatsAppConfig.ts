@@ -4,6 +4,7 @@ export type FinancialMessageLanguage = "sw" | "en";
 export type FinancialWhatsAppTemplateKind =
   | "reminder"
   | "daily_summary"
+  | "pledge_acknowledgement"
   | "pledge_thank_you"
   | "meeting_invitation";
 
@@ -22,6 +23,14 @@ export function getFinancialWhatsAppTemplate(
   language: FinancialMessageLanguage
 ): TemplateConfig {
   const suffix = language === "sw" ? "SW" : "EN";
+  if (kind === "pledge_acknowledgement") {
+    const templateName = value(`WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_${suffix}`);
+    return {
+      configured: Boolean(templateName),
+      languageCode: language === "sw" ? "sw" : "en_US",
+      templateName,
+    };
+  }
   if (kind === "pledge_thank_you") {
     const templateName =
       value(`WHATSAPP_FINANCIAL_THANK_YOU_TEMPLATE_${suffix}`) ??
@@ -55,12 +64,16 @@ export function getFinancialWhatsAppReadiness() {
   const reminderEn = getFinancialWhatsAppTemplate("reminder", "en");
   const thankYouSw = getFinancialWhatsAppTemplate("pledge_thank_you", "sw");
   const thankYouEn = getFinancialWhatsAppTemplate("pledge_thank_you", "en");
+  const acknowledgementSw = getFinancialWhatsAppTemplate("pledge_acknowledgement", "sw");
+  const acknowledgementEn = getFinancialWhatsAppTemplate("pledge_acknowledgement", "en");
   return {
     whatsappConfigured: Boolean(
       value("WHATSAPP_ACCESS_TOKEN") && value("WHATSAPP_PHONE_NUMBER_ID")
     ),
     thankYouSwConfigured: thankYouSw.configured,
     thankYouEnConfigured: thankYouEn.configured,
+    acknowledgementSwConfigured: acknowledgementSw.configured,
+    acknowledgementEnConfigured: acknowledgementEn.configured,
     reminderSwConfigured: reminderSw.configured,
     reminderEnConfigured: reminderEn.configured,
   };

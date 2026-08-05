@@ -41,7 +41,7 @@ export type SendAggregate = { queued: number; sent: number; failed: number; skip
 function channels(value: "sms" | "whatsapp" | "both"): FinancialChannel[] {
   return value === "both" ? ["sms", "whatsapp"] : [value];
 }
-export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_thank_you" | "meeting_invitation" = "reminder") {
+export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_acknowledgement" | "pledge_thank_you" | "meeting_invitation" = "reminder") {
   if (channel === "sms") {
     const configured = Boolean(process.env.BEEM_API_KEY && process.env.BEEM_SECRET_KEY && process.env.BEEM_SENDER_NAME);
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
@@ -49,7 +49,7 @@ export function financialProviderStatus(channel: FinancialChannel, language: "sw
   const template = getFinancialWhatsAppTemplate(templateKind, language);
   if(templateKind==="meeting_invitation"&&!template.configured)return {configured:false,message:language==="en"?"English template unavailable.":"Template not configured."};
   const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && template.configured);
-  const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_thank_you" ? "pledge thank-you" : templateKind === "meeting_invitation" ? "meeting invitation" : "daily summary";
+  const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_acknowledgement" ? "pledge acknowledgement" : templateKind === "pledge_thank_you" ? "pledge thank-you" : templateKind === "meeting_invitation" ? "meeting invitation" : "daily summary";
   const languageLabel = language === "sw" ? "Swahili" : "English";
   return { configured, message: configured ? (templateKind==="meeting_invitation"?`${languageLabel} WhatsApp meeting template configured; verify Meta approval status before sending.`:`Approved ${languageLabel} WhatsApp ${label} template configured.`) : templateKind==="meeting_invitation"?`${languageLabel} WhatsApp meeting template or credentials are not configured.`:`The approved ${languageLabel} WhatsApp ${label} template is not configured.` };
 }
@@ -243,7 +243,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
     } else {
       const result = await sendFinancialWhatsAppTemplate({
         phoneNumber: reminder.recipient_phone, language: event.language === "en" ? "en" : "sw",
-        templateKind: reminder.reminder_type === "pledge_thank_you" ? "pledge_thank_you" : "reminder",
+        templateKind: reminder.reminder_type === "pledge_acknowledgement" ? "pledge_acknowledgement" : reminder.reminder_type === "pledge_thank_you" ? "pledge_thank_you" : "reminder",
         parameters: [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)],
       });
       providerMessageId = result.messageId;
@@ -264,8 +264,8 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
   let query=db.from("pledge_reminders")
     .select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type")
     .eq("delivery_status","queued")
-    .eq("reminder_type","pledge_thank_you")
     .like("idempotency_key","pledge-acknowledgement:%")
+    .in("reminder_type",["pledge_acknowledgement","pledge_thank_you"])
     .order("id",{ascending:true})
     .limit(100);
   if(eventId)query=query.eq("event_id",eventId);
@@ -303,7 +303,12 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
       await db.from("finance_audit_logs").insert({event_id:reminder.event_id,pledge_id:reminder.pledge_id,actor_type:"system",action:"reminder_failed",metadata:{channel:reminder.channel,reminder_id:reminder.id,failure_type:"validation",safe_provider_error:message}});
       aggregate.skipped+=1;aggregate.errors.push(message);continue;
     }
-    const currentReminder={...reminder,channel,recipient_phone:pledge.normalized_phone};
+    const completed=pledge.calculated_status==="completed"&&Number(pledge.balance)<=0;
+    const reminderType=completed?"pledge_thank_you":"pledge_acknowledgement";
+    const message=buildPledgeMessage(reminderType,event.language==="en"?"en":"sw",{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance});
+    const repaired=await db.from("pledge_reminders").update({reminder_type:reminderType,message_body:message,recipient_phone:pledge.normalized_phone}).eq("id",reminder.id).eq("delivery_status","processing").select("id").maybeSingle();
+    if(repaired.error||!repaired.data){aggregate.failed+=1;aggregate.errors.push("A queued pledge acknowledgement could not be prepared.");continue}
+    const currentReminder={...reminder,reminder_type:reminderType,message_body:message,channel,recipient_phone:pledge.normalized_phone};
     const delivery=await deliverReminder(db,currentReminder,event as EventRow,pledge as PledgeRow,{type:"system"},true);
     aggregate[delivery.status]+=1;
     if(delivery.error)aggregate.errors.push(delivery.error);
