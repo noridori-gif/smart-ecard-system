@@ -261,7 +261,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
   }
 }
 
-export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,eventId?:number):Promise<SendAggregate>{
+export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,eventId?:number,reminderId?:number):Promise<SendAggregate>{
   let query=db.from("pledge_reminders")
     .select("id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type")
     .eq("delivery_status","queued")
@@ -270,6 +270,7 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
     .order("id",{ascending:true})
     .limit(100);
   if(eventId)query=query.eq("event_id",eventId);
+  if(reminderId)query=query.eq("id",reminderId);
   const {data,error}=await query;
   if(error)throw new Error("Queued pledge acknowledgements could not be loaded.");
   const aggregate:SendAggregate={queued:0,sent:0,failed:0,skipped:0,errors:[]};
@@ -318,7 +319,7 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
   return aggregate;
 }
 
-export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,eventId?:number):Promise<SendAggregate>{
+export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,eventId?:number,reminderId?:number):Promise<SendAggregate>{
   const now=new Date().toISOString();
   const fields="id,pledge_id,event_id,channel,recipient_phone,message_body,retry_count,reminder_type,originating_payment_id,originating_source,delivery_status,next_retry_at";
   let queuedQuery=db.from("pledge_reminders")
@@ -330,6 +331,7 @@ export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,
     .order("id",{ascending:true})
     .limit(100);
   if(eventId)queuedQuery=queuedQuery.eq("event_id",eventId);
+  if(reminderId)queuedQuery=queuedQuery.eq("id",reminderId);
   const queuedResult=await queuedQuery;
   if(queuedResult.error)throw new Error("Automatic payment acknowledgements could not be loaded.");
   const queued=queuedResult.data??[];
@@ -337,6 +339,7 @@ export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,
   if(queued.length<100){
     let failedQuery=db.from("pledge_reminders").select(fields).like("idempotency_key","payment-acknowledgement:%").in("reminder_type",["payment_received","pledge_thank_you"]).eq("delivery_status","failed").lt("retry_count",3).not("next_retry_at","is",null).lte("next_retry_at",now).order("next_retry_at",{ascending:true}).limit(100-queued.length);
     if(eventId)failedQuery=failedQuery.eq("event_id",eventId);
+    if(reminderId)failedQuery=failedQuery.eq("id",reminderId);
     const failedResult=await failedQuery;
     if(failedResult.error)throw new Error("Due payment acknowledgement retries could not be loaded.");
     failed=failedResult.data??[];

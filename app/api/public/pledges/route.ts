@@ -1,4 +1,6 @@
 import { hashPublicPledgeValue, normalizePublicPhone, publicPledgeClient, publicPledgeHeaders } from "@/lib/publicPledge";
+import { serviceDatabase } from "@/lib/makeConnectorServer";
+import { processWorkflowByIdempotencyKey } from "@/services/financialWorkflowProcessor";
 
 function ipFor(request: Request) { return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"; }
 export async function GET(request: Request) {
@@ -20,5 +22,7 @@ export async function POST(request: Request) {
   const expectedDate = typeof body.expectedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.expectedDate) ? body.expectedDate : null;
   const { data, error } = await publicPledgeClient().rpc("submit_public_pledge", { supplied_token_hash: hashPublicPledgeValue(token), submission_key: idempotencyKey, submitter_name: fullName, submitter_phone: phone, submitter_email: email, amount: amountText, expected_date: expectedDate, submitter_note: typeof body.note === "string" ? body.note.trim().slice(0,1000) || null : null, request_ip_hash: hashPublicPledgeValue(ipFor(request)) });
   if (error) { const limited = error.message.includes("RATE_LIMITED"); return Response.json({ error: limited ? "Too many submissions. Please try again later." : "This pledge link is unavailable." }, { status: limited ? 429 : 400, headers: publicPledgeHeaders }); }
-  return Response.json(data, { status: 201, headers: publicPledgeHeaders });
+  let acknowledgement={status:"queued",message:"Pledge saved. Acknowledgement queued for delivery."};
+  try{const origin=process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/,"")||new URL(request.url).origin;acknowledgement=await processWorkflowByIdempotencyKey(serviceDatabase(),`ack:${idempotencyKey}`,origin);}catch{}
+  return Response.json({...data,acknowledgement}, { status: 201, headers: publicPledgeHeaders });
 }

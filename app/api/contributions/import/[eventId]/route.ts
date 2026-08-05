@@ -4,6 +4,8 @@ import {
 } from "@/lib/financePortalServer";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
 import type { FinancialImportOptions, FinancialImportRow } from "@/services/financialImportService";
+import { serviceDatabase } from "@/lib/makeConnectorServer";
+import { processWorkflowByIdempotencyKey } from "@/services/financialWorkflowProcessor";
 
 const moneyPattern = /^\d+(\.\d{1,2})?$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,8 +162,11 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   if (error) return response({ error: error.message }, 400);
   const result = data as { receipts?: { rowNumber: number; receiptNumber: string }[] } & Record<string, unknown>;
   const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || new URL(request.url).origin;
+  const acknowledgementResults:{status:string;message:string}[]=[];
+  try{const db=serviceDatabase(),receipts=(result.receipts??[]).slice(0,100),numbers=receipts.map(item=>item.receiptNumber);if(numbers.length){const {data:payments}=await db.from("pledge_payments").select("id,receipt_number").in("receipt_number",numbers);for(const payment of payments??[])acknowledgementResults.push(await processWorkflowByIdempotencyKey(db,`payment-message:${payment.id}`,origin));}}catch{}
   return response({
     ...result,
+    acknowledgementProcessing:{processed:acknowledgementResults.length,sent:acknowledgementResults.filter(item=>item.status==="sent").length,queued:acknowledgementResults.filter(item=>item.status!=="sent").length,limited:(result.receipts?.length??0)>100},
     receipts: (result.receipts ?? []).map((receipt) => ({
       ...receipt,
       verificationUrl: `${origin}/r/${rowsWithTokens.find((row) => row.rowNumber === receipt.rowNumber)?.receiptToken ?? ""}`,

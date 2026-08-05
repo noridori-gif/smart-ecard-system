@@ -6,6 +6,8 @@ import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
 import { createClient } from "@supabase/supabase-js";
 import { financialProviderStatus, previewFinancialReminders, previewPledgeThankYous, sendFinancialReminders, sendPledgeThankYous, type FinancialChannel } from "@/services/financialNotificationEngine";
 import { getFinancialWhatsAppReadiness } from "@/lib/financialWhatsAppConfig";
+import { serviceDatabase } from "@/lib/makeConnectorServer";
+import { processWorkflowByIdempotencyKey } from "@/services/financialWorkflowProcessor";
 
 type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
@@ -102,7 +104,10 @@ export async function POST(request: Request) {
         contributor_normalized_phone: normalizedPhone, contributor_email: text(body?.email, 254),
         amount, pledge_notes: text(body?.notes, 1000),
       });
-      if (error) throw error; return Response.json({ pledge: data }, { status: 201, headers: noStoreHeaders });
+      if (error) throw error;
+      let acknowledgement={status:"queued",message:"Pledge saved. Acknowledgement queued for delivery."};
+      try{const pledgeId=Number((data as {id?:number})?.id),origin=process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/,"")||new URL(request.url).origin;if(pledgeId)acknowledgement=await processWorkflowByIdempotencyKey(serviceDatabase(),`pledge-acknowledgement:${pledgeId}`,origin);}catch{}
+      return Response.json({ pledge: data, acknowledgement }, { status: 201, headers: noStoreHeaders });
     }
     const pledgeId = Number(body?.pledgeId);
     if (!Number.isInteger(pledgeId) || pledgeId <= 0) throw new Error("Pledge not found");
@@ -153,7 +158,10 @@ export async function POST(request: Request) {
         reference: text(body?.reference, 200), payment_provider: text(body?.provider, 100),
         payment_notes: text(body?.notes, 1000),
       });
-      if (error) throw error; return Response.json(data, { status: 201, headers: noStoreHeaders });
+      if (error) throw error;
+      let acknowledgement={status:"queued",message:"Payment saved. Acknowledgement queued for delivery."};
+      try{const db=serviceDatabase(),receipt=(data as {receipt_number?:string})?.receipt_number,origin=process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/,"")||new URL(request.url).origin;const {data:payment}=receipt?await db.from("pledge_payments").select("id").eq("receipt_number",receipt).maybeSingle():{data:null};if(payment)acknowledgement=await processWorkflowByIdempotencyKey(db,`payment-message:${payment.id}`,origin);}catch{}
+      return Response.json({...data,acknowledgement}, { status: 201, headers: noStoreHeaders });
     }
     if (action === "payment_history") {
       const { data, error } = await client.rpc("organiser_payment_history", { supplied_token_hash, target_pledge_id: pledgeId });

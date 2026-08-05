@@ -25,8 +25,10 @@ export async function queueMakeDeliveries(db: SupabaseClient, workflow: ClaimedW
   for (const connector of connectors ?? []) if ((connector.allowed_event_types as string[]).includes(workflow.event_type)) await db.from("automation_connector_deliveries").upsert({ event_id: workflow.event_id, workflow_event_id: workflow.id, connector_id: connector.id, idempotency_key: `make:${connector.id}:workflow:${workflow.id}`, event_type: workflow.event_type, request_summary: { schemaVersion: "1.0", eventType: workflow.event_type, entityType: workflow.entity_type, source: workflow.source } }, { onConflict: "idempotency_key", ignoreDuplicates: true });
 }
 
-export async function processMakeDeliveries(db: SupabaseClient, origin: string) {
-  const { data: rows } = await db.from("automation_connector_deliveries").select("*,event_automation_connectors!inner(*)").in("status", ["pending", "failed"]).lte("next_attempt_at", new Date().toISOString()).order("created_at").limit(20);
+export async function processMakeDeliveries(db: SupabaseClient, origin: string, workflowEventId?:number) {
+  let query=db.from("automation_connector_deliveries").select("*,event_automation_connectors!inner(*)").in("status", ["pending", "failed"]).lte("next_attempt_at", new Date().toISOString()).order("created_at").limit(20);
+  if(workflowEventId)query=query.eq("workflow_event_id",workflowEventId);
+  const { data: rows } = await query;
   let accepted = 0, failed = 0;
   for (const row of rows ?? []) {
     const connector = Array.isArray(row.event_automation_connectors) ? row.event_automation_connectors[0] : row.event_automation_connectors;

@@ -85,12 +85,12 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   ), [data, guestFilter, query, status]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize)); const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   async function savePledge(input: PledgeInput) {
-    if (selected) await updatePledge(selected.id, input, selected.total_paid); else await createPledge(input);
-    setMode(null); setSelected(null); setNotice("Pledge saved successfully."); await load();
+    const acknowledgement=selected?null:await createPledge(input); if(selected)await updatePledge(selected.id,input,selected.total_paid);
+    setMode(null); setSelected(null); setNotice(acknowledgement?.message??"Pledge saved successfully."); await load();
   }
   async function savePayment(values: Parameters<typeof recordPayment>[1]) {
     if (!selected) return; const result = await recordPayment(selected.id, values);
-    setMode(null); setSelected(null); setNewReceipt({receipt:result.receipt,verificationUrl:result.verificationUrl});setNotice(`Payment recorded. Receipt ${result.receipt.receipt_number}. Status: ${statusLabels[result.pledge.calculated_status]}.`); await load();
+    setMode(null); setSelected(null); setNewReceipt({receipt:result.receipt,verificationUrl:result.verificationUrl});setNotice(result.acknowledgement?.message??`Payment recorded. Receipt ${result.receipt.receipt_number}. Status: ${statusLabels[result.pledge.calculated_status]}.`); await load();
   }
   async function cancel(item: FinancialPledge) {
     const reason = window.prompt(`Reason for cancelling ${item.full_name}'s pledge:`);

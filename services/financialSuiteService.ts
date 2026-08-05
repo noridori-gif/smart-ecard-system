@@ -51,6 +51,14 @@ export type PledgeInput = {
   eventId: number; guestId?: number | null; fullName: string; phone: string;
   email?: string; pledgedAmount: string; notes?: string; expectedCompletionDate?: string|null;
 };
+export type ImmediateAcknowledgement = { status: "sent"|"queued"|"failed"|"skipped"|"already_processing"; message: string };
+
+async function processPledgeAcknowledgement(pledgeId:number):Promise<ImmediateAcknowledgement>{
+  const {data}=await supabase.auth.getSession();
+  if(!data.session?.access_token)return {status:"queued",message:"Pledge saved. Acknowledgement queued for delivery."};
+  try{const response=await fetch("/api/contributions/process-financial-workflow",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${data.session.access_token}`},body:JSON.stringify({pledgeId})});const payload=await response.json();return response.ok?payload.acknowledgement:{status:"queued",message:"Pledge saved. Acknowledgement queued for delivery."};}
+  catch{return {status:"queued",message:"Pledge saved. Acknowledgement queued for delivery."};}
+}
 
 type OptionalPledgePhone = { phone: string | null; normalizedPhone: string | null };
 
@@ -74,7 +82,7 @@ async function assertPledgePhoneAvailable(eventId: number, normalizedPhone: stri
   if (data?.length) throw new Error(`Possible duplicate: ${data[0].full_name} already uses this phone.`);
 }
 
-function throwPledgePersistenceError(error: { message: string }) {
+function throwPledgePersistenceError(error: { message: string }):never {
   console.error("Pledge persistence error:", error);
   throw new Error("PLEDGE_SAVE_FAILED");
 }
@@ -105,12 +113,13 @@ export async function createPledge(input: PledgeInput) {
   const { phone, normalizedPhone } = normalizeOptionalPledgePhone(input.phone);
   const expectedCompletionDate=validateExpectedCompletionDate(input.expectedCompletionDate);
   await assertPledgePhoneAvailable(input.eventId, normalizedPhone);
-  const { error } = await supabase.from("event_pledges").insert({
+  const { data, error } = await supabase.from("event_pledges").insert({
     event_id: input.eventId, guest_id: input.guestId || null, full_name: input.fullName.trim(),
     phone, normalized_phone: normalizedPhone, email: input.email?.trim() || null,
     pledged_amount: input.pledgedAmount, notes: input.notes?.trim() || null, expected_completion_date: expectedCompletionDate,
-  });
-  if (error) throwPledgePersistenceError(error);
+  }).select("id").single();
+  if (error || !data) throwPledgePersistenceError(error ?? { message: "Pledge insert returned no row." });
+  return processPledgeAcknowledgement(data.id);
 }
 
 export async function saveFinanceTarget(eventId:number,target:FinanceTarget) {
@@ -145,7 +154,7 @@ export async function recordPayment(pledgeId: number, values: {
   if(!session.session?.access_token)throw new Error("Your session has expired.");
   const response=await fetch("/api/contributions/payments",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${session.session.access_token}`},body:JSON.stringify({pledgeId,...values})});
   const payload=await response.json();if(!response.ok)throw new Error(payload.error||"Payment could not be recorded.");
-  return payload as {pledge:FinancialPledge;receipt:import("@/services/receiptMessageService").FinanceReceipt;verificationUrl:string};
+  return payload as {pledge:FinancialPledge;receipt:import("@/services/receiptMessageService").FinanceReceipt;verificationUrl:string;acknowledgement?:ImmediateAcknowledgement};
 }
 
 export async function cancelPledge(id: number, reason: string) {

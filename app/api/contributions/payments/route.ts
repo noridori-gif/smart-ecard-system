@@ -1,6 +1,8 @@
 import {
   authenticatedFinanceClient,bearerToken,generateReceiptToken,hashOrganiserToken,noStoreHeaders,sameOrigin,
 } from "@/lib/financePortalServer";
+import {serviceDatabase} from "@/lib/makeConnectorServer";
+import {processWorkflowByIdempotencyKey} from "@/services/financialWorkflowProcessor";
 export async function POST(request:Request){
   if(!sameOrigin(request))return Response.json({error:"Origin not allowed."},{status:403,headers:noStoreHeaders});
   const accessToken=bearerToken(request);if(!accessToken)return Response.json({error:"Not authorized."},{status:401,headers:noStoreHeaders});
@@ -10,5 +12,7 @@ export async function POST(request:Request){
   const rawToken=generateReceiptToken();const {data,error}=await client.rpc("record_pledge_payment_with_verification",{target_pledge_id:pledgeId,payment_amount:amount,paid_on:body?.date,method,reference:body?.reference??null,payment_provider:body?.provider??null,payment_notes:body?.notes??null,supplied_receipt_token_hash:hashOrganiserToken(rawToken)});
   if(error||!data)return Response.json({error:error?.message||"Payment could not be recorded."},{status:400,headers:noStoreHeaders});
   const origin=process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/,"")||new URL(request.url).origin;
-  return Response.json({...data,verificationUrl:`${origin}/r/${rawToken}`},{status:201,headers:noStoreHeaders});
+  let acknowledgement={status:"queued",message:"Payment saved. Acknowledgement queued for delivery."};
+  try{const db=serviceDatabase(),receipt=(data as {receipt?:{receipt_number?:string}}).receipt?.receipt_number;const {data:payment}=receipt?await db.from("pledge_payments").select("id").eq("receipt_number",receipt).maybeSingle():{data:null};if(payment)acknowledgement=await processWorkflowByIdempotencyKey(db,`payment-message:${payment.id}`,origin); }catch{}
+  return Response.json({...data,verificationUrl:`${origin}/r/${rawToken}`,acknowledgement},{status:201,headers:noStoreHeaders});
 }
