@@ -6,6 +6,25 @@ import { processMakeDeliveries, queueMakeDeliveries } from "@/lib/makeConnectorS
 
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store, max-age=0"};
+const workflowErrorFallback="Workflow action failed";
+function workflowErrorText(cause:unknown){
+ const record=typeof cause==="object"&&cause!==null?cause as Record<string,unknown>:null;
+ const rawMessage=cause instanceof Error?cause.message:typeof record?.message==="string"?record.message:"";
+ const rawCode=typeof record?.code==="string"||typeof record?.code==="number"?String(record.code):"";
+ const code=/^[a-z0-9_.-]{1,64}$/i.test(rawCode)?rawCode:"";
+ let message=rawMessage
+  .replace(/[\u0000-\u001f\u007f]+/g," ")
+  .replace(/\b(?:postgres(?:ql)?|https?):\/\/\S+/gi,"[REDACTED_URL]")
+  .replace(/\bBearer\s+\S+/gi,"Bearer [REDACTED]")
+  .replace(/\beyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\b/g,"[REDACTED_TOKEN]")
+  .replace(/\b(authorization|api[-_ ]?key|token|secret|password|credential)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,"$1=[REDACTED]")
+  .replace(/\s+/g," ")
+  .trim();
+ if(/\b(?:connection (?:to|refused)|database (?:connection|host)|host\s*=|port\s*=|user\s*=|dbname\s*=)/i.test(message))message="Database connection failed.";
+ if(/\b(?:request payload|request body|response payload|response body|provider response)\b/i.test(message))message="External service operation failed.";
+ message=message.slice(0,700);
+ return `${code?`[${code}] `:""}${message||workflowErrorFallback}`;
+}
 function authorized(request:Request){const expected=process.env.CRON_SECRET||process.env.WORKFLOW_CRON_SECRET||process.env.FINANCIAL_AUTOMATION_CRON_SECRET||"",supplied=request.headers.get("authorization")?.replace(/^Bearer\s+/,"")||"";if(!expected||!supplied)return false;return timingSafeEqual(createHash("sha256").update(expected).digest(),createHash("sha256").update(supplied).digest())}
 export async function GET(request:Request){
  const invokedAt=new Date().toISOString(),isAuthorized=authorized(request);console.info("workflow_processor_invoked",{invokedAt,authorized:isAuthorized});
@@ -38,7 +57,7 @@ export async function GET(request:Request){
      if(eventRow){const preferred=settings.reminder_channel==="sms"?"sms":"whatsapp";const message=buildPledgeMessage("pledge_acknowledgement",event.payload?.language==="en"?"en":"sw",{guestName:pledge.full_name,eventTitle:eventRow.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,completionDate:pledge.expected_completion_date});const inserted=await db.from("pledge_reminders").upsert({pledge_id:pledge.id,event_id:event.event_id,reminder_type:"pledge_thank_you",channel:preferred,recipient_phone:pledge.normalized_phone,message_body:message,delivery_status:"queued",idempotency_key:`pledge-acknowledgement:${pledge.id}:${preferred}`,requested_by:null},{onConflict:"idempotency_key",ignoreDuplicates:true});if(inserted.error)throw inserted.error;totals.acknowledgementsQueued+=1;}
    }
    const finished=await db.rpc("finish_workflow_event",{target_id:event.id,succeeded:true,error_text:null});if(finished.error)throw finished.error;totals.processed+=1;console.info("workflow_processor_event",{workflowEventId:event.id,eventType:event.event_type,result:"processed"});
- }catch(cause){totals.failed+=1;await db.rpc("finish_workflow_event",{target_id:event.id,succeeded:false,error_text:cause instanceof Error?cause.message:"Workflow action failed"});console.info("workflow_processor_event",{workflowEventId:event.id,eventType:event.event_type,result:"failed"});}}
+ }catch(cause){totals.failed+=1;await db.rpc("finish_workflow_event",{target_id:event.id,succeeded:false,error_text:workflowErrorText(cause)});console.info("workflow_processor_event",{workflowEventId:event.id,eventType:event.event_type,result:"failed"});}}
  const {data:due}=await db.from("pledge_reminder_schedules").select("id,event_id,pledge_id,schedule_type,status,event_pledge_reminder_settings!inner(reminder_mode,is_enabled),event_pledges!inner(normalized_phone,reminder_paused_at,cancelled_at)").in("status",["scheduled","queued"]).lte("scheduled_for",new Date().toISOString()).limit(50);
  for(const schedule of due??[]){const policy=Array.isArray(schedule.event_pledge_reminder_settings)?schedule.event_pledge_reminder_settings[0]:schedule.event_pledge_reminder_settings;const pledge=Array.isArray(schedule.event_pledges)?schedule.event_pledges[0]:schedule.event_pledges;if(!policy?.is_enabled||pledge?.reminder_paused_at||pledge?.cancelled_at){await db.from("pledge_reminder_schedules").update({status:"cancelled",cancelled_at:new Date().toISOString(),cancel_reason:"ineligible"}).eq("id",schedule.id);continue}if(policy.reminder_mode==="hybrid"){await db.from("pledge_reminder_schedules").update({status:"recommended"}).eq("id",schedule.id);continue}if(policy.reminder_mode!=="automatic")continue;if(!pledge?.normalized_phone){await db.from("pledge_reminder_schedules").update({status:"skipped",cancel_reason:"missing_phone"}).eq("id",schedule.id);continue}try{const {data:deliverySetting}=await db.from("event_finance_automation_settings").select("reminder_channel").eq("event_id",schedule.event_id).maybeSingle();const channels:FinancialChannel[]=deliverySetting?.reminder_channel==="both"?["sms","whatsapp"]:[deliverySetting?.reminder_channel==="whatsapp"?"whatsapp":"sms"];const preview=await previewFinancialReminders(db,{eventId:schedule.event_id,pledgeId:schedule.pledge_id,requestedChannels:channels});const result=await sendFinancialReminders(db,preview,{type:"system"});const {data:delivery}=await db.from("pledge_reminders").select("id,delivery_status,error_message").eq("pledge_id",schedule.pledge_id).eq("reminder_type","pledge_reminder").order("created_at",{ascending:false}).limit(1).maybeSingle();await db.from("pledge_reminder_schedules").update({status:result.sent>0?"sent":result.failed>0?"failed":"skipped",delivery_id:delivery?.id??null,last_error:delivery?.error_message??result.errors[0]??null,cancel_reason:result.skipped>0&&!result.sent&&!result.failed?"delivery_ineligible":null}).eq("id",schedule.id);}catch(cause){await db.from("pledge_reminder_schedules").update({status:"failed",last_error:cause instanceof Error?cause.message:"Delivery failed"}).eq("id",schedule.id)}}
  const make=await processMakeDeliveries(db,new URL(request.url).origin).catch(()=>({accepted:0,failed:0}));
