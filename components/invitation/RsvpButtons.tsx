@@ -12,7 +12,7 @@ type RsvpButtonsProps = {
   currentStatus: string;
   language?: Language;
   accentTextClass?: string;
-  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage" | "letterpress" | "emerald";
+  variant?: "default" | "classic" | "dark" | "envelope" | "ivory" | "african" | "midnight" | "heritage" | "letterpress" | "emerald" | "editorial";
 };
 
 type RsvpResponse = {
@@ -221,6 +221,45 @@ export default function RsvpButtons({
         </div>
         <p className="relative mt-6 text-center text-xs text-white/65">{translations.currentResponse}: <span className="font-bold text-[var(--theme-accent)]">{selectedOption?.statusLabel ?? getStatusLabel(selectedStatus)}</span></p>
         {message && <p role="status" aria-live="polite" className={`relative mt-4 text-center text-xs font-semibold ${isSuccess ? "text-[var(--theme-accent)]" : "text-red-200"}`}>{message}</p>}
+      </section>
+    );
+  }
+
+  if (variant === "editorial") {
+    return (
+      <section className="mt-12 rounded-[2rem] border px-4 py-9 text-center sm:px-8" style={{ borderColor: "var(--theme-accent)", backgroundColor: "color-mix(in srgb, var(--theme-secondary) 60%, white)" }}>
+        <p className="text-[9px] font-black uppercase tracking-[0.4em]" style={{ color: "var(--theme-accent)" }}>{translations.title}</p>
+        <h3 className="mt-3 font-serif text-3xl sm:text-4xl" style={{ color: "var(--theme-primary)" }}>{translations.heading}</h3>
+        <p className="mt-3 text-sm text-slate-500">{translations.instruction}</p>
+        <div className="mt-8 grid grid-cols-3 gap-2 sm:gap-4">
+          {options.map(option => {
+            const isSelected = selectedStatus === option.value;
+            const isThisUpdating = updatingStatus === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={option.statusLabel}
+                disabled={isUpdating}
+                onClick={() => updateRsvp(option.value)}
+                className="min-h-24 rounded-2xl border px-2 py-5 text-center transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                style={
+                  isSelected
+                    ? { borderColor: "var(--theme-accent)", backgroundColor: "var(--theme-accent)", color: "var(--theme-primary)" }
+                    : { borderColor: "color-mix(in srgb, var(--theme-primary) 30%, transparent)", color: "var(--theme-primary)" }
+                }
+              >
+                <span className="block font-serif text-2xl leading-none">{isThisUpdating ? "…" : option.icon}</span>
+                <span className="mt-3 block text-[10px] font-black uppercase tracking-[0.15em]">{isThisUpdating ? translations.saving : option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-6 text-xs text-slate-500">
+          {translations.currentResponse}: <span className="font-bold" style={{ color: "var(--theme-primary)" }}>{selectedOption?.statusLabel ?? getStatusLabel(selectedStatus)}</span>
+        </p>
+        {message && <p role="status" aria-live="polite" className={`mt-4 text-center text-xs font-semibold ${isSuccess ? "text-emerald-700" : "text-red-700"}`}>{message}</p>}
       </section>
     );
   }

@@ -1,17 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 
 export type PremiumWhatsAppTemplate =
-  | "african_royal"
-  | "chateau_letterpress"
-  | "classic_photo"
-  | "elegant_gold"
-  | "emerald_botanical_halo"
-  | "heritage_monogram"
-  | "modern_floral"
-  | "luxury_envelope"
-  | "minimal_ivory"
-  | "midnight_luxe"
-  | "royal_dark";
+  | "royal_portrait"
+  | "golden_elegance"
+  | "botanical_romance"
+  | "modern_minimal_photo"
+  | "heritage_pattern";
 
 export type PremiumWhatsAppCardData = {
   title: string;
@@ -61,51 +55,7 @@ type Theme = {
 };
 
 const THEMES: Record<PremiumWhatsAppTemplate, Theme> = {
-  midnight_luxe: {
-    skin: "midnight",
-    paper: "#071426",
-    paperAlt: "#0C2039",
-    ink: "#FFF9ED",
-    muted: "#C8C3B8",
-    accent: "#D8B56B",
-    accentSoft: "#665638",
-    ticket: "#102742",
-    shadow: "rgba(0,0,0,0.42)",
-  },
-  emerald_botanical_halo: {
-    skin: "botanical",
-    paper: "#F7F2E6",
-    paperAlt: "#E8EEE3",
-    ink: "#173F32",
-    muted: "#637267",
-    accent: "#B18D4C",
-    accentSoft: "#CFC7A8",
-    ticket: "#E6EDDF",
-    shadow: "rgba(28,62,48,0.18)",
-  },
-  modern_floral: {
-    skin: "floral",
-    paper: "#FFF8F5",
-    paperAlt: "#F8E8E4",
-    ink: "#754652",
-    muted: "#936F77",
-    accent: "#B9786C",
-    accentSoft: "#E7C6BF",
-    ticket: "#F8E5E1",
-    shadow: "rgba(117,70,82,0.17)",
-  },
-  luxury_envelope: {
-    skin: "envelope",
-    paper: "#FBF2E2",
-    paperAlt: "#EEDCC0",
-    ink: "#4E3B27",
-    muted: "#7B6B58",
-    accent: "#B28748",
-    accentSoft: "#D8C29C",
-    ticket: "#F1DFC2",
-    shadow: "rgba(78,59,39,0.18)",
-  },
-  classic_photo: {
+  royal_portrait: {
     skin: "classic",
     paper: "#FFFCF5",
     paperAlt: "#EEF0EC",
@@ -116,51 +66,7 @@ const THEMES: Record<PremiumWhatsAppTemplate, Theme> = {
     ticket: "#EFF1EC",
     shadow: "rgba(24,54,77,0.18)",
   },
-  heritage_monogram: {
-    skin: "heritage",
-    paper: "#F8EEDC",
-    paperAlt: "#EBDAC2",
-    ink: "#682E38",
-    muted: "#806269",
-    accent: "#A9854B",
-    accentSoft: "#D1B98D",
-    ticket: "#EFDDC8",
-    shadow: "rgba(104,46,56,0.18)",
-  },
-  minimal_ivory: {
-    skin: "minimal",
-    paper: "#FFFCF5",
-    paperAlt: "#F5F1E8",
-    ink: "#292D2B",
-    muted: "#71736F",
-    accent: "#A98F5C",
-    accentSoft: "#D9D0BC",
-    ticket: "#F4F0E7",
-    shadow: "rgba(41,45,43,0.11)",
-  },
-  african_royal: {
-    skin: "african",
-    paper: "#F2E1C2",
-    paperAlt: "#D9BB88",
-    ink: "#5A321F",
-    muted: "#795D49",
-    accent: "#A76D29",
-    accentSoft: "#C99F63",
-    ticket: "#E6CFA8",
-    shadow: "rgba(90,50,31,0.2)",
-  },
-  chateau_letterpress: {
-    skin: "letterpress",
-    paper: "#EFE2CB",
-    paperAlt: "#E3CFAD",
-    ink: "#44392D",
-    muted: "#746757",
-    accent: "#907249",
-    accentSoft: "#C7B48F",
-    ticket: "#E4D0AF",
-    shadow: "rgba(68,57,45,0.16)",
-  },
-  elegant_gold: {
+  golden_elegance: {
     skin: "gold",
     paper: "#FFF9EC",
     paperAlt: "#F2E4C7",
@@ -171,16 +77,38 @@ const THEMES: Record<PremiumWhatsAppTemplate, Theme> = {
     ticket: "#F4E7CE",
     shadow: "rgba(63,51,34,0.18)",
   },
-  royal_dark: {
-    skin: "regal",
-    paper: "#081A3B",
-    paperAlt: "#102958",
-    ink: "#FFF9EA",
-    muted: "#D1CAB9",
-    accent: "#D8B45E",
-    accentSoft: "#71613D",
-    ticket: "#102B57",
-    shadow: "rgba(0,0,0,0.4)",
+  botanical_romance: {
+    skin: "botanical",
+    paper: "#F7F2E6",
+    paperAlt: "#E8EEE3",
+    ink: "#173F32",
+    muted: "#637267",
+    accent: "#B18D4C",
+    accentSoft: "#CFC7A8",
+    ticket: "#E6EDDF",
+    shadow: "rgba(28,62,48,0.18)",
+  },
+  modern_minimal_photo: {
+    skin: "minimal",
+    paper: "#FFFCF5",
+    paperAlt: "#F5F1E8",
+    ink: "#292D2B",
+    muted: "#71736F",
+    accent: "#A98F5C",
+    accentSoft: "#D9D0BC",
+    ticket: "#F4F0E7",
+    shadow: "rgba(41,45,43,0.11)",
+  },
+  heritage_pattern: {
+    skin: "heritage",
+    paper: "#F8EEDC",
+    paperAlt: "#EBDAC2",
+    ink: "#682E38",
+    muted: "#806269",
+    accent: "#A9854B",
+    accentSoft: "#D1B98D",
+    ticket: "#EFDDC8",
+    shadow: "rgba(104,46,56,0.18)",
   },
 };
 
@@ -404,7 +332,7 @@ function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
       <>
         <div style={{ position: "absolute", left: -100, right: 540, top: -180, height: 510, display: "flex", borderBottom: `2px solid ${theme.accentSoft}`, backgroundColor: theme.paperAlt, transform: "rotate(19deg)", opacity: 0.52 }} />
         <div style={{ position: "absolute", left: 540, right: -100, top: -180, height: 510, display: "flex", borderBottom: `2px solid ${theme.accentSoft}`, backgroundColor: theme.paperAlt, transform: "rotate(-19deg)", opacity: 0.52 }} />
-        <div style={{ position: "absolute", left: 487, top: 106, width: 106, height: 106, display: "flex", borderRadius: 999, backgroundColor: theme.accent, border: `8px double ${theme.paper}`, boxShadow: `0 12px 24px ${theme.shadow}` }} />
+        <div style={{ position: "absolute", left: 487, top: 106, width: 106, height: 106, display: "flex", borderRadius: 999, backgroundColor: theme.accent, border: `8px solid ${theme.paper}`, boxShadow: `0 12px 24px ${theme.shadow}` }} />
       </>
     );
   }
@@ -415,7 +343,7 @@ function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
         <div style={{ position: "absolute", right: -10, top: 290, display: "flex", fontFamily: "Georgia, serif", fontSize: 340, lineHeight: 1, fontWeight: 700, fontStyle: "italic", color: theme.accent, opacity: 0.075 }}>
           {initials(title) || "S E"}
         </div>
-        <div style={{ position: "absolute", inset: 34, display: "flex", border: `2px double ${theme.accent}` }} />
+        <div style={{ position: "absolute", inset: 34, display: "flex", border: `2px solid ${theme.accent}` }} />
         <div style={{ position: "absolute", inset: 46, display: "flex", border: `1px solid ${theme.accentSoft}` }} />
       </>
     );
@@ -424,7 +352,7 @@ function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
   if (theme.skin === "letterpress") {
     return (
       <>
-        <div style={{ position: "absolute", inset: 27, display: "flex", border: `5px double ${theme.ink}`, opacity: 0.78 }} />
+        <div style={{ position: "absolute", inset: 27, display: "flex", border: `5px solid ${theme.ink}`, opacity: 0.78 }} />
         <div style={{ position: "absolute", inset: 43, display: "flex", border: `1px solid ${theme.accent}` }} />
         {[0, 1, 2, 3, 4, 5].map((dot) => (
           <div key={dot} style={{ position: "absolute", left: 90 + dot * 178, bottom: 74, width: 5, height: 5, display: "flex", borderRadius: 9, backgroundColor: theme.ink, opacity: 0.35 }} />
@@ -476,23 +404,23 @@ function InvitationTop({ data, theme }: { data: PremiumWhatsAppCardData; theme: 
   const text = copy(data.language);
 
   return (
-    <div style={{ width: "100%", minHeight: 325, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "54px 90px 34px", textAlign: "center" }}>
+    <div style={{ width: "100%", minHeight: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 90px 10px", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 5, color: theme.muted }}>
         <div style={{ width: 34, height: 1, display: "flex", marginRight: 14, backgroundColor: theme.accent }} />
         SMART EVENT PASS
         <div style={{ width: 34, height: 1, display: "flex", marginLeft: 14, backgroundColor: theme.accent }} />
       </div>
-      <div style={{ display: "flex", marginTop: 18 }}>
-        <DiamondOrnament theme={theme} width={65} />
+      <div style={{ display: "flex", marginTop: 14 }}>
+        <DiamondOrnament theme={theme} width={50} />
       </div>
-      <div style={{ display: "flex", marginTop: 18, fontFamily: "Georgia, serif", fontSize: 64, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
+      <div style={{ display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: 52, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
         {text.heading}
       </div>
       <div
         style={{
           maxWidth: 865,
           display: "flex",
-          marginTop: 22,
+          marginTop: 16,
           whiteSpace: "pre-wrap",
           fontFamily: "Georgia, serif",
           fontSize: messageSize(data.invitationMessage),
@@ -508,67 +436,41 @@ function InvitationTop({ data, theme }: { data: PremiumWhatsAppCardData; theme: 
   );
 }
 
-function Portrait({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
-  const isRound = theme.skin === "heritage" || theme.skin === "botanical";
-  const isSquare = theme.skin === "minimal" || theme.skin === "letterpress";
-  const radius = isRound ? "190px 190px 36px 36px" : isSquare ? 8 : 28;
-
+function PhotoBanner({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
   return (
-    <div style={{ width: 350, height: 420, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ position: "absolute", inset: "7px -8px -7px 8px", display: "flex", border: `1px solid ${theme.accent}`, borderRadius: radius, transform: "rotate(2deg)", opacity: 0.65 }} />
-      <div
-        style={{
-          width: 322,
-          height: 394,
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          border: `${theme.skin === "classic" || theme.skin === "gold" ? 8 : 3}px solid ${theme.accent}`,
-          borderRadius: radius,
-          backgroundColor: theme.paperAlt,
-          boxShadow: `0 22px 42px ${theme.shadow}`,
-        }}
-      >
-        {data.coverImageDataUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.coverImageDataUrl} alt="" width={322} height={394} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: theme.ink }}>
-            <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 60, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
-              {initials(data.title) || "S & E"}
-            </div>
-            <div style={{ width: 94, height: 1, display: "flex", marginTop: 22, backgroundColor: theme.accent }} />
-            <div style={{ display: "flex", marginTop: 18, fontFamily: "Arial, sans-serif", fontSize: 12, fontWeight: 800, letterSpacing: 4, color: theme.accent }}>
-              TOGETHER
-            </div>
+    <div style={{ width: 1080, height: 620, position: "relative", display: "flex", overflow: "hidden" }}>
+      {data.coverImageDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={data.coverImageDataUrl} alt="" width={1080} height={620} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+      ) : (
+        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.ink }}>
+          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 84, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
+            {initials(data.title) || "S & E"}
           </div>
-        )}
-      </div>
+          <div style={{ width: 130, height: 1, display: "flex", marginTop: 26, backgroundColor: theme.accent }} />
+          <div style={{ display: "flex", marginTop: 20, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 5, color: theme.accent }}>
+            TOGETHER
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function Hero({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+function GuestAndTitle({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
   const text = copy(data.language);
 
   return (
-    <div style={{ width: 940, height: 485, display: "flex", alignItems: "center", marginTop: 5 }}>
-      <div style={{ width: "40%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Portrait data={data} theme={theme} />
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "12px 70px 6px", textAlign: "center" }}>
+      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34), lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+        {data.guestName}
       </div>
-      <div style={{ width: "60%", height: 392, display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", padding: "18px 15px 18px 54px", borderLeft: `1px solid ${theme.accentSoft}` }}>
-        <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 58, 50, 42), lineHeight: 1.04, fontWeight: 700, color: theme.ink }}>
-          {data.guestName}
-        </div>
-        <div style={{ width: 235, height: 1, display: "flex", marginTop: 28, backgroundColor: theme.accent }} />
-        <div style={{ display: "flex", marginTop: 29 }}>
-          <Label theme={theme}>{text.weddingOf}</Label>
-        </div>
-        <div style={{ maxWidth: 500, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 50, 44, 38), lineHeight: 1.04, fontWeight: 700, fontStyle: "italic", color: theme.ink }}>
-          {data.title}
-        </div>
+      <div style={{ width: 180, height: 1, display: "flex", marginTop: 14, backgroundColor: theme.accent }} />
+      <div style={{ display: "flex", marginTop: 14 }}>
+        <Label theme={theme}>{text.weddingOf}</Label>
+      </div>
+      <div style={{ maxWidth: 780, display: "flex", marginTop: 8, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 40, 36, 30), lineHeight: 1.06, fontWeight: 700, fontStyle: "italic", color: theme.ink, textAlign: "center" }}>
+        {data.title}
       </div>
     </div>
   );
@@ -588,13 +490,13 @@ function Detail({
   featured?: boolean;
 }) {
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "7px 18px", textAlign: "center" }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px 18px", textAlign: "center" }}>
       <Label theme={theme}>{label}</Label>
-      <div style={{ maxWidth: 420, display: "flex", marginTop: 10, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? 43 : 27, lineHeight: 1.15, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+      <div style={{ maxWidth: 420, display: "flex", marginTop: 7, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? 40 : 25, lineHeight: 1.12, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
         {value || "—"}
       </div>
       {secondary && (
-        <div style={{ maxWidth: 420, display: "flex", marginTop: 6, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 21, lineHeight: 1.2, color: theme.muted, textAlign: "center" }}>
+        <div style={{ maxWidth: 420, display: "flex", marginTop: 4, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 19, lineHeight: 1.15, color: theme.muted, textAlign: "center" }}>
           {secondary}
         </div>
       )}
@@ -609,7 +511,7 @@ function EventDetails({ data, theme }: { data: PremiumWhatsAppCardData; theme: T
   const receptionVenue = data.receptionVenue || data.venue;
 
   return (
-    <div style={{ width: 920, height: 420, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "33px 20px 31px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
+    <div style={{ width: 920, height: 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
       <Detail label={text.date} value={data.date} theme={theme} featured />
       <div style={{ width: "100%", display: "flex", alignItems: "stretch" }}>
         <div style={{ width: "50%", display: "flex" }}>
@@ -620,7 +522,7 @@ function EventDetails({ data, theme }: { data: PremiumWhatsAppCardData; theme: T
           <Detail label={text.reception} value={receptionVenue} theme={theme} />
         </div>
       </div>
-      <div style={{ width: "72%", display: "flex", paddingTop: 16, borderTop: `1px solid ${theme.accentSoft}` }}>
+      <div style={{ width: "72%", display: "flex", paddingTop: 10, borderTop: `1px solid ${theme.accentSoft}` }}>
         <div style={{ width: "50%", display: "flex" }}>
           <Detail label={text.dress} value={data.dressCode || "—"} theme={theme} />
         </div>
@@ -638,29 +540,29 @@ function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: The
   const passId = data.eventPassId || "—";
 
   return (
-    <div style={{ width: 930, height: 375, position: "relative", display: "flex", overflow: "hidden", marginTop: 28, border: `2px solid ${theme.accent}`, borderRadius: theme.skin === "letterpress" ? 4 : 26, backgroundColor: theme.ticket, color: theme.ink, boxShadow: `0 20px 42px ${theme.shadow}` }}>
+    <div style={{ width: 930, height: 300, position: "relative", display: "flex", overflow: "hidden", marginTop: 18, border: `2px solid ${theme.accent}`, borderRadius: theme.skin === "letterpress" ? 4 : 26, backgroundColor: theme.ticket, color: theme.ink, boxShadow: `0 20px 42px ${theme.shadow}` }}>
       <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 12, display: "flex", backgroundColor: theme.accent }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "36px 38px 32px 50px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "22px 38px 18px 50px" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ width: 13, height: 13, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
           <Label theme={theme}>{text.pass}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 27 }}>
+        <div style={{ display: "flex", marginTop: 18 }}>
           <Label theme={theme}>{text.passId}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 8, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 44 : 55, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 40 : 50, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
           {passId}
         </div>
-        <div style={{ maxWidth: 520, display: "flex", marginTop: 23, fontFamily: "Georgia, serif", fontSize: 21, lineHeight: 1.3, fontStyle: "italic", color: theme.muted }}>
+        <div style={{ maxWidth: 520, display: "flex", marginTop: 16, fontFamily: "Georgia, serif", fontSize: 19, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
           {text.instruction}
         </div>
       </div>
-      <div style={{ width: 310, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
+      <div style={{ width: 280, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.qrCodeDataUrl} alt="" width={265} height={265} style={{ width: 265, height: 265, objectFit: "contain" }} />
+          <img src={data.qrCodeDataUrl} alt="" width={220} height={220} style={{ width: 220, height: 220, objectFit: "contain" }} />
         ) : (
-          <div style={{ width: 235, height: 235, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 28, fontWeight: 900, color: theme.ink }}>
+          <div style={{ width: 195, height: 195, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 26, fontWeight: 900, color: theme.ink }}>
             QR
           </div>
         )}
@@ -676,29 +578,32 @@ export default function PremiumWhatsAppCard({
   data: PremiumWhatsAppCardData;
   template: PremiumWhatsAppTemplate;
 }): ReactElement {
-  const theme = THEMES[template] ?? THEMES.classic_photo;
+  const theme = THEMES[template] ?? THEMES.royal_portrait;
   const text = copy(data.language);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
-      <TemplateAtmosphere theme={theme} title={data.title} />
-      <InvitationTop data={data} theme={theme} />
-      <Hero data={data} theme={theme} />
-      <EventDetails data={data} theme={theme} />
-      <PassTicket data={data} theme={theme} />
-      <div style={{ width: 620, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 24 }}>
-        <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
-        <div style={{ maxWidth: 430, display: "flex", margin: "0 22px", fontFamily: "Georgia, serif", fontSize: 18, lineHeight: 1.2, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>
-          {text.closing}
+      <PhotoBanner data={data} theme={theme} />
+      <div style={{ width: "100%", height: 1180, position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden" }}>
+        <TemplateAtmosphere theme={theme} title={data.title} />
+        <InvitationTop data={data} theme={theme} />
+        <GuestAndTitle data={data} theme={theme} />
+        <EventDetails data={data} theme={theme} />
+        <PassTicket data={data} theme={theme} />
+        <div style={{ width: 620, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 14 }}>
+          <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+          <div style={{ maxWidth: 430, display: "flex", margin: "0 22px", fontFamily: "Georgia, serif", fontSize: 16, lineHeight: 1.2, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>
+            {text.closing}
+          </div>
+          <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         </div>
-        <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
       </div>
     </div>
   );
 }
 
 export function CompactHorizontalCard({ data }: { data: PremiumWhatsAppCardData }): ReactElement {
-  const theme = THEMES.emerald_botanical_halo;
+  const theme = THEMES.botanical_romance;
   const text = copy(data.language);
 
   return (

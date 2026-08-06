@@ -10,14 +10,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const previewTemplates = new Set<WhatsAppCardTemplate>([
-  "midnight_luxe",
-  "emerald_botanical_halo",
-  "modern_floral",
-  "royal_dark",
-  "elegant_gold",
-  "chateau_letterpress",
-  "luxury_envelope",
-  "classic_photo",
+  "royal_portrait",
+  "golden_elegance",
+  "botanical_romance",
+  "modern_minimal_photo",
+  "heritage_pattern",
 ]);
 
 type RouteContext = {
@@ -29,7 +26,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (requestedTemplate === "compact_horizontal") {
     return createCompactWhatsAppInvitationCard(
-      previewData("classic_photo", requestedTemplate)
+      previewData("royal_portrait", requestedTemplate)
     );
   }
 
@@ -37,7 +34,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (
     !previewTemplates.has(template) ||
-    (template === "classic_photo" && requestedTemplate !== "classic_photo")
+    (template === "royal_portrait" && requestedTemplate !== "royal_portrait")
   ) {
     return new Response("Unknown WhatsApp card template.", { status: 404 });
   }

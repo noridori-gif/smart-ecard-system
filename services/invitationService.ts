@@ -2,6 +2,10 @@ import {
   supabase,
 } from "@/lib/supabase";
 
+import {
+  DEFAULT_INVITATION_TEMPLATE,
+} from "@/services/eventService";
+
 import type {
   InvitationTemplate,
 } from "@/services/eventService";
@@ -246,21 +250,16 @@ function normalizeInvitationTemplate(
     | undefined
 ): InvitationTemplate {
   if (
-    template === "african_royal" ||
-    template === "chateau_letterpress" ||
-    template === "elegant_gold" ||
-    template === "emerald_botanical_halo" ||
-    template === "heritage_monogram" ||
-    template === "luxury_envelope" ||
-    template === "minimal_ivory" ||
-    template === "midnight_luxe" ||
-    template === "modern_floral" ||
-    template === "royal_dark"
+    template === "royal_portrait" ||
+    template === "golden_elegance" ||
+    template === "botanical_romance" ||
+    template === "modern_minimal_photo" ||
+    template === "heritage_pattern"
   ) {
     return template;
   }
 
-  return "classic_photo";
+  return DEFAULT_INVITATION_TEMPLATE;
 }
 
 export async function createInvitation(

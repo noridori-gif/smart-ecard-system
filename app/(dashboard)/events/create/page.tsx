@@ -3,9 +3,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import EventFormWizard, { type EventFormValues } from "@/components/events/EventFormWizard";
-import { createEvent, DEFAULT_EVENT_THEME, uploadEventCover } from "@/services/eventService";
+import { createEvent, DEFAULT_EVENT_THEME, DEFAULT_INVITATION_TEMPLATE, uploadEventCover } from "@/services/eventService";
 
-const INITIAL_VALUES:EventFormValues={title:"",event_type:"",bride_name:"",groom_name:"",language:"sw",invitation_template:"classic_photo",invitation_message:"",ceremony_title:"Ibada ya Ndoa",ceremony_date:"",ceremony_time:"",ceremony_venue:"",ceremony_map_url:"",event_date:"",event_time:"",venue:"",reception_map_url:"",dress_code:"",theme_primary_color:DEFAULT_EVENT_THEME.primaryColor,theme_secondary_color:DEFAULT_EVENT_THEME.secondaryColor,theme_accent_color:DEFAULT_EVENT_THEME.accentColor};
+const INITIAL_VALUES:EventFormValues={title:"",event_type:"",bride_name:"",groom_name:"",language:"sw",invitation_template:DEFAULT_INVITATION_TEMPLATE,invitation_message:"",ceremony_title:"Ibada ya Ndoa",ceremony_date:"",ceremony_time:"",ceremony_venue:"",ceremony_map_url:"",event_date:"",event_time:"",venue:"",reception_map_url:"",dress_code:"",theme_primary_color:DEFAULT_EVENT_THEME.primaryColor,theme_secondary_color:DEFAULT_EVENT_THEME.secondaryColor,theme_accent_color:DEFAULT_EVENT_THEME.accentColor};
 
 export default function CreateEventPage(){
   const router=useRouter();const [values,setValues]=useState(INITIAL_VALUES);const [coverFile,setCoverFile]=useState<File|null>(null);const [coverPreview,setCoverPreview]=useState("");const [isSaving,setIsSaving]=useState(false);const [error,setError]=useState("");

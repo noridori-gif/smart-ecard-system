@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { sendBeemSms } from "@/services/beemSmsService";
+import { DEFAULT_INVITATION_TEMPLATE } from "@/services/eventService";
 import { buildSmsMessage } from "@/services/invitationMessageService";
 
 export const runtime = "nodejs";
@@ -216,14 +217,14 @@ export async function POST(request: Request) {
         event_pass_id: guest.event_pass_id ?? null,
         allowed_guests: guest.allowed_guests ?? 1,
         language: (event.language || "sw") as "sw" | "en",
-        invitation_template: "minimal_ivory",
+        invitation_template: DEFAULT_INVITATION_TEMPLATE,
         events: {
           title: event.title ?? "Event",
           event_type: "",
           bride_name: null,
           groom_name: null,
           language: (event.language === "en" ? "en" : "sw") as "sw" | "en",
-          invitation_template: "minimal_ivory",
+          invitation_template: DEFAULT_INVITATION_TEMPLATE,
           ceremony_title: null,
           ceremony_date: null,
           ceremony_time: null,

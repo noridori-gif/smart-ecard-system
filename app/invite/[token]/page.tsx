@@ -11,17 +11,11 @@ import {
 } from "next/navigation";
 
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
-import AfricanRoyal from "@/components/invitation/templates/AfricanRoyal";
-import ChateauLetterpress from "@/components/invitation/templates/ChateauLetterpress";
-import ClassicPhoto from "@/components/invitation/templates/ClassicPhoto";
-import ElegantGold from "@/components/invitation/templates/ElegantGold";
-import EmeraldBotanicalHalo from "@/components/invitation/templates/EmeraldBotanicalHalo";
-import HeritageMonogram from "@/components/invitation/templates/HeritageMonogram";
-import LuxuryEnvelope from "@/components/invitation/templates/LuxuryEnvelope";
-import MinimalIvory from "@/components/invitation/templates/MinimalIvory";
-import MidnightLuxe from "@/components/invitation/templates/MidnightLuxe";
-import ModernFloral from "@/components/invitation/templates/ModernFloral";
-import RoyalDark from "@/components/invitation/templates/RoyalDark";
+import { TEMPLATE_COMPONENTS } from "@/components/invitation/templates";
+
+import {
+  DEFAULT_INVITATION_TEMPLATE,
+} from "@/services/eventService";
 
 import {
   getInvitationByToken,
@@ -187,7 +181,7 @@ export default async function InvitationPage({
   const template =
     invitation
       .invitation_template ||
-    "classic_photo";
+    DEFAULT_INVITATION_TEMPLATE;
 
   const templateProps = {
     invitation,
@@ -195,6 +189,10 @@ export default async function InvitationPage({
     displayedMessage,
     language,
   };
+
+  const Template =
+    TEMPLATE_COMPONENTS[template] ??
+    TEMPLATE_COMPONENTS[DEFAULT_INVITATION_TEMPLATE];
 
   return (
     <main
@@ -218,61 +216,9 @@ export default async function InvitationPage({
         }
       />
 
-      {template ===
-      "african_royal" ? (
-        <AfricanRoyal
-          {...templateProps}
-        />
-      ) : template ===
-        "chateau_letterpress" ? (
-        <ChateauLetterpress
-          {...templateProps}
-        />
-      ) : template ===
-        "heritage_monogram" ? (
-        <HeritageMonogram
-          {...templateProps}
-        />
-      ) : template ===
-      "luxury_envelope" ? (
-        <LuxuryEnvelope
-          {...templateProps}
-        />
-      ) : template ===
-        "midnight_luxe" ? (
-        <MidnightLuxe
-          {...templateProps}
-        />
-      ) : template ===
-        "minimal_ivory" ? (
-        <MinimalIvory
-          {...templateProps}
-        />
-      ) : template ===
-        "elegant_gold" ? (
-        <ElegantGold
-          {...templateProps}
-        />
-      ) : template ===
-        "emerald_botanical_halo" ? (
-        <EmeraldBotanicalHalo
-          {...templateProps}
-        />
-      ) : template ===
-        "modern_floral" ? (
-        <ModernFloral
-          {...templateProps}
-        />
-      ) : template ===
-        "royal_dark" ? (
-        <RoyalDark
-          {...templateProps}
-        />
-      ) : (
-        <ClassicPhoto
-          {...templateProps}
-        />
-      )}
+      <Template
+        {...templateProps}
+      />
     </main>
   );
 }

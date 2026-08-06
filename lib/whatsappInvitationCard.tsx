@@ -8,17 +8,11 @@ import PremiumWhatsAppCard, {
 import type { PublicInvitation } from "@/services/invitationService";
 
 export type WhatsAppCardTemplate =
-  | "african_royal"
-  | "chateau_letterpress"
-  | "classic_photo"
-  | "elegant_gold"
-  | "emerald_botanical_halo"
-  | "heritage_monogram"
-  | "modern_floral"
-  | "luxury_envelope"
-  | "minimal_ivory"
-  | "midnight_luxe"
-  | "royal_dark";
+  | "royal_portrait"
+  | "golden_elegance"
+  | "botanical_romance"
+  | "modern_minimal_photo"
+  | "heritage_pattern";
 
 export type WhatsAppCardData = {
   title: string;
@@ -150,21 +144,16 @@ export function normalizeWhatsAppCardTemplate(
   template: string | null | undefined
 ): WhatsAppCardTemplate {
   if (
-    template === "african_royal" ||
-    template === "chateau_letterpress" ||
-    template === "elegant_gold" ||
-    template === "emerald_botanical_halo" ||
-    template === "heritage_monogram" ||
-    template === "modern_floral" ||
-    template === "luxury_envelope" ||
-    template === "minimal_ivory" ||
-    template === "midnight_luxe" ||
-    template === "royal_dark"
+    template === "royal_portrait" ||
+    template === "golden_elegance" ||
+    template === "botanical_romance" ||
+    template === "modern_minimal_photo" ||
+    template === "heritage_pattern"
   ) {
     return template;
   }
 
-  return "classic_photo";
+  return "royal_portrait";
 }
 
 export function getWhatsAppCardData(

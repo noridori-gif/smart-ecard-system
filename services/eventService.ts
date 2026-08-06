@@ -7,20 +7,14 @@ export type EventLanguage =
   | "en";
 
 export type InvitationTemplate =
-  | "african_royal"
-  | "chateau_letterpress"
-  | "classic_photo"
-  | "elegant_gold"
-  | "emerald_botanical_halo"
-  | "heritage_monogram"
-  | "luxury_envelope"
-  | "minimal_ivory"
-  | "midnight_luxe"
-  | "modern_floral"
-  | "royal_dark";
+  | "royal_portrait"
+  | "golden_elegance"
+  | "botanical_romance"
+  | "modern_minimal_photo"
+  | "heritage_pattern";
 
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
-  "classic_photo";
+  "royal_portrait";
 
 export const DEFAULT_EVENT_THEME = {
   primaryColor: "#BE123C",
@@ -170,17 +164,11 @@ const MAX_INVITATION_MESSAGE_LENGTH =
   600;
 
 const INVITATION_TEMPLATES: InvitationTemplate[] = [
-  "african_royal",
-  "chateau_letterpress",
-  "classic_photo",
-  "elegant_gold",
-  "emerald_botanical_halo",
-  "heritage_monogram",
-  "luxury_envelope",
-  "minimal_ivory",
-  "midnight_luxe",
-  "modern_floral",
-  "royal_dark",
+  "royal_portrait",
+  "golden_elegance",
+  "botanical_romance",
+  "modern_minimal_photo",
+  "heritage_pattern",
 ];
 
 function normalizeInvitationTemplate(

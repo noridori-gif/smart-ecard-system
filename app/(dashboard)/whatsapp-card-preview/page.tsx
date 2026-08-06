@@ -6,14 +6,11 @@ import { useRouter } from "next/navigation";
 import { getCurrentUserProfile } from "@/services/profileService";
 
 const templates = [
-  ["midnight_luxe", "Midnight Luxe"],
-  ["emerald_botanical_halo", "Emerald Botanical Halo"],
-  ["modern_floral", "Modern Floral"],
-  ["royal_dark", "Royal Dark"],
-  ["elegant_gold", "Elegant Gold"],
-  ["chateau_letterpress", "Chateau Letterpress"],
-  ["luxury_envelope", "Luxury Envelope"],
-  ["classic_photo", "Classic Photo (No Photo)"],
+  ["royal_portrait", "Royal Portrait"],
+  ["golden_elegance", "Golden Elegance"],
+  ["botanical_romance", "Botanical Romance"],
+  ["modern_minimal_photo", "Modern Minimal Photo"],
+  ["heritage_pattern", "Heritage Pattern"],
 ] as const;
 
 export default function WhatsAppCardPreviewPage() {
