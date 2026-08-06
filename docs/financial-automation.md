@@ -1,5 +1,39 @@
 # Financial automation scheduler
 
+## Per-event master automation
+
+Every event finance automation row has `automatic_messaging_enabled`, which defaults to `true` so
+existing events retain their current production behaviour. Event administrators can pause or resume
+the setting in Automation Center. Pausing blocks automatic pledge and payment acknowledgements,
+completed-pledge messages, scheduled reminders, daily summaries, and automatic Make dispatch.
+Pledge, payment, guest, and event writes continue normally.
+
+Manual authenticated reminder, thank-you, meeting-invitation, preview/test, and Make Test Connection
+actions remain available while paused. Automatic entry points re-check the persisted master setting
+immediately before provider delivery; the database also changes newly queued automatic work to
+`held` with the machine-readable reason `automation_paused`. Held work is neither sent nor failed,
+and provider attempt counters are not consumed.
+
+Resuming does not release held work. An administrator must explicitly choose **Process Held
+Messages** (after confirmation) or **Cancel Held Messages**. Processing requires automation to be
+active; normal workflow validation then re-checks current pledge/payment state, recipient phone,
+channel and provider readiness, connector state, and existing idempotency/delivery state. Terminal,
+duplicate, invalid, cancelled, delivered, and read items are never resent.
+
+### Safe deployment and recovery
+
+Deploy in this order: (1) take a normal database backup, (2) apply
+`202608060001_event_master_automation.sql` once, (3) deploy the application build, (4) verify each
+event reports `automatic_messaging_enabled = true`, and (5) verify cron health without invoking any
+production send endpoint manually. The database default keeps automation on during the short period
+between migration and application deployment.
+
+For recovery, pause the affected event first, inspect held counts and audit rows without editing
+queue records, correct configuration or recipient data, resume automation, and explicitly process
+only after review. Cancel held work when it is obsolete. Never bulk-change `held` rows to pending or
+retry production endpoints directly; use the authenticated Automation Center actions so state and
+audit records remain consistent.
+
 The scheduler endpoint is:
 
 `GET /api/cron/financial-automation`

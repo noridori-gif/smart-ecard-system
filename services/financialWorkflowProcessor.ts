@@ -3,9 +3,10 @@ import type {SupabaseClient} from "@supabase/supabase-js";
 import {buildCompactFinancialSmsMessage,buildPledgeMessage} from "@/services/pledgeMessageService";
 import {financialProviderStatus,processAutomaticPaymentAcknowledgements,processQueuedPledgeAcknowledgements} from "@/services/financialNotificationEngine";
 import {processMakeDeliveries,queueMakeDeliveries} from "@/lib/makeConnectorServer";
+import {automaticMessagingEnabled,holdWorkflowEvent} from "@/services/automationMasterServer";
 
 export type FinancialWorkflowEvent={id:number;event_id:number;event_type:string;entity_type:string;entity_id:string|null;source:string;payload?:Record<string,unknown>;created_at:string};
-export type ImmediateProcessingResult={status:"sent"|"queued"|"failed"|"skipped"|"already_processing";message:string;workflowEventId:number|null};
+export type ImmediateProcessingResult={status:"sent"|"queued"|"failed"|"skipped"|"held"|"already_processing";message:string;workflowEventId:number|null};
 
 export function safeWorkflowError(cause:unknown){
  const record=typeof cause==="object"&&cause!==null?cause as Record<string,unknown>:null,raw=cause instanceof Error?cause.message:typeof record?.message==="string"?record.message:"Workflow action failed";
@@ -15,6 +16,7 @@ export function safeWorkflowError(cause:unknown){
 async function reminderId(db:SupabaseClient,key:string){const {data}=await db.from("pledge_reminders").select("id").eq("idempotency_key",key).maybeSingle();return data?.id as number|undefined}
 
 export async function processClaimedFinancialWorkflow(db:SupabaseClient,event:FinancialWorkflowEvent,origin:string):Promise<ImmediateProcessingResult>{
+ if(!(await automaticMessagingEnabled(db,event.event_id))){await holdWorkflowEvent(db,event.id);return {status:"held",message:"Financial record saved. Automatic messaging is paused.",workflowEventId:event.id}}
  let deliveryId:number|undefined;
  try{
   await queueMakeDeliveries(db,event);

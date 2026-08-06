@@ -4,6 +4,7 @@ import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService
 import { buildCompactFinancialSmsMessage, buildPledgeMessage, formatTzs } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
 import { getFinancialWhatsAppTemplate } from "@/lib/financialWhatsAppConfig";
+import { automaticMessagingEnabled } from "@/services/automationMasterServer";
 
 export type FinancialChannel = "sms" | "whatsapp";
 export type ReminderSkipReason =
@@ -224,6 +225,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
   id: number; pledge_id: number; event_id: number; channel: FinancialChannel; recipient_phone: string;
   message_body: string; retry_count: number; reminder_type?: string; originating_payment_id?:number|null; source?:string|null;
 }, event: EventRow, pledge: PledgeRow, actor: { type: "system" | "authenticated_user" | "organiser_link"; userId?: string | null; linkId?: string | null }, alreadyClaimed = false) {
+  if(actor.type==="system"&&!(await automaticMessagingEnabled(db,reminder.event_id))){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"automation_paused",next_retry_at:null}).eq("id",reminder.id);return {status:"skipped" as const,error:undefined}}
   const attempt = reminder.retry_count + 1;
   const attemptUpdate={ delivery_status: "processing", retry_count: attempt, last_attempt_at: new Date().toISOString(), next_retry_at: null };
   if(alreadyClaimed){
@@ -288,7 +290,7 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
     const [eventResult,pledgeResult,settingResult]=await Promise.all([
       db.from("events").select("id,title,event_date,language,archived_at").eq("id",reminder.event_id).maybeSingle(),
       db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("id",reminder.pledge_id).eq("event_id",reminder.event_id).maybeSingle(),
-      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel").eq("event_id",reminder.event_id).maybeSingle(),
+      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,automatic_messaging_enabled").eq("event_id",reminder.event_id).maybeSingle(),
     ]);
     if(eventResult.error||pledgeResult.error||settingResult.error){
       await db.from("pledge_reminders").update({delivery_status:"queued"}).eq("id",reminder.id).eq("delivery_status","processing");
@@ -299,16 +301,18 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
     const validStatus=pledge&&["pledged","partial","completed"].includes(pledge.calculated_status);
     const validPhone=pledge?.normalized_phone&&/^255[67]\d{8}$/.test(pledge.normalized_phone)&&/^255[67]\d{8}$/.test(reminder.recipient_phone);
     const validChannel=(channel==="sms"||channel==="whatsapp")&&setting&&channels(setting.reminder_channel).includes(channel);
+    if(setting?.automatic_messaging_enabled===false){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"automation_paused",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     if(!event||!pledge||!setting||setting.pledge_acknowledgement_mode!=="automatic"||!validStatus||!validPhone||!validChannel){
       const message="Automatic pledge acknowledgement is no longer eligible for delivery.";
-      await db.from("pledge_reminders").update({delivery_status:"failed",error_message:message,failure_type:"validation",next_retry_at:null}).eq("id",reminder.id).eq("delivery_status","processing");
-      await db.from("finance_audit_logs").insert({event_id:reminder.event_id,pledge_id:reminder.pledge_id,actor_type:"system",action:"reminder_failed",metadata:{channel:reminder.channel,reminder_id:reminder.id,failure_type:"validation",safe_provider_error:message}});
+      await db.from("pledge_reminders").update({delivery_status:"cancelled",error_message:"ineligible_after_revalidation",failure_type:"validation",next_retry_at:null}).eq("id",reminder.id).eq("delivery_status","processing");
       aggregate.skipped+=1;aggregate.errors.push(message);continue;
     }
     const completed=pledge.calculated_status==="completed"&&Number(pledge.balance)<=0;
     const reminderType=completed?"pledge_thank_you":"pledge_acknowledgement";
     const values={guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance};
     const message=channel==="sms"?buildCompactFinancialSmsMessage(reminderType,values).message:buildPledgeMessage(reminderType,event.language==="en"?"en":"sw",values);
+    const provider=financialProviderStatus(channel,event.language==="en"?"en":"sw",reminderType==="pledge_thank_you"?"pledge_thank_you":"pledge_acknowledgement");
+    if(!provider.configured){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"provider_not_ready",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     const repaired=await db.from("pledge_reminders").update({reminder_type:reminderType,message_body:message,recipient_phone:pledge.normalized_phone}).eq("id",reminder.id).eq("delivery_status","processing").select("id").maybeSingle();
     if(repaired.error||!repaired.data){aggregate.failed+=1;aggregate.errors.push("A queued pledge acknowledgement could not be prepared.");continue}
     const currentReminder={...reminder,reminder_type:reminderType,message_body:message,channel,recipient_phone:pledge.normalized_phone};
@@ -358,7 +362,7 @@ export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,
       db.from("events").select("id,title,event_date,language,archived_at").eq("id",reminder.event_id).maybeSingle(),
       db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("id",reminder.pledge_id).eq("event_id",reminder.event_id).maybeSingle(),
       db.from("pledge_payments").select("id,pledge_id,amount,voided_at,recorded_by").eq("id",reminder.originating_payment_id).eq("pledge_id",reminder.pledge_id).maybeSingle(),
-      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel").eq("event_id",reminder.event_id).maybeSingle(),
+      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,automatic_messaging_enabled").eq("event_id",reminder.event_id).maybeSingle(),
     ]);
     if(eventResult.error||pledgeResult.error||paymentResult.error||settingResult.error){
       await db.from("pledge_reminders").update({delivery_status:candidate.delivery_status}).eq("id",reminder.id).eq("delivery_status","processing");
@@ -367,11 +371,13 @@ export async function processAutomaticPaymentAcknowledgements(db:SupabaseClient,
     const event=eventResult.data,pledge=pledgeResult.data,payment=paymentResult.data,setting=settingResult.data;
     const validPhone=pledge?.normalized_phone&&/^255[67]\d{8}$/.test(pledge.normalized_phone);
     const smsEnabled=setting&&(setting.reminder_channel==="sms"||setting.reminder_channel==="both");
+    if(setting?.automatic_messaging_enabled===false){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"automation_paused",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     if(!event||!pledge||!payment||payment.voided_at||Number(payment.amount)<=0||!setting||setting.pledge_acknowledgement_mode!=="automatic"||!validPhone||!smsEnabled||reminder.channel!=="sms"){
       const message="Automatic payment acknowledgement is no longer eligible for delivery.";
-      await db.from("pledge_reminders").update({delivery_status:"failed",error_message:message,failure_type:"validation",next_retry_at:null}).eq("id",reminder.id).eq("delivery_status","processing");
+      await db.from("pledge_reminders").update({delivery_status:"cancelled",error_message:"ineligible_after_revalidation",failure_type:"validation",next_retry_at:null}).eq("id",reminder.id).eq("delivery_status","processing");
       aggregate.skipped+=1;aggregate.errors.push(message);continue;
     }
+    if(!financialProviderStatus("sms",event.language==="en"?"en":"sw").configured){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"provider_not_ready",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     const prepared=await db.from("pledge_reminders").update({recipient_phone:pledge.normalized_phone}).eq("id",reminder.id).eq("delivery_status","processing").select("id").maybeSingle();
     if(prepared.error||!prepared.data){aggregate.failed+=1;aggregate.errors.push("A payment acknowledgement could not be prepared.");continue}
     const currentReminder={...reminder,channel:"sms" as const,recipient_phone:pledge.normalized_phone,source:reminder.originating_source??(payment.recorded_by?"authenticated_user":"organiser_link")};
@@ -386,6 +392,7 @@ export async function sendFinancialReminders(db: SupabaseClient, preview: Remind
   type: "system" | "authenticated_user" | "organiser_link"; userId?: string | null; linkId?: string | null;
 }): Promise<SendAggregate> {
   const aggregate: SendAggregate = { queued: 0, sent: 0, failed: 0, skipped: preview.skipped, errors: [] };
+  if(actor.type==="system"){const {data:master}=await db.from("event_finance_automation_settings").select("automatic_messaging_enabled").eq("event_id",preview.event.id).maybeSingle();if(master?.automatic_messaging_enabled===false){aggregate.skipped+=preview.eligible;aggregate.errors.push("automation_paused");return aggregate}}
   for (const row of preview.rows) {
     if (!row.eligible || !row.phone) continue;
     const provider = preview.provider[row.channel];
@@ -442,9 +449,10 @@ export async function retryDueFinancialReminders(db: SupabaseClient, eventId?: n
     const [{ data: event }, { data: pledge }, { data: setting }] = await Promise.all([
       db.from("events").select("id,title,event_date,language,archived_at").eq("id", reminder.event_id).maybeSingle(),
       db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("id", reminder.pledge_id).maybeSingle(),
-      db.from("event_finance_automation_settings").select("reminders_enabled,reminder_channel,stop_after_event_date,allow_after_event_date").eq("event_id", reminder.event_id).maybeSingle(),
+      db.from("event_finance_automation_settings").select("reminders_enabled,reminder_channel,stop_after_event_date,allow_after_event_date,automatic_messaging_enabled").eq("event_id", reminder.event_id).maybeSingle(),
     ]);
     const eventPassed = event ? new Date(`${event.event_date}T23:59:59Z`) < new Date() : true;
+    if(setting?.automatic_messaging_enabled===false){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"automation_paused",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     if (!event || !pledge || !setting || event.archived_at || !setting.reminders_enabled
       || !channels(setting.reminder_channel).includes(reminder.channel as FinancialChannel)
       || (eventPassed && setting.stop_after_event_date && !setting.allow_after_event_date)
@@ -498,6 +506,7 @@ export async function sendDailyFinancialSummary(db: SupabaseClient, input: {
     getDailyFinancialSummary(db, input.eventId, input.date),
   ]);
   const aggregate: SendAggregate = { queued: 0, sent: 0, failed: 0, skipped: 0, errors: [] };
+  if(input.requireEnabled&&setting?.automatic_messaging_enabled===false){aggregate.skipped=input.requestedChannels.length;aggregate.errors.push("automation_paused");return aggregate}
   if (!setting?.owner_summary_phone || (input.requireEnabled && !setting.daily_summary_enabled) || built.event.archived_at) {
     aggregate.skipped = input.requestedChannels.length;
     aggregate.errors.push(!setting?.owner_summary_phone ? "Daily Summary has no valid owner phone." : built.event.archived_at ? "Daily Summary is unavailable for an archived event." : "Daily Summary is not enabled.");
@@ -526,6 +535,7 @@ export async function sendDailyFinancialSummary(db: SupabaseClient, input: {
       log=inserted.data;
     }
     aggregate.queued += 1;
+    if(input.requireEnabled&&!(await automaticMessagingEnabled(db,input.eventId))){await db.from("finance_automation_delivery_logs").update({delivery_status:"held",error_message:"automation_paused",next_retry_at:null}).eq("id",log.id);aggregate.queued-=1;aggregate.skipped+=1;continue}
     try {
       let providerMessageId: string | undefined;
       if (channel === "sms") {

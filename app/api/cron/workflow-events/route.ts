@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { previewFinancialReminders, processAutomaticPaymentAcknowledgements, processQueuedPledgeAcknowledgements, sendDailyFinancialSummary, sendFinancialReminders, type FinancialChannel } from "@/services/financialNotificationEngine";
 import { processMakeDeliveries, queueMakeDeliveries } from "@/lib/makeConnectorServer";
 import {processClaimedFinancialWorkflow} from "@/services/financialWorkflowProcessor";
+import {automaticMessagingEnabled,holdWorkflowEvent} from "@/services/automationMasterServer";
 
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const headers={"Cache-Control":"private, no-store, max-age=0"};
@@ -33,6 +34,7 @@ export async function GET(request:Request){
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});const eligibleResult=await db.from("workflow_events").select("id",{count:"exact",head:true}).in("status",["pending","failed"]).lte("available_at",invokedAt).lt("attempt_count",5);const {data:events,error}=await db.rpc("claim_workflow_events",{batch_size:25});console.info("workflow_processor_claim",{invokedAt,eligible:eligibleResult.count??null,claimed:events?.length??0,claimSucceeded:!error});if(error)return Response.json({error:"Workflow events could not be claimed."},{status:500,headers});
  const totals={claimed:events?.length??0,processed:0,failed:0,acknowledgementsQueued:0,acknowledgementsSent:0,acknowledgementsFailed:0,acknowledgementsSkipped:0,paymentAcknowledgementsQueued:0,paymentAcknowledgementsSent:0,paymentAcknowledgementsFailed:0,paymentAcknowledgementsSkipped:0};
  for(const event of events??[]){
+  if(!(await automaticMessagingEnabled(db,event.event_id))){await holdWorkflowEvent(db,event.id);continue;}
   if(event.event_type==="message.acknowledgement.requested"||event.event_type==="payment.recorded"){
    const result=await processClaimedFinancialWorkflow(db,event,new URL(request.url).origin);if(result.status==="sent"){totals.processed+=1;if(event.event_type==="payment.recorded")totals.paymentAcknowledgementsSent+=1;else totals.acknowledgementsSent+=1}else if(result.status==="failed")totals.failed+=1;else{totals.processed+=1;if(event.event_type==="payment.recorded")totals.paymentAcknowledgementsSkipped+=1;else totals.acknowledgementsSkipped+=1}continue;
   }

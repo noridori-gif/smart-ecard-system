@@ -35,6 +35,7 @@ export async function GET(request: Request) {
   for (const setting of settings ?? []) {
     const event = Array.isArray(setting.events) ? setting.events[0] : setting.events;
     if (!event || event.archived_at) continue;
+    if (setting.automatic_messaging_enabled === false) continue;
     totals.eventsProcessed += 1;
     try {
       const retry = await retryDueFinancialReminders(db, event.id);

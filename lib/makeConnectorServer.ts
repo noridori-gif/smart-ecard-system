@@ -2,6 +2,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { buildPledgeMessage } from "@/services/pledgeMessageService";
+import { automaticMessagingEnabled } from "@/services/automationMasterServer";
 
 export const MAKE_EVENT_TYPES = ["pledge.submitted", "message.acknowledgement.requested", "pledge.reminder.send_requested", "payment.completed", "invitation.sent", "rsvp.accepted", "guest.checked_in"] as const;
 export type MakeEventType = (typeof MAKE_EVENT_TYPES)[number];
@@ -31,6 +32,7 @@ export async function processMakeDeliveries(db: SupabaseClient, origin: string, 
   const { data: rows } = await query;
   let accepted = 0, failed = 0;
   for (const row of rows ?? []) {
+    if(row.event_type!=="connector.test"&&!(await automaticMessagingEnabled(db,row.event_id))){await db.from("automation_connector_deliveries").update({status:"held",last_error:"automation_paused",updated_at:new Date().toISOString()}).eq("id",row.id).in("status",["pending","failed"]);continue;}
     const connector = Array.isArray(row.event_automation_connectors) ? row.event_automation_connectors[0] : row.event_automation_connectors;
     if (!connector?.is_active) { await db.from("automation_connector_deliveries").update({ status: "skipped", last_error: "Connector is paused.", updated_at: new Date().toISOString() }).eq("id", row.id).in("status", ["pending", "failed"]); continue; }
     const attempt = row.attempt_count + 1;
