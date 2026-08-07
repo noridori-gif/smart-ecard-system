@@ -8,8 +8,7 @@ import {
   useState,
 } from "react";
 import { useParams } from "next/navigation";
-import Input from "@/components/Input";
-import Button from "@/components/Button";
+import Button from "@/components/ui/Button";
 import {
   getEventById,
   type Event,
@@ -241,7 +240,7 @@ export default function EventGuestsPage() {
 
           <Link
             href="/events"
-            className="mt-5 inline-block rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+            className="mt-5 inline-block rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
           >
             Back to Events
           </Link>
@@ -253,7 +252,7 @@ export default function EventGuestsPage() {
   return (
     <section>
       <div>
-        <h1 className="text-4xl font-bold text-blue-700">
+        <h1 className="text-4xl font-bold text-emerald-700">
           Guests
         </h1>
 
@@ -282,7 +281,7 @@ export default function EventGuestsPage() {
         </div>
 
         {editingGuestId !== null && (
-          <div className="mt-4 rounded-lg bg-blue-50 p-4 text-sm text-blue-700">
+          <div className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700">
             Unahariri taarifa za mgeni. QR code na invitation
             link vitabaki vilevile.
           </div>
@@ -304,64 +303,37 @@ export default function EventGuestsPage() {
           onSubmit={handleSubmit}
           className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2"
         >
-          <Input
-            label="Full Name"
-            name="full_name"
-            value={formData.full_name}
-            placeholder="Guest full name"
-            required
-            onChange={handleChange}
-          />
+          <div className="space-y-2">
+            <label htmlFor="full_name" className="sep-label block">Full Name</label>
+            <input id="full_name" name="full_name" value={formData.full_name} placeholder="Guest full name" required onChange={handleChange} className="sep-control" />
+          </div>
 
-          <Input
-            label="Phone"
-            name="phone"
-            value={formData.phone}
-            placeholder="+255..."
-            onChange={handleChange}
-          />
+          <div className="space-y-2">
+            <label htmlFor="phone" className="sep-label block">Phone</label>
+            <input id="phone" name="phone" value={formData.phone} placeholder="+255..." onChange={handleChange} className="sep-control" />
+          </div>
 
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            placeholder="guest@example.com"
-            onChange={handleChange}
-          />
+          <div className="space-y-2">
+            <label htmlFor="email" className="sep-label block">Email</label>
+            <input id="email" name="email" type="email" value={formData.email} placeholder="guest@example.com" onChange={handleChange} className="sep-control" />
+          </div>
 
-          <Input
-            label="Category"
-            name="category"
-            value={formData.category}
-            placeholder="VIP, Family, Friend, Normal"
-            required
-            onChange={handleChange}
-          />
+          <div className="space-y-2">
+            <label htmlFor="category" className="sep-label block">Category</label>
+            <input id="category" name="category" value={formData.category} placeholder="VIP, Family, Friend, Normal" required onChange={handleChange} className="sep-control" />
+          </div>
 
-          <Input
-            label="Allowed Guests"
-            name="allowed_guests"
-            type="number"
-            value={formData.allowed_guests}
-            required
-            onChange={handleChange}
-          />
+          <div className="space-y-2">
+            <label htmlFor="allowed_guests" className="sep-label block">Allowed Guests</label>
+            <input id="allowed_guests" name="allowed_guests" type="number" value={formData.allowed_guests} required onChange={handleChange} className="sep-control" />
+          </div>
 
           <div className="flex items-end gap-3">
-            <Button
-              text={
-                isSaving
-                  ? editingGuestId !== null
-                    ? "Updating..."
-                    : "Saving..."
-                  : editingGuestId !== null
-                    ? "Update Guest"
-                    : "Add Guest"
-              }
-              type="submit"
-              disabled={isSaving}
-            />
+            <Button type="submit" loading={isSaving}>
+              {editingGuestId !== null
+                ? isSaving ? "Updating..." : "Update Guest"
+                : isSaving ? "Saving..." : "Add Guest"}
+            </Button>
           </div>
         </form>
       </div>
@@ -399,7 +371,7 @@ export default function EventGuestsPage() {
                     key={guest.id}
                     className={
                       editingGuestId === guest.id
-                        ? "bg-blue-50"
+                        ? "bg-emerald-50"
                         : "hover:bg-gray-50"
                     }
                   >
@@ -435,7 +407,7 @@ export default function EventGuestsPage() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/events/${eventId}/guests/${guest.id}/qr`}
-                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
                         >
                           View QR
                         </Link>

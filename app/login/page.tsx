@@ -12,8 +12,7 @@ import {
   useRouter,
 } from "next/navigation";
 
-import Button from "@/components/Button";
-import Input from "@/components/Input";
+import Button from "@/components/ui/Button";
 
 
 function getSafeRedirectPath() {
@@ -188,14 +187,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-100 px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-white/70 bg-white p-7 shadow-xl sm:p-10">
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-bold text-white shadow-lg shadow-blue-200">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700 text-2xl font-bold text-white shadow-lg shadow-emerald-200">
             S
           </div>
 
-          <h1 className="mt-5 text-3xl font-bold text-blue-700">
+          <h1 className="mt-5 text-3xl font-bold text-emerald-700">
             Smart Event Pass
           </h1>
 
@@ -210,43 +209,39 @@ export default function LoginPage() {
           }
           className="mt-8 space-y-5"
         >
-          <Input
-            label="Username, phone or email"
-            name="identity"
-            type="text"
-            value={
-              formData.identity
-            }
-            placeholder="elia, 0715631284 or elia@example.com"
-            required
-            onChange={
-              handleChange
-            }
-          />
+          <div className="space-y-2">
+            <label htmlFor="identity" className="sep-label block">Username, phone or email</label>
+            <input
+              id="identity"
+              name="identity"
+              type="text"
+              value={formData.identity}
+              placeholder="elia, 0715631284 or elia@example.com"
+              required
+              onChange={handleChange}
+              className="sep-control"
+            />
+          </div>
 
           <div>
-            <Input
-              label="Password"
-              name="password"
-              type={
-                showPassword
-                  ? "text"
-                  : "password"
-              }
-              value={
-                formData.password
-              }
-              placeholder="Enter your password"
-              required
-              onChange={
-                handleChange
-              }
-            />
+            <div className="space-y-2">
+              <label htmlFor="password" className="sep-label block">Password</label>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                placeholder="Enter your password"
+                required
+                onChange={handleChange}
+                className="sep-control"
+              />
+            </div>
 
             <div className="mt-3 flex items-center justify-between gap-4">
               <Link
                 href="/forgot-password"
-                className="text-sm font-semibold text-blue-600 transition hover:text-blue-800"
+                className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
               >
                 Forgot Password?
               </Link>
@@ -261,7 +256,7 @@ export default function LoginPage() {
                       !currentValue
                   )
                 }
-                className="text-sm font-semibold text-blue-600 transition hover:text-blue-800"
+                className="text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
               >
                 {showPassword
                   ? "Hide password"
@@ -279,22 +274,9 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div
-            className={
-              isLoading
-                ? "pointer-events-none opacity-60"
-                : ""
-            }
-          >
-            <Button
-              text={
-                isLoading
-                  ? "Signing in..."
-                  : "Login"
-              }
-              type="submit"
-            />
-          </div>
+          <Button type="submit" loading={isLoading} className="w-full">
+            {isLoading ? "Signing in..." : "Login"}
+          </Button>
         </form>
 
         <p className="mt-7 text-center text-xs text-slate-400">

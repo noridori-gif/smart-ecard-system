@@ -312,9 +312,9 @@ export default function ResetPasswordPage() {
 
   if (isCheckingLink) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-100 px-4">
         <div className="rounded-2xl bg-white p-8 text-center shadow-xl">
-          <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+          <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
           <p className="mt-4 font-semibold text-slate-600">
             Checking reset link...
@@ -325,10 +325,10 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-100 px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-white/70 bg-white p-7 shadow-xl sm:p-10">
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-2xl shadow-lg shadow-blue-200">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700 text-2xl shadow-lg shadow-emerald-200">
             🔑
           </div>
 
@@ -422,7 +422,7 @@ export default function ResetPasswordPage() {
               disabled={
                 isSaving
               }
-              className="w-full rounded-xl bg-blue-600 px-6 py-3 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-emerald-700 px-6 py-3 font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving
                 ? "Saving Password..."
@@ -434,7 +434,7 @@ export default function ResetPasswordPage() {
         <div className="mt-6 text-center">
           <Link
             href="/login"
-            className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+            className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
           >
             ← Back to Login
           </Link>
@@ -498,7 +498,7 @@ function PasswordInput({
               event.target.value
             )
           }
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
         />
 
         <button
@@ -509,7 +509,7 @@ function PasswordInput({
           onClick={
             onToggleVisibility
           }
-          className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-60"
+          className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-60"
         >
           {showPassword
             ? "Hide"

@@ -153,7 +153,7 @@ export default function ImportHistoryPage() {
           type="button"
           onClick={loadImportHistory}
           disabled={isLoading}
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {isLoading
             ? "Refreshing..."
@@ -173,7 +173,7 @@ export default function ImportHistoryPage() {
             Total Imports
           </p>
 
-          <p className="mt-2 text-3xl font-bold text-blue-700">
+          <p className="mt-2 text-3xl font-bold text-emerald-700">
             {filteredHistory.length}
           </p>
         </div>
@@ -226,14 +226,14 @@ export default function ImportHistoryPage() {
             setCurrentPage(1);
           }}
           placeholder="Tafuta event, file au imported by..."
-          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
         />
       </div>
 
       {isLoading ? (
         <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="text-center">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
             <p className="mt-4 text-sm text-slate-600">
               Inapakua import history...

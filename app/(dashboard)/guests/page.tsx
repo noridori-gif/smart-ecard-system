@@ -419,7 +419,7 @@ export default function GuestsPage() {
     return (
       <div className="flex min-h-[350px] items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
           <p className="mt-4 text-sm text-slate-600">
             Inapakua guests...
@@ -514,7 +514,7 @@ export default function GuestsPage() {
                 setCurrentPage(1);
               }}
               placeholder="Jina, simu, email au Event Pass ID..."
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
             />
           </div>
 
@@ -533,7 +533,7 @@ export default function GuestsPage() {
                 setSelectedEventId(event.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
             >
               <option value="all">
                 Events zote
@@ -567,7 +567,7 @@ export default function GuestsPage() {
                 setSelectedStatus(event.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
             >
               <option value="all">
                 Status zote
