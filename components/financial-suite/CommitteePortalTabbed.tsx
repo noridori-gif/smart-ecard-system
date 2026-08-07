@@ -14,7 +14,7 @@ import {
 import RecordPaymentDialog from "./RecordPaymentDialog";
 import PaymentHistoryDialog from "./PaymentHistoryDialog";
 import ReceiptDialog from "./ReceiptDialog";
-import { PortalDetailsForm } from "./OrganiserPortal";
+import { PortalDetailsForm } from "./PortalDetailsForm";
 import {
   CommitteePortalHeader,
   CommitteeTabNavigation,
