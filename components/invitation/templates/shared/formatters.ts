@@ -61,3 +61,22 @@ export function coupleInitials(brideName: string | null, groomName: string | nul
 
   return parts.map(name => name.trim().charAt(0).toUpperCase()).join(" & ");
 }
+
+const HERO_NAME_SIZE_TIERS: Array<{ maxLength: number; min: number; vw: number; max: number }> = [
+  { maxLength: 16, min: 40, vw: 9.5, max: 76 },
+  { maxLength: 26, min: 34, vw: 8.5, max: 62 },
+  { maxLength: 40, min: 28, vw: 7, max: 48 },
+  { maxLength: Infinity, min: 24, vw: 6, max: 38 },
+];
+
+/**
+ * Fluid, length-aware font size for hero couple names: longer names get a
+ * lower ceiling so they stay to 1-2 lines instead of wrapping to 3+ at a
+ * fixed large size. Returns a CSS `clamp()` value for direct use in `style`.
+ */
+export function heroNameFontSize(value: string): string {
+  const length = value.trim().length;
+  const tier = HERO_NAME_SIZE_TIERS.find(candidate => length <= candidate.maxLength) ?? HERO_NAME_SIZE_TIERS.at(-1)!;
+
+  return `clamp(${tier.min}px, ${tier.vw}vw, ${tier.max}px)`;
+}

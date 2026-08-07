@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
+import sharp from "sharp";
 import PremiumWhatsAppCard, {
   CompactHorizontalCard,
 } from "./PremiumWhatsAppCard";
@@ -39,6 +40,7 @@ export type WhatsAppCardData = {
 
 type RenderData = WhatsAppCardData & {
   coverImageDataUrl: string | null;
+  coverImageBannerHeight: number;
   qrCodeDataUrl: string | null;
   primaryText: string;
   secondaryText: string;
@@ -48,6 +50,10 @@ type RenderData = WhatsAppCardData & {
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1800;
+const CONTENT_HEIGHT = 1180;
+const DEFAULT_BANNER_HEIGHT = 620;
+const MIN_BANNER_HEIGHT = 480;
+const MAX_BANNER_HEIGHT = 2400;
 const COVER_FETCH_TIMEOUT_MS = 6_000;
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -260,7 +266,10 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
       throw new Error("Cover image is not a supported PNG, JPEG, or WebP file.");
     }
 
-    return `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
+    const dataUrl = `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
+    const bannerHeight = await bannerHeightFromImageBytes(buffer);
+
+    return { dataUrl, bannerHeight };
   } catch (error) {
     console.warn("WhatsApp card cover image fallback:", {
       urlHost: getUrlHost(urlValue),
@@ -268,6 +277,23 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
     });
 
     return null;
+  }
+}
+
+async function bannerHeightFromImageBytes(buffer: ArrayBuffer) {
+  try {
+    const { width, height } = await sharp(Buffer.from(buffer)).metadata();
+
+    if (!width || !height) {
+      return DEFAULT_BANNER_HEIGHT;
+    }
+
+    const naturalHeight = Math.round((CARD_WIDTH / width) * height);
+
+    return Math.min(MAX_BANNER_HEIGHT, Math.max(MIN_BANNER_HEIGHT, naturalHeight));
+  } catch (error) {
+    console.warn("WhatsApp card banner height fallback:", error);
+    return DEFAULT_BANNER_HEIGHT;
   }
 }
 
@@ -282,6 +308,7 @@ function getUrlHost(urlValue: string) {
 function renderData(
   data: WhatsAppCardData,
   coverImageDataUrl: string | null,
+  coverImageBannerHeight: number,
   qrCodeDataUrl: string | null
 ): RenderData {
   const primary = safeColor(data.primary, "#145A46");
@@ -310,6 +337,7 @@ function renderData(
     secondary,
     accent,
     coverImageDataUrl,
+    coverImageBannerHeight,
     qrCodeDataUrl,
     primaryText: readableText(primary),
     secondaryText: readableText(secondary),
@@ -374,22 +402,35 @@ export async function createWhatsAppInvitationCard(
   template: WhatsAppCardTemplate,
   data: WhatsAppCardData
 ) {
-  const coverImageDataUrl = await fetchCoverImageDataUrl(data.coverImageUrl);
+  const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
   const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
-  let normalizedData = renderData(data, coverImageDataUrl, qrCodeDataUrl);
+  let normalizedData = renderData(
+    data,
+    cover?.dataUrl ?? null,
+    cover?.bannerHeight ?? DEFAULT_BANNER_HEIGHT,
+    qrCodeDataUrl
+  );
 
   try {
     return pngResponse(
-      await materializePng(renderWhatsAppCard(template, normalizedData))
+      await materializePng(
+        renderWhatsAppCard(template, normalizedData),
+        CARD_WIDTH,
+        normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
+      )
     );
   } catch (error) {
     if (normalizedData.coverImageDataUrl) {
       console.warn("WhatsApp card image decode fallback:", error);
-      normalizedData = renderData(data, null, qrCodeDataUrl);
+      normalizedData = renderData(data, null, DEFAULT_BANNER_HEIGHT, qrCodeDataUrl);
 
       try {
         return pngResponse(
-          await materializePng(renderWhatsAppCard(template, normalizedData))
+          await materializePng(
+            renderWhatsAppCard(template, normalizedData),
+            CARD_WIDTH,
+            normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
+          )
         );
       } catch (fallbackError) {
         console.error("WhatsApp card template fallback failed:", fallbackError);
@@ -408,7 +449,7 @@ export async function createCompactWhatsAppInvitationCard(
   data: WhatsAppCardData
 ) {
   const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
-  const normalizedData = renderData(data, null, qrCodeDataUrl);
+  const normalizedData = renderData(data, null, DEFAULT_BANNER_HEIGHT, qrCodeDataUrl);
 
   return pngResponse(
     await materializePng(

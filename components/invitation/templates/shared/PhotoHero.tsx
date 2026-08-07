@@ -68,46 +68,57 @@ export default function PhotoHero({
   monogramText,
   children,
 }: PhotoHeroProps) {
+  if (coverImageUrl) {
+    return (
+      <div className="relative w-full overflow-hidden">
+        <img
+          src={coverImageUrl}
+          alt={alt}
+          className="block h-auto w-full"
+          style={
+            treatment === "duotone"
+              ? { filter: "grayscale(1) contrast(1.08) brightness(1.05)" }
+              : undefined
+          }
+        />
+
+        {treatment === "duotone" && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: accentColor, mixBlendMode: "color", opacity: 0.65 }}
+          />
+        )}
+
+        {overlay && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+        )}
+
+        {ornament === "botanical" && <BotanicalCorners accentColor={accentColor} />}
+        {ornament === "geometric" && <GeometricBorder accentColor={accentColor} />}
+
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className={`relative w-full overflow-hidden ${heightClassName}`}>
-      {coverImageUrl ? (
-        <>
-          <img
-            src={coverImageUrl}
-            alt={alt}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={
-              treatment === "duotone"
-                ? { filter: "grayscale(1) contrast(1.08) brightness(1.05)" }
-                : undefined
-            }
-          />
-
-          {treatment === "duotone" && (
-            <div
-              className="absolute inset-0"
-              style={{ backgroundColor: accentColor, mixBlendMode: "color", opacity: 0.65 }}
-            />
-          )}
-        </>
-      ) : (
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{ background: `linear-gradient(150deg, ${primaryColor}, color-mix(in srgb, ${primaryColor} 55%, black))` }}
+      >
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ background: `linear-gradient(150deg, ${primaryColor}, color-mix(in srgb, ${primaryColor} 55%, black))` }}
-        >
-          <div
-            className="absolute inset-3 rounded-2xl border sm:inset-5"
-            style={{ borderColor: `${accentColor}70` }}
-          />
+          className="absolute inset-3 rounded-2xl border sm:inset-5"
+          style={{ borderColor: `${accentColor}70` }}
+        />
 
-          <span
-            className="font-script relative text-6xl sm:text-7xl"
-            style={{ color: accentColor }}
-          >
-            {monogramText}
-          </span>
-        </div>
-      )}
+        <span
+          className="font-script relative text-6xl sm:text-7xl"
+          style={{ color: accentColor }}
+        >
+          {monogramText}
+        </span>
+      </div>
 
       {overlay && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />

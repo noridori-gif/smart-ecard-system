@@ -1,9 +1,48 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import PremiumWhatsAppCard, { type PremiumWhatsAppCardData, type PremiumWhatsAppTemplate } from "@/lib/PremiumWhatsAppCard";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import type { EventLanguage, InvitationTemplate } from "@/services/eventService";
+
+const CARD_WIDTH = 1080;
+const CONTENT_HEIGHT = 1180;
+const DEFAULT_BANNER_HEIGHT = 620;
+const MIN_BANNER_HEIGHT = 480;
+const MAX_BANNER_HEIGHT = 2400;
+const PREVIEW_BOX_WIDTH = 300;
+const PREVIEW_SCALE = PREVIEW_BOX_WIDTH / CARD_WIDTH;
+
+function useCoverImageBannerHeight(coverImageUrl: string | null) {
+  const [state, setState] = useState({ url: coverImageUrl, height: DEFAULT_BANNER_HEIGHT });
+
+  if (state.url !== coverImageUrl) {
+    setState({ url: coverImageUrl, height: coverImageUrl ? state.height : DEFAULT_BANNER_HEIGHT });
+  }
+
+  useEffect(() => {
+    if (!coverImageUrl) return;
+
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (cancelled || !image.naturalWidth || !image.naturalHeight) return;
+      const natural = Math.round((CARD_WIDTH / image.naturalWidth) * image.naturalHeight);
+      const height = Math.min(MAX_BANNER_HEIGHT, Math.max(MIN_BANNER_HEIGHT, natural));
+      setState(prev => (prev.url === coverImageUrl ? { url: coverImageUrl, height } : prev));
+    };
+    image.onerror = () => {
+      if (!cancelled) setState(prev => (prev.url === coverImageUrl ? { url: coverImageUrl, height: DEFAULT_BANNER_HEIGHT } : prev));
+    };
+    image.src = coverImageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [coverImageUrl]);
+
+  return state.height;
+}
 
 export type EventPreviewData = {
   title:string; eventType:string; brideName:string; groomName:string; language:EventLanguage;
@@ -21,13 +60,15 @@ export default function EventPreviewSwitcher({data,invitationPreview}:{data:Even
   const [whatsAppView,setWhatsAppView]=useState<WhatsAppView>("card");
   const modes: Array<[Mode,string]>=[["invitation",t("preview.invitation")],["whatsapp",t("preview.whatsappCard")],["pass",t("preview.eventPass")]];
   const names=data.brideName&&data.groomName?`${data.brideName} & ${data.groomName}`:data.brideName||data.title|| (data.language==="sw"?"Tukio Lako":"Your Event");
+  const bannerHeight=useCoverImageBannerHeight(data.coverImageUrl);
+  const totalCardHeight=bannerHeight+CONTENT_HEIGHT;
   const payload=useMemo<PremiumWhatsAppCardData>(()=>({
     title:names, invitationMessage:data.invitationMessage?.trim()||(data.language==="sw"?"Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu.":"We are delighted to invite you to celebrate this special occasion with us."),
     date:data.eventDate||(data.language==="sw"?"Tarehe ya tukio":"Event date"), eventTime:data.eventTime||(data.language==="sw"?"Muda wa tukio":"Event time"), venue:data.venue||(data.language==="sw"?"Ukumbi wa sherehe":"Reception venue"),
     ceremonyTitle:data.ceremonyTitle, ceremonyTime:data.ceremonyTime, ceremonyVenue:data.ceremonyVenue, receptionVenue:data.venue,
     guestName:"Mr & Mrs Mgeni", dressCode:data.dressCode, allowedGuests:2, eventPassId:"SEP-PREVIEW", language:data.language,
-    coverImageDataUrl:data.coverImageUrl, qrCodeDataUrl:null, primary:data.primary, secondary:data.secondary, accent:data.accent,
-  }),[data,names]);
+    coverImageDataUrl:data.coverImageUrl, coverImageBannerHeight:bannerHeight, qrCodeDataUrl:null, primary:data.primary, secondary:data.secondary, accent:data.accent,
+  }),[data,names,bannerHeight]);
 
   function keyNavigation(event:KeyboardEvent<HTMLButtonElement>,index:number){if(!["ArrowLeft","ArrowRight"].includes(event.key))return;event.preventDefault();const next=(index+(event.key==="ArrowRight"?1:-1)+modes.length)%modes.length;setMode(modes[next][0]);document.getElementById(`event-preview-${modes[next][0]}`)?.focus();}
 
@@ -36,7 +77,7 @@ export default function EventPreviewSwitcher({data,invitationPreview}:{data:Even
     <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-bold text-emerald-800">{t("preview.only")}</p>
     <div role="tabpanel" className="mt-4 transition-opacity duration-200">
       {mode==="invitation"&&invitationPreview}
-      {mode==="whatsapp"&&<div><div className="mb-3 flex justify-center gap-1"><button type="button" aria-pressed={whatsAppView==="card"} onClick={()=>setWhatsAppView("card")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="card"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.cardImage")}</button><button type="button" aria-pressed={whatsAppView==="message"} onClick={()=>setWhatsAppView("message")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="message"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.messageView")}</button></div>{whatsAppView==="card"?<div className="mx-auto h-[500px] w-[300px] overflow-hidden rounded-xl bg-white shadow-xl"><div className="h-[1800px] w-[1080px] origin-top-left scale-[0.278]"><PremiumWhatsAppCard data={payload} template={data.template as PremiumWhatsAppTemplate}/></div></div>:<MessagePreview data={data} names={names}/>}</div>}
+      {mode==="whatsapp"&&<div><div className="mb-3 flex justify-center gap-1"><button type="button" aria-pressed={whatsAppView==="card"} onClick={()=>setWhatsAppView("card")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="card"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.cardImage")}</button><button type="button" aria-pressed={whatsAppView==="message"} onClick={()=>setWhatsAppView("message")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="message"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.messageView")}</button></div>{whatsAppView==="card"?<div className="mx-auto w-[300px] overflow-hidden rounded-xl bg-white shadow-xl" style={{height:totalCardHeight*PREVIEW_SCALE}}><div style={{width:CARD_WIDTH,height:totalCardHeight,transform:`scale(${PREVIEW_SCALE})`,transformOrigin:"top left"}}><PremiumWhatsAppCard data={payload} template={data.template as PremiumWhatsAppTemplate}/></div></div>:<MessagePreview data={data} names={names}/>}</div>}
       {mode==="pass"&&<div className="rounded-2xl border-2 border-dashed bg-white p-5 text-center shadow-sm" style={{borderColor:data.accent}}><p className="text-xs font-black uppercase tracking-[.18em]" style={{color:data.primary}}>Smart Event Pass</p><h3 className="mt-4 font-serif text-2xl font-black">{names}</h3><p className="mt-3 text-sm">Mr & Mrs Mgeni · 2</p><div className="mx-auto mt-5 grid h-28 w-28 place-items-center border-4 text-xs font-black">PREVIEW QR</div><p className="mt-4 font-mono font-black">SEP-PREVIEW</p></div>}
     </div>
   </section>;

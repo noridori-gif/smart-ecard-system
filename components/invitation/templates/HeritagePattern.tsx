@@ -6,7 +6,7 @@ import CardShell from "./shared/CardShell";
 import DateBadge from "./shared/DateBadge";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import { coupleInitials } from "./shared/formatters";
+import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -77,7 +77,10 @@ export default function HeritagePattern({ invitation, heroTitle, displayedMessag
           <p className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "var(--theme-accent)" }}>
             {t.eyebrow}
           </p>
-          <h1 className="mt-3 font-serif text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-6xl">
+          <h1
+            className="mt-3 font-serif font-black leading-[1.02] tracking-tight text-white"
+            style={{ fontSize: heroNameFontSize(heroTitle) }}
+          >
             {heroTitle}
           </h1>
         </div>

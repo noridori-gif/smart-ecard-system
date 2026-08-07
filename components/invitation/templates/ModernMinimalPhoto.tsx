@@ -7,7 +7,7 @@ import DateBadge from "./shared/DateBadge";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import { coupleInitials } from "./shared/formatters";
+import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -78,7 +78,12 @@ export default function ModernMinimalPhoto({ invitation, heroTitle, displayedMes
       <section className="px-6 pb-10 pt-10 text-center sm:px-14 sm:pb-14 sm:pt-14">
         <p className="text-[10px] font-semibold uppercase tracking-[0.5em] text-slate-400">{t.eyebrow}</p>
 
-        <h1 className="mt-5 font-serif text-4xl font-light leading-tight text-slate-950 sm:text-6xl">{heroTitle}</h1>
+        <h1
+          className="mt-5 font-serif font-light leading-tight text-slate-950"
+          style={{ fontSize: heroNameFontSize(heroTitle) }}
+        >
+          {heroTitle}
+        </h1>
 
         <div className="mt-8 flex justify-center">
           <DateBadge

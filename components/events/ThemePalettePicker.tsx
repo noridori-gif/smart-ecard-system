@@ -26,7 +26,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#12305A",
 
       secondaryColor:
-        "#F7F3E8",
+        "#F1E7D2",
 
       accentColor:
         "#D4AF37",
@@ -45,7 +45,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#08664F",
 
       secondaryColor:
-        "#F8F3E6",
+        "#EAEFDD",
 
       accentColor:
         "#C9A227",
@@ -65,7 +65,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#731F35",
 
       secondaryColor:
-        "#F9EEE9",
+        "#F6DFD8",
 
       accentColor:
         "#C7A36A",
@@ -84,7 +84,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#14213D",
 
       secondaryColor:
-        "#F3F5F8",
+        "#E6EAF2",
 
       accentColor:
         "#A7B0BE",
@@ -104,7 +104,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#A34F38",
 
       secondaryColor:
-        "#F8F1E7",
+        "#F0E1CB",
 
       accentColor:
         "#87966B",
@@ -124,7 +124,7 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
         "#171717",
 
       secondaryColor:
-        "#F7F0E4",
+        "#EEDFBB",
 
       accentColor:
         "#C7A35A",
@@ -164,14 +164,14 @@ export default function ThemePalettePicker({
       <div className="mb-4">
         <h3 className="font-bold text-gray-900">
           {language === "sw"
-            ? "Palette ya Rangi za Dress Code"
-            : "Dress Code Colour Palette"}
+            ? "Palette ya Rangi na Background ya Kadi"
+            : "Card Background & Colour Palette"}
         </h3>
 
         <p className="mt-1 text-sm leading-6 text-gray-500">
           {language === "sw"
-            ? "Chagua palette ili rangi za kadi na dress code zibadilike pamoja."
-            : "Choose a palette to update the card colours and dress code together."}
+            ? "Chagua palette ili kuweka background ya kadi, rangi za msisitizo, na dress code kwa pamoja."
+            : "Choose a palette to set your card's background colour, accent colours, and dress code together."}
         </p>
       </div>
 
@@ -221,10 +221,24 @@ export default function ThemePalettePicker({
                     : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div
+                  className="relative h-12 w-full rounded-xl border border-black/10 shadow-inner"
+                  style={{
+                    backgroundColor:
+                      palette
+                        .secondaryColor,
+                  }}
+                >
+                  <span className="absolute bottom-1 left-2 text-[9px] font-bold uppercase tracking-wide text-black/40">
+                    {language === "sw" ? "Background" : "Background"}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-start justify-between gap-3">
                   <div className="flex gap-1.5">
                     <span
-                      className="h-8 w-8 rounded-full border border-black/10 shadow-sm"
+                      title={language === "sw" ? "Rangi Kuu" : "Primary"}
+                      className="h-6 w-6 rounded-full border border-black/10 shadow-sm"
                       style={{
                         backgroundColor:
                           palette
@@ -233,16 +247,8 @@ export default function ThemePalettePicker({
                     />
 
                     <span
-                      className="h-8 w-8 rounded-full border border-black/10 shadow-sm"
-                      style={{
-                        backgroundColor:
-                          palette
-                            .secondaryColor,
-                      }}
-                    />
-
-                    <span
-                      className="h-8 w-8 rounded-full border border-black/10 shadow-sm"
+                      title={language === "sw" ? "Msisitizo" : "Accent"}
+                      className="h-6 w-6 rounded-full border border-black/10 shadow-sm"
                       style={{
                         backgroundColor:
                           palette

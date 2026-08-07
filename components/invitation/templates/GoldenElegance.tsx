@@ -6,7 +6,7 @@ import CardShell from "./shared/CardShell";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import { coupleInitials, formatEventDate } from "./shared/formatters";
+import { coupleInitials, formatEventDate, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -80,7 +80,10 @@ export default function GoldenElegance({ invitation, heroTitle, displayedMessage
 
         <div className="absolute inset-x-0 bottom-0 px-6 pb-8 sm:px-10 sm:pb-10">
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/80">{t.heading}</p>
-          <h1 className="mt-3 font-serif text-4xl leading-[1.02] tracking-tight text-white sm:text-6xl" style={{ color: "var(--theme-accent)" }}>
+          <h1
+            className="mt-3 font-serif leading-[1.02] tracking-tight text-white"
+            style={{ color: "var(--theme-accent)", fontSize: heroNameFontSize(heroTitle) }}
+          >
             {heroTitle}
           </h1>
         </div>
@@ -88,7 +91,7 @@ export default function GoldenElegance({ invitation, heroTitle, displayedMessage
 
       <section className="px-5 pb-9 pt-9 sm:px-10 sm:pb-12">
         <div className="mx-auto max-w-xl text-center">
-          <p className="font-script text-3xl" style={{ color: "var(--theme-accent)" }}>
+          <p className="font-script text-xl sm:text-2xl" style={{ color: "var(--theme-accent)" }}>
             {language === "sw" ? "Kwa heshima ya" : "In honour of"}
           </p>
           <h2 className="mt-2 font-serif text-3xl leading-tight text-slate-950 sm:text-4xl">{invitation.guest_name}</h2>

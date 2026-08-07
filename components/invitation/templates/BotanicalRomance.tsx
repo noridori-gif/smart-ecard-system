@@ -6,7 +6,7 @@ import CardShell from "./shared/CardShell";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import { coupleInitials } from "./shared/formatters";
+import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -79,7 +79,10 @@ export default function BotanicalRomance({ invitation, heroTitle, displayedMessa
           {t.eyebrow}
         </p>
 
-        <h1 className="font-script mt-4 text-5xl leading-tight sm:text-7xl" style={{ color: "var(--theme-primary)" }}>
+        <h1
+          className="font-script mt-4 leading-tight"
+          style={{ color: "var(--theme-primary)", fontSize: heroNameFontSize(heroTitle) }}
+        >
           {heroTitle}
         </h1>
 

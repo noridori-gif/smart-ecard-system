@@ -23,11 +23,14 @@ export type PremiumWhatsAppCardData = {
   eventPassId: string;
   language: "sw" | "en";
   coverImageDataUrl: string | null;
+  coverImageBannerHeight?: number;
   qrCodeDataUrl: string | null;
   primary: string;
   secondary: string;
   accent: string;
 };
+
+const DEFAULT_BANNER_HEIGHT = 620;
 
 type Skin =
   | "african"
@@ -54,63 +57,70 @@ type Theme = {
   shadow: string;
 };
 
-const THEMES: Record<PremiumWhatsAppTemplate, Theme> = {
-  royal_portrait: {
-    skin: "classic",
-    paper: "#FFFCF5",
-    paperAlt: "#EEF0EC",
-    ink: "#18364D",
-    muted: "#66737C",
-    accent: "#AA8B50",
-    accentSoft: "#D7C7A3",
-    ticket: "#EFF1EC",
-    shadow: "rgba(24,54,77,0.18)",
-  },
-  golden_elegance: {
-    skin: "gold",
-    paper: "#FFF9EC",
-    paperAlt: "#F2E4C7",
-    ink: "#3F3322",
-    muted: "#776A57",
-    accent: "#B58A3C",
-    accentSoft: "#DCC89B",
-    ticket: "#F4E7CE",
-    shadow: "rgba(63,51,34,0.18)",
-  },
-  botanical_romance: {
-    skin: "botanical",
-    paper: "#F7F2E6",
-    paperAlt: "#E8EEE3",
-    ink: "#173F32",
-    muted: "#637267",
-    accent: "#B18D4C",
-    accentSoft: "#CFC7A8",
-    ticket: "#E6EDDF",
-    shadow: "rgba(28,62,48,0.18)",
-  },
-  modern_minimal_photo: {
-    skin: "minimal",
-    paper: "#FFFCF5",
-    paperAlt: "#F5F1E8",
-    ink: "#292D2B",
-    muted: "#71736F",
-    accent: "#A98F5C",
-    accentSoft: "#D9D0BC",
-    ticket: "#F4F0E7",
-    shadow: "rgba(41,45,43,0.11)",
-  },
-  heritage_pattern: {
-    skin: "heritage",
-    paper: "#F8EEDC",
-    paperAlt: "#EBDAC2",
-    ink: "#682E38",
-    muted: "#806269",
-    accent: "#A9854B",
-    accentSoft: "#D1B98D",
-    ticket: "#EFDDC8",
-    shadow: "rgba(104,46,56,0.18)",
-  },
+const SKIN_BY_TEMPLATE: Record<PremiumWhatsAppTemplate, Skin> = {
+  royal_portrait: "classic",
+  golden_elegance: "gold",
+  botanical_romance: "botanical",
+  modern_minimal_photo: "minimal",
+  heritage_pattern: "heritage",
 };
+
+const FALLBACK_COLORS = {
+  primary: "#145A46",
+  secondary: "#FFF8EC",
+  accent: "#C9A962",
+};
+
+function safeColor(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized && /^#[0-9a-f]{6}$/i.test(normalized) ? normalized.toUpperCase() : fallback;
+}
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return null;
+
+  const value = parseInt(match[1], 16);
+  return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+}
+
+function rgbToHex([r, g, b]: [number, number, number]) {
+  const clamp = (channel: number) => Math.max(0, Math.min(255, Math.round(channel)));
+  return `#${[r, g, b].map(channel => clamp(channel).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Linear-blends two hex colors; weight is the proportion of colorB (0-1). Satori doesn't support CSS color-mix(), so this is done in plain JS. */
+function mixHex(colorA: string, colorB: string, weight: number) {
+  const a = hexToRgb(colorA);
+  const b = hexToRgb(colorB);
+  if (!a || !b) return colorA;
+
+  const w = Math.max(0, Math.min(1, weight));
+  return rgbToHex([
+    a[0] + (b[0] - a[0]) * w,
+    a[1] + (b[1] - a[1]) * w,
+    a[2] + (b[2] - a[2]) * w,
+  ]);
+}
+
+/** Builds the card's colour theme from the organizer's chosen primary/secondary/accent, keeping only the decorative "skin" (shape/layout) tied to the template. */
+function buildTheme(data: PremiumWhatsAppCardData, template: PremiumWhatsAppTemplate): Theme {
+  const primary = safeColor(data.primary, FALLBACK_COLORS.primary);
+  const secondary = safeColor(data.secondary, FALLBACK_COLORS.secondary);
+  const accent = safeColor(data.accent, FALLBACK_COLORS.accent);
+
+  return {
+    skin: SKIN_BY_TEMPLATE[template] ?? "classic",
+    paper: secondary,
+    paperAlt: mixHex(secondary, primary, 0.08),
+    ink: primary,
+    muted: mixHex(primary, secondary, 0.45),
+    accent,
+    accentSoft: mixHex(accent, secondary, 0.55),
+    ticket: mixHex(secondary, primary, 0.05),
+    shadow: "rgba(15,23,42,0.18)",
+  };
+}
 
 function copy(language: "sw" | "en") {
   return language === "en"
@@ -437,11 +447,13 @@ function InvitationTop({ data, theme }: { data: PremiumWhatsAppCardData; theme: 
 }
 
 function PhotoBanner({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+  const bannerHeight = data.coverImageBannerHeight ?? DEFAULT_BANNER_HEIGHT;
+
   return (
-    <div style={{ width: 1080, height: 620, position: "relative", display: "flex", overflow: "hidden" }}>
+    <div style={{ width: 1080, height: bannerHeight, position: "relative", display: "flex", overflow: "hidden" }}>
       {data.coverImageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={data.coverImageDataUrl} alt="" width={1080} height={620} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+        <img src={data.coverImageDataUrl} alt="" width={1080} height={bannerHeight} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
       ) : (
         <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.ink }}>
           <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 84, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
@@ -540,29 +552,29 @@ function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: The
   const passId = data.eventPassId || "—";
 
   return (
-    <div style={{ width: 930, height: 300, position: "relative", display: "flex", overflow: "hidden", marginTop: 18, border: `2px solid ${theme.accent}`, borderRadius: theme.skin === "letterpress" ? 4 : 26, backgroundColor: theme.ticket, color: theme.ink, boxShadow: `0 20px 42px ${theme.shadow}` }}>
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 12, display: "flex", backgroundColor: theme.accent }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "22px 38px 18px 50px" }}>
+    <div style={{ width: 920, display: "flex", alignItems: "center", marginTop: 20, paddingTop: 26, borderTop: `1px solid ${theme.accentSoft}` }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: 34 }}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ width: 13, height: 13, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
+          <div style={{ width: 11, height: 11, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
           <Label theme={theme}>{text.pass}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 18 }}>
+        <div style={{ display: "flex", marginTop: 16 }}>
           <Label theme={theme}>{text.passId}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 40 : 50, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 38 : 48, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
           {passId}
         </div>
-        <div style={{ maxWidth: 520, display: "flex", marginTop: 16, fontFamily: "Georgia, serif", fontSize: 19, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
+        <div style={{ maxWidth: 480, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: 18, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
           {text.instruction}
         </div>
       </div>
-      <div style={{ width: 280, display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `2px dashed ${theme.accent}`, backgroundColor: "#FFFFFF" }}>
+      <div style={{ width: 1, height: 220, display: "flex", backgroundColor: theme.accentSoft }} />
+      <div style={{ width: 240, display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 34 }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.qrCodeDataUrl} alt="" width={220} height={220} style={{ width: 220, height: 220, objectFit: "contain" }} />
+          <img src={data.qrCodeDataUrl} alt="" width={200} height={200} style={{ width: 200, height: 200, objectFit: "contain" }} />
         ) : (
-          <div style={{ width: 195, height: 195, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 26, fontWeight: 900, color: theme.ink }}>
+          <div style={{ width: 180, height: 180, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.accentSoft}`, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900, color: theme.ink }}>
             QR
           </div>
         )}
@@ -578,7 +590,7 @@ export default function PremiumWhatsAppCard({
   data: PremiumWhatsAppCardData;
   template: PremiumWhatsAppTemplate;
 }): ReactElement {
-  const theme = THEMES[template] ?? THEMES.royal_portrait;
+  const theme = buildTheme(data, template);
   const text = copy(data.language);
 
   return (
@@ -603,7 +615,7 @@ export default function PremiumWhatsAppCard({
 }
 
 export function CompactHorizontalCard({ data }: { data: PremiumWhatsAppCardData }): ReactElement {
-  const theme = THEMES.botanical_romance;
+  const theme = buildTheme(data, "botanical_romance");
   const text = copy(data.language);
 
   return (

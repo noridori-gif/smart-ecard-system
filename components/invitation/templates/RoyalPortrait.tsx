@@ -7,7 +7,7 @@ import DateBadge from "./shared/DateBadge";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import { coupleInitials } from "./shared/formatters";
+import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
 
@@ -90,10 +90,15 @@ export default function RoyalPortrait({ invitation, heroTitle, displayedMessage,
 
       <section className="px-5 pb-9 pt-6 sm:px-10 sm:pb-12">
         <div className="mx-auto max-w-xl text-center">
-          <p className="font-script text-3xl sm:text-4xl" style={{ color: "var(--theme-accent)" }}>
+          <p className="font-script text-xl sm:text-2xl" style={{ color: "var(--theme-accent)" }}>
             {t.eyebrow}
           </p>
-          <h1 className="mt-2 font-serif text-4xl leading-[1.05] tracking-tight text-slate-950 sm:text-6xl">{heroTitle}</h1>
+          <h1
+            className="mt-3 font-serif leading-[1.05] tracking-tight text-slate-950"
+            style={{ fontSize: heroNameFontSize(heroTitle) }}
+          >
+            {heroTitle}
+          </h1>
 
           <p className="mt-6 whitespace-pre-line text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
             {displayedMessage}
