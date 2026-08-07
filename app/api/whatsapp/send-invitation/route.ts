@@ -169,6 +169,11 @@ function formatTime(
   ).format(parsedTime);
 }
 
+const PNG_SIGNATURE = [
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+];
+const JPEG_SIGNATURE = [0xff, 0xd8, 0xff];
+
 async function assertPublicCardImage(
   cardImageUrl: string
 ) {
@@ -176,7 +181,7 @@ async function assertPublicCardImage(
     cardImageUrl,
     {
       headers: {
-        Accept: "image/png",
+        Accept: "image/jpeg,image/png",
       },
       cache: "no-store",
       signal:
@@ -195,11 +200,11 @@ async function assertPublicCardImage(
 
   if (
     !response.ok ||
-    contentType !==
-      "image/png"
+    (contentType !== "image/jpeg" &&
+      contentType !== "image/png")
   ) {
     throw new Error(
-      "WhatsApp card image haipatikani kama PNG halali. Jaribu tena."
+      "WhatsApp card image haipatikani kama picha halali. Jaribu tena."
     );
   }
 
@@ -216,33 +221,32 @@ async function assertPublicCardImage(
       )
     );
 
-  const isPng =
+  const expectedSignature =
+    contentType === "image/png"
+      ? PNG_SIGNATURE
+      : JPEG_SIGNATURE;
+
+  const hasValidSignature =
     imageBuffer.byteLength >=
       1_000 &&
     imageBuffer.byteLength <=
       5 * 1024 * 1024 &&
-    [
-      0x89,
-      0x50,
-      0x4e,
-      0x47,
-      0x0d,
-      0x0a,
-      0x1a,
-      0x0a,
-    ].every(
+    expectedSignature.every(
       (byte, index) =>
         signature[index] ===
         byte
     );
 
-  if (!isPng) {
+  if (!hasValidSignature) {
     throw new Error(
-      "WhatsApp card image si PNG halali au ukubwa wake haukubaliki."
+      "WhatsApp card image si picha halali au ukubwa wake haukubaliki."
     );
   }
 
-  return imageBuffer.byteLength;
+  return {
+    bytes: imageBuffer.byteLength,
+    contentType,
+  };
 }
 
 export async function POST(
@@ -580,7 +584,7 @@ export async function POST(
       )}/card?v=${Date.now()}`;
 
     try {
-      const imageBytes =
+      const { bytes: imageBytes, contentType: cardContentType } =
         await assertPublicCardImage(
           cardImageUrl
         );
@@ -592,7 +596,7 @@ export async function POST(
             "/api/invitations/:token/card",
           status: 200,
           contentType:
-            "image/png",
+            cardContentType,
           bytes:
             imageBytes,
         }

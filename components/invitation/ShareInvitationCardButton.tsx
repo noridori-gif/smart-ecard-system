@@ -22,7 +22,9 @@ function createSafeFileName(
 
   eventPassId:
     | string
-    | null
+    | null,
+
+  extension: string
 ) {
   const safeGuestName =
     guestName
@@ -50,8 +52,16 @@ function createSafeFileName(
   return (
     `smart-event-pass-` +
     `${safeGuestName || "guest"}-` +
-    `${safePassId}.png`
+    `${safePassId}.${extension}`
   );
+}
+
+function extensionForContentType(
+  contentType: string
+) {
+  return contentType === "image/png"
+    ? "png"
+    : "jpg";
 }
 
 function downloadCardFile(
@@ -136,10 +146,17 @@ export default function ShareInvitationCardButton({
       const cardBlob =
         await response.blob();
 
+      const contentType =
+        cardBlob.type ||
+        "image/jpeg";
+
       const fileName =
         createSafeFileName(
           guestName,
-          eventPassId
+          eventPassId,
+          extensionForContentType(
+            contentType
+          )
         );
 
       const cardFile =
@@ -148,8 +165,7 @@ export default function ShareInvitationCardButton({
           fileName,
           {
             type:
-              cardBlob.type ||
-              "image/png",
+              contentType,
           }
         );
 
