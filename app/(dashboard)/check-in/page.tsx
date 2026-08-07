@@ -175,9 +175,21 @@ export default function CheckInPage() {
       if (!componentActive) return;
 
       try {
-        const { Html5QrcodeScanner } = await import("html5-qrcode");
+        const { Html5QrcodeScanner, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (!componentActive) return;
-        scanner = new Html5QrcodeScanner("qr-reader", { fps: 15, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true }, false);
+        scanner = new Html5QrcodeScanner("qr-reader", {
+          fps: 15,
+          qrbox: { width: 250, height: 250 },
+          rememberLastUsedCamera: true,
+          // Guests' passes are always plain QR codes — skipping other barcode
+          // formats keeps every decode attempt focused on that alone.
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          // Prefer the browser's native (hardware-accelerated) barcode detector
+          // where available — generally more robust against screen glare/contrast
+          // than the pure-JS decoder, which matters when scanning a QR code off
+          // another phone's screen rather than a printed code.
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        }, false);
         scanner.render((decodedText) => void verifyQrToken(decodedText), () => {});
         setScannerReady(true);
       } catch (error) {

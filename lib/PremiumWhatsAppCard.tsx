@@ -1,5 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 
+import { formatPassIdForDisplay } from "./passId";
+
 export type PremiumWhatsAppTemplate =
   | "royal_portrait"
   | "golden_elegance"
@@ -552,11 +554,11 @@ function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppC
 
 function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
-  const passId = data.eventPassId || "—";
-  const qrSize = compact ? 150 : 200;
+  const passId = data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—";
+  const qrSize = compact ? 175 : 225;
 
   return (
-    <div style={{ width: compact ? "94%" : 920, display: "flex", alignItems: "center", marginTop: 20, paddingTop: 26, borderTop: `1px solid ${theme.accentSoft}` }}>
+    <div style={{ width: compact ? "94%" : 920, display: "flex", alignItems: "center", marginTop: 14, paddingTop: 18, borderTop: `1px solid ${theme.accentSoft}` }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: compact ? 18 : 34 }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ width: 11, height: 11, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
@@ -572,7 +574,7 @@ function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCar
           {text.instruction}
         </div>
       </div>
-      <div style={{ width: 1, height: 220, display: "flex", backgroundColor: theme.accentSoft }} />
+      <div style={{ width: 1, height: 240, display: "flex", backgroundColor: theme.accentSoft }} />
       <div style={{ width: qrSize + (compact ? 36 : 74), display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: compact ? 18 : 34 }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -700,7 +702,7 @@ export function CompactHorizontalCard({ data }: { data: PremiumWhatsAppCardData 
         <div style={{ display: "flex", marginTop: 17, paddingTop: 13, borderTop: `1px solid ${theme.accent}`, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 700 }}>
           {data.date} · {data.eventTime || data.venue} · {statusText(data)}
         </div>
-        <div style={{ display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700 }}>{data.eventPassId || "—"}</div>
+        <div style={{ display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: 25, fontWeight: 700 }}>{data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—"}</div>
       </div>
       <div style={{ width: 205, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", borderLeft: `2px dashed ${theme.accent}` }}>
         {data.qrCodeDataUrl ? (

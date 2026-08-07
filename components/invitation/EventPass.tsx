@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   QRCodeSVG,
 } from "qrcode.react";
+
+import Dialog from "@/components/ui/Dialog";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 type Language =
   | "sw"
@@ -38,6 +43,8 @@ export default function EventPass({
   category,
   language = "sw",
 }: EventPassProps) {
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+
   const translation =
     language === "sw"
       ? {
@@ -64,6 +71,12 @@ export default function EventPass({
 
           unavailable:
             "Haijapatikana",
+
+          zoomLabel:
+            "Gusa kuikuza QR Code",
+
+          close:
+            "Funga",
         }
       : {
           entryPass:
@@ -89,6 +102,12 @@ export default function EventPass({
 
           unavailable:
             "Not available",
+
+          zoomLabel:
+            "Tap to enlarge QR Code",
+
+          close:
+            "Close",
         };
 
   const safeAllowedGuests =
@@ -105,8 +124,9 @@ export default function EventPass({
       : translation.guests;
 
   const displayPassId =
-    eventPassId?.trim() ||
-    translation.unavailable;
+    eventPassId?.trim()
+      ? formatPassIdForDisplay(eventPassId)
+      : translation.unavailable;
 
   const qrValue =
     qrToken?.trim() ||
@@ -122,16 +142,28 @@ export default function EventPass({
             "linear-gradient(135deg, var(--theme-primary), color-mix(in srgb, var(--theme-primary) 62%, black))",
         }}
       >
-        <div className="shrink-0 rounded-2xl bg-white p-2.5 shadow-inner">
+        <button
+          type="button"
+          onClick={() => setIsZoomOpen(true)}
+          aria-label={translation.zoomLabel}
+          className="relative shrink-0 rounded-2xl bg-white p-2.5 shadow-inner transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
           <QRCodeSVG
             value={qrValue}
-            size={104}
+            size={130}
             includeMargin
             level="M"
             className="h-auto w-full"
-            aria-label="Guest QR Code"
+            aria-hidden="true"
           />
-        </div>
+
+          <span className="absolute -bottom-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full border border-black/10 bg-white text-slate-600 shadow-sm">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3M11 8v6M8 11h6" />
+            </svg>
+          </span>
+        </button>
 
         <div className="min-w-0">
           <p className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{ color: "var(--theme-accent)" }}>
@@ -153,6 +185,45 @@ export default function EventPass({
         <span style={{ color: "var(--theme-accent)" }}>◉</span>
         {translation.scan}
       </p>
+
+      {isZoomOpen && (
+        <Dialog
+          titleId="event-pass-zoom-title"
+          onClose={() => setIsZoomOpen(false)}
+          className="max-w-xs text-center"
+        >
+          <h2 id="event-pass-zoom-title" className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">
+            {translation.entryPass}
+          </h2>
+
+          <div className="mx-auto mt-4 w-full max-w-[260px] rounded-2xl bg-white p-4 shadow-inner ring-1 ring-slate-100">
+            <QRCodeSVG
+              value={qrValue}
+              size={260}
+              includeMargin
+              level="M"
+              className="h-auto w-full"
+              aria-label="Guest QR Code"
+            />
+          </div>
+
+          <p className="mt-4 font-mono text-2xl font-black tracking-wide text-slate-900">
+            {displayPassId}
+          </p>
+
+          <p className="mt-2 text-xs text-slate-500">
+            {translation.scan}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setIsZoomOpen(false)}
+            className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+          >
+            {translation.close}
+          </button>
+        </Dialog>
+      )}
     </section>
   );
 }

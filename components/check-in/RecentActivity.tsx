@@ -1,3 +1,4 @@
+import { formatPassIdForDisplay } from "@/lib/passId";
 import CheckInIcon, { type CheckInIconName } from "./CheckInIcons";
 
 export type ActivityStatus = "checked_in" | "already_checked_in" | "invalid";
@@ -39,7 +40,7 @@ export default function RecentActivity({ entries }: { entries: ActivityEntry[] }
                     <CheckInIcon name={config.icon} className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-slate-900">{entry.guestName ?? entry.passId ?? "Unknown pass"}</p>
+                    <p className="truncate font-bold text-slate-900">{entry.guestName ?? (entry.passId ? formatPassIdForDisplay(entry.passId) : null) ?? "Unknown pass"}</p>
                     <p className="truncate text-xs text-slate-500">{config.label} · {entry.detail}</p>
                   </div>
                   <time className="shrink-0 text-sm font-semibold tabular-nums text-slate-600" dateTime={entry.occurredAt}>

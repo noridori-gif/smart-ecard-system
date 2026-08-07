@@ -426,8 +426,8 @@ async function buildQrCodeDataUrl(token: string | null | undefined) {
 
   try {
     return await QRCode.toDataURL(token, {
-      margin: 1,
-      width: 240,
+      margin: 3,
+      width: 400,
       errorCorrectionLevel: "M",
       color: {
         dark: "#0F172A",
