@@ -4,9 +4,11 @@ import QRCode from "qrcode";
 import sharp from "sharp";
 import PremiumWhatsAppCard, {
   CompactHorizontalCard,
+  whatsAppCardTotalHeight,
 } from "./PremiumWhatsAppCard";
 
 import type { PublicInvitation } from "@/services/invitationService";
+import type { PhotoLayout } from "@/services/eventService";
 
 export type WhatsAppCardTemplate =
   | "royal_portrait"
@@ -32,6 +34,7 @@ export type WhatsAppCardData = {
   qrToken: string | null;
   language: "sw" | "en";
   invitationTemplate: WhatsAppCardTemplate;
+  photoLayout: PhotoLayout;
   coverImageUrl: string | null;
   primary: string;
   secondary: string;
@@ -50,7 +53,6 @@ type RenderData = WhatsAppCardData & {
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1800;
-const CONTENT_HEIGHT = 1180;
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
 // Capped well below the photo's true aspect ratio for very tall portrait
@@ -150,6 +152,20 @@ function titleFontSize(title: string) {
   return 78;
 }
 
+export function normalizeWhatsAppCardPhotoLayout(
+  layout: string | null | undefined
+): PhotoLayout {
+  if (
+    layout === "top_banner" ||
+    layout === "side_by_side" ||
+    layout === "text_only"
+  ) {
+    return layout;
+  }
+
+  return "top_banner";
+}
+
 export function normalizeWhatsAppCardTemplate(
   template: string | null | undefined
 ): WhatsAppCardTemplate {
@@ -194,6 +210,7 @@ export function getWhatsAppCardData(
     qrToken: invitation.qr_token?.trim() || null,
     language,
     invitationTemplate,
+    photoLayout: normalizeWhatsAppCardPhotoLayout(invitation.photo_layout),
     coverImageUrl: invitation.cover_image_url?.trim() || null,
     primary: safeColor(invitation.theme_primary_color, "#145A46"),
     secondary: safeColor(invitation.theme_secondary_color, "#FFF8EC"),
@@ -441,7 +458,7 @@ export async function createWhatsAppInvitationCard(
       await materializeJpeg(
         renderWhatsAppCard(template, normalizedData),
         CARD_WIDTH,
-        normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
+        whatsAppCardTotalHeight(normalizedData.photoLayout, normalizedData.coverImageBannerHeight)
       )
     );
   } catch (error) {
@@ -454,7 +471,7 @@ export async function createWhatsAppInvitationCard(
           await materializeJpeg(
             renderWhatsAppCard(template, normalizedData),
             CARD_WIDTH,
-            normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
+            whatsAppCardTotalHeight(normalizedData.photoLayout, normalizedData.coverImageBannerHeight)
           )
         );
       } catch (fallbackError) {

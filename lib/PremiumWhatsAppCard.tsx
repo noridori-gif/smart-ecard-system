@@ -28,6 +28,7 @@ export type PremiumWhatsAppCardData = {
   primary: string;
   secondary: string;
   accent: string;
+  photoLayout?: "top_banner" | "side_by_side" | "text_only";
 };
 
 const DEFAULT_BANNER_HEIGHT = 620;
@@ -332,7 +333,7 @@ function AfricanBands({ theme }: { theme: Theme }) {
   );
 }
 
-function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
+function TemplateAtmosphere({ theme, title, hasBanner = true }: { theme: Theme; title: string; hasBanner?: boolean }) {
   if (theme.skin === "botanical") return <BotanicalLeaves theme={theme} />;
   if (theme.skin === "floral") return <FloralCorners theme={theme} />;
   if (theme.skin === "african") return <AfricanBands theme={theme} />;
@@ -376,7 +377,9 @@ function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
       <>
         <div style={{ position: "absolute", inset: 24, display: "flex", border: `4px solid ${theme.accent}` }} />
         <div style={{ position: "absolute", inset: 38, display: "flex", border: `1px solid ${theme.accent}` }} />
-        <div style={{ position: "absolute", left: 330, top: -250, width: 420, height: 540, display: "flex", border: `2px solid ${theme.accent}`, borderRadius: "210px 210px 0 0", opacity: 0.34 }} />
+        {hasBanner && (
+          <div style={{ position: "absolute", left: 330, top: -250, width: 420, height: 540, display: "flex", border: `2px solid ${theme.accent}`, borderRadius: "210px 210px 0 0", opacity: 0.34 }} />
+        )}
       </>
     );
   }
@@ -410,11 +413,11 @@ function TemplateAtmosphere({ theme, title }: { theme: Theme; title: string }) {
   );
 }
 
-function InvitationTop({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+function InvitationTop({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
 
   return (
-    <div style={{ width: "100%", minHeight: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 90px 10px", textAlign: "center" }}>
+    <div style={{ width: "100%", minHeight: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "24px 7% 10px" : "24px 90px 10px", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 5, color: theme.muted }}>
         <div style={{ width: 34, height: 1, display: "flex", marginRight: 14, backgroundColor: theme.accent }} />
         SMART EVENT PASS
@@ -469,11 +472,11 @@ function PhotoBanner({ data, theme }: { data: PremiumWhatsAppCardData; theme: Th
   );
 }
 
-function GuestAndTitle({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+function GuestAndTitle({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
 
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "12px 70px 6px", textAlign: "center" }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "12px 6% 6px" : "12px 70px 6px", textAlign: "center" }}>
       <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34), lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
         {data.guestName}
       </div>
@@ -516,14 +519,14 @@ function Detail({
   );
 }
 
-function EventDetails({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
   const ceremonyTime = data.ceremonyTime || data.eventTime;
   const ceremonyVenue = data.ceremonyVenue;
   const receptionVenue = data.receptionVenue || data.venue;
 
   return (
-    <div style={{ width: 920, height: 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
+    <div style={{ width: compact ? "94%" : 920, height: compact ? 410 : 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
       <Detail label={text.date} value={data.date} theme={theme} featured />
       <div style={{ width: "100%", display: "flex", alignItems: "stretch" }}>
         <div style={{ width: "50%", display: "flex" }}>
@@ -547,13 +550,14 @@ function EventDetails({ data, theme }: { data: PremiumWhatsAppCardData; theme: T
   );
 }
 
-function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: Theme }) {
+function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
   const passId = data.eventPassId || "—";
+  const qrSize = compact ? 150 : 200;
 
   return (
-    <div style={{ width: 920, display: "flex", alignItems: "center", marginTop: 20, paddingTop: 26, borderTop: `1px solid ${theme.accentSoft}` }}>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: 34 }}>
+    <div style={{ width: compact ? "94%" : 920, display: "flex", alignItems: "center", marginTop: 20, paddingTop: 26, borderTop: `1px solid ${theme.accentSoft}` }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: compact ? 18 : 34 }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ width: 11, height: 11, display: "flex", marginRight: 14, border: `3px solid ${theme.accent}`, transform: "rotate(45deg)" }} />
           <Label theme={theme}>{text.pass}</Label>
@@ -561,20 +565,20 @@ function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: The
         <div style={{ display: "flex", marginTop: 16 }}>
           <Label theme={theme}>{text.passId}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? 38 : 48, lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? (compact ? 30 : 38) : (compact ? 38 : 48), lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
           {passId}
         </div>
-        <div style={{ maxWidth: 480, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: 18, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
+        <div style={{ maxWidth: compact ? 320 : 480, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: compact ? 15 : 18, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
           {text.instruction}
         </div>
       </div>
       <div style={{ width: 1, height: 220, display: "flex", backgroundColor: theme.accentSoft }} />
-      <div style={{ width: 240, display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 34 }}>
+      <div style={{ width: qrSize + (compact ? 36 : 74), display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: compact ? 18 : 34 }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.qrCodeDataUrl} alt="" width={200} height={200} style={{ width: 200, height: 200, objectFit: "contain" }} />
+          <img src={data.qrCodeDataUrl} alt="" width={qrSize} height={qrSize} style={{ width: qrSize, height: qrSize, objectFit: "contain" }} />
         ) : (
-          <div style={{ width: 180, height: 180, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.accentSoft}`, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900, color: theme.ink }}>
+          <div style={{ width: qrSize - 20, height: qrSize - 20, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.accentSoft}`, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900, color: theme.ink }}>
             QR
           </div>
         )}
@@ -582,6 +586,40 @@ function PassTicket({ data, theme }: { data: PremiumWhatsAppCardData; theme: The
     </div>
   );
 }
+
+function ClosingDivider({ theme, text, compact = false }: { theme: Theme; text: string; compact?: boolean }) {
+  return (
+    <div style={{ width: compact ? "88%" : 620, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 14 }}>
+      <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+      <div style={{ maxWidth: compact ? 320 : 430, display: "flex", margin: compact ? "0 14px" : "0 22px", fontFamily: "Georgia, serif", fontSize: compact ? 14 : 16, lineHeight: 1.2, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>
+        {text}
+      </div>
+      <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
+    </div>
+  );
+}
+
+function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; theme: Theme; width: number }) {
+  return (
+    <div style={{ width, height: "100%", position: "relative", display: "flex", overflow: "hidden" }}>
+      {data.coverImageDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={data.coverImageDataUrl} alt="" width={width} height={1180} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+      ) : (
+        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.ink }}>
+          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 56, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
+            {initials(data.title) || "S & E"}
+          </div>
+          <div style={{ width: 90, height: 1, display: "flex", marginTop: 20, backgroundColor: theme.accent }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SIDE_PHOTO_WIDTH = 400;
+const SIDE_BY_SIDE_HEIGHT = 1500;
+const TEXT_ONLY_HEIGHT = 1180;
 
 export default function PremiumWhatsAppCard({
   data,
@@ -592,6 +630,36 @@ export default function PremiumWhatsAppCard({
 }): ReactElement {
   const theme = buildTheme(data, template);
   const text = copy(data.language);
+  const photoLayout = data.photoLayout ?? "top_banner";
+
+  if (photoLayout === "side_by_side") {
+    return (
+      <div style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
+        <SidePhoto data={data} theme={theme} width={SIDE_PHOTO_WIDTH} />
+        <div style={{ width: 1080 - SIDE_PHOTO_WIDTH, height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden" }}>
+          <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} />
+          <InvitationTop data={data} theme={theme} compact />
+          <GuestAndTitle data={data} theme={theme} compact />
+          <EventDetails data={data} theme={theme} compact />
+          <PassTicket data={data} theme={theme} compact />
+          <ClosingDivider theme={theme} text={text.closing} compact />
+        </div>
+      </div>
+    );
+  }
+
+  if (photoLayout === "text_only") {
+    return (
+      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
+        <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} />
+        <InvitationTop data={data} theme={theme} />
+        <GuestAndTitle data={data} theme={theme} />
+        <EventDetails data={data} theme={theme} />
+        <PassTicket data={data} theme={theme} />
+        <ClosingDivider theme={theme} text={text.closing} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
@@ -602,16 +670,16 @@ export default function PremiumWhatsAppCard({
         <GuestAndTitle data={data} theme={theme} />
         <EventDetails data={data} theme={theme} />
         <PassTicket data={data} theme={theme} />
-        <div style={{ width: 620, display: "flex", alignItems: "center", justifyContent: "center", marginTop: 14 }}>
-          <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
-          <div style={{ maxWidth: 430, display: "flex", margin: "0 22px", fontFamily: "Georgia, serif", fontSize: 16, lineHeight: 1.2, fontStyle: "italic", color: theme.muted, textAlign: "center" }}>
-            {text.closing}
-          </div>
-          <div style={{ flex: 1, height: 1, display: "flex", backgroundColor: theme.accentSoft }} />
-        </div>
+        <ClosingDivider theme={theme} text={text.closing} />
       </div>
     </div>
   );
+}
+
+export function whatsAppCardTotalHeight(photoLayout: PremiumWhatsAppCardData["photoLayout"], bannerHeight: number) {
+  if (photoLayout === "side_by_side") return SIDE_BY_SIDE_HEIGHT;
+  if (photoLayout === "text_only") return TEXT_ONLY_HEIGHT;
+  return bannerHeight + TEXT_ONLY_HEIGHT;
 }
 
 export function CompactHorizontalCard({ data }: { data: PremiumWhatsAppCardData }): ReactElement {

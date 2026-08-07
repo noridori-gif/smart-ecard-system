@@ -13,8 +13,6 @@ type CountdownProps = {
   eventDate: string;
   eventTime: string;
   language?: Language;
-  accentTextClass?: string;
-  boxClassName?: string;
 };
 
 type TimeRemaining = {
@@ -128,10 +126,6 @@ export default function Countdown({
   eventDate,
   eventTime,
   language = "sw",
-  accentTextClass =
-    "text-blue-700",
-  boxClassName =
-    "bg-slate-50",
 }: CountdownProps) {
   const [
     timeRemaining,
@@ -283,56 +277,43 @@ export default function Countdown({
   ];
 
   return (
-    <section className="mt-4">
-      <div className="mb-2 flex items-center justify-center gap-2">
-        <span className="h-px w-7 bg-slate-200" />
+    <section className="mt-12 text-center">
+      <div className="mb-5 flex items-center justify-center gap-3">
+        <span className="h-px w-9" style={{ backgroundColor: "var(--theme-accent)" }} />
 
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-          {
-            translations.heading
-          }
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: "var(--theme-accent)" }}>
+          {translations.heading}
         </p>
 
-        <span className="h-px w-7 bg-slate-200" />
+        <span className="h-px w-9" style={{ backgroundColor: "var(--theme-accent)" }} />
       </div>
 
-      <div
-        className={`grid grid-cols-4 overflow-hidden rounded-2xl border border-slate-200 shadow-sm ${boxClassName}`}
-      >
-        {countdownItems.map(
-          (
-            item,
-            index
-          ) => (
-            <div
-              key={
-                item.label
-              }
-              className={`relative min-w-0 px-1 py-3 text-center ${
-                index > 0
-                  ? "border-l border-slate-200/80"
-                  : ""
-              }`}
-            >
+      <div className="flex items-start justify-center gap-3 sm:gap-5">
+        {countdownItems.map((item, index) => (
+          <div key={item.label} className="flex items-start gap-3 sm:gap-5">
+            <div className="min-w-0 text-center">
               <p
-                className={`text-xl font-bold tabular-nums sm:text-2xl ${accentTextClass}`}
+                className="font-serif text-3xl font-black tabular-nums sm:text-4xl"
+                style={{ color: "var(--theme-primary)" }}
               >
-                {String(
-                  item.value
-                ).padStart(
-                  2,
-                  "0"
-                )}
+                {String(item.value).padStart(2, "0")}
               </p>
 
-              <p className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">
-                {
-                  item.label
-                }
+              <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">
+                {item.label}
               </p>
             </div>
-          )
-        )}
+
+            {index < countdownItems.length - 1 && (
+              <span
+                className="pt-0.5 font-serif text-2xl font-light sm:text-3xl"
+                style={{ color: "var(--theme-accent)", opacity: 0.6 }}
+              >
+                :
+              </span>
+            )}
+          </div>
+        ))}
       </div>
     </section>
   );

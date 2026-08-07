@@ -16,6 +16,14 @@ export type InvitationTemplate =
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
   "royal_portrait";
 
+export type PhotoLayout =
+  | "top_banner"
+  | "side_by_side"
+  | "text_only";
+
+export const DEFAULT_PHOTO_LAYOUT: PhotoLayout =
+  "top_banner";
+
 export const DEFAULT_EVENT_THEME = {
   primaryColor: "#BE123C",
   secondaryColor: "#FFF1F2",
@@ -38,6 +46,7 @@ export type Event = {
 
   language: EventLanguage;
   invitation_template: InvitationTemplate;
+  photo_layout: PhotoLayout;
 
   ceremony_title?:
     | string
@@ -96,6 +105,7 @@ export type NewEvent = {
 
   language?: EventLanguage;
   invitation_template?: InvitationTemplate;
+  photo_layout?: PhotoLayout;
 
   ceremony_title?: string;
   ceremony_date?: string;
@@ -131,6 +141,7 @@ export type UpdateEvent = {
 
   language: EventLanguage;
   invitation_template?: InvitationTemplate;
+  photo_layout?: PhotoLayout;
 
   ceremony_title?: string;
   ceremony_date?: string;
@@ -185,6 +196,28 @@ function normalizeInvitationTemplate(
   }
 
   return template;
+}
+
+const PHOTO_LAYOUTS: PhotoLayout[] = [
+  "top_banner",
+  "side_by_side",
+  "text_only",
+];
+
+function normalizePhotoLayout(
+  layout: PhotoLayout | undefined
+): PhotoLayout {
+  if (!layout) {
+    return DEFAULT_PHOTO_LAYOUT;
+  }
+
+  if (!PHOTO_LAYOUTS.includes(layout)) {
+    throw new Error(
+      "Muonekano wa picha uliochaguliwa si sahihi."
+    );
+  }
+
+  return layout;
 }
 
 function normalizeHexColor(
@@ -459,6 +492,11 @@ export async function createEvent(
           event.invitation_template
         ),
 
+      photo_layout:
+        normalizePhotoLayout(
+          event.photo_layout
+        ),
+
       ceremony_title:
         normalizeOptionalText(
           event.ceremony_title
@@ -664,6 +702,17 @@ export async function updateEvent(
       );
   }
 
+  const layoutUpdates: {
+    photo_layout?: PhotoLayout;
+  } = {};
+
+  if (event.photo_layout) {
+    layoutUpdates.photo_layout =
+      normalizePhotoLayout(
+        event.photo_layout
+      );
+  }
+
   const {
     data,
     error,
@@ -690,6 +739,7 @@ export async function updateEvent(
         event.language,
 
       ...templateUpdates,
+      ...layoutUpdates,
 
       ceremony_title:
         normalizeOptionalText(

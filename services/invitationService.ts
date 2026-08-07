@@ -4,10 +4,12 @@ import {
 
 import {
   DEFAULT_INVITATION_TEMPLATE,
+  DEFAULT_PHOTO_LAYOUT,
 } from "@/services/eventService";
 
 import type {
   InvitationTemplate,
+  PhotoLayout,
 } from "@/services/eventService";
 
 export type EventLanguage =
@@ -147,6 +149,9 @@ export type PublicInvitation = {
   invitation_template:
     InvitationTemplate;
 
+  photo_layout:
+    PhotoLayout;
+
   ceremony_title:
     | string
     | null;
@@ -262,6 +267,23 @@ function normalizeInvitationTemplate(
   return DEFAULT_INVITATION_TEMPLATE;
 }
 
+function normalizePhotoLayout(
+  layout:
+    | string
+    | null
+    | undefined
+): PhotoLayout {
+  if (
+    layout === "top_banner" ||
+    layout === "side_by_side" ||
+    layout === "text_only"
+  ) {
+    return layout;
+  }
+
+  return DEFAULT_PHOTO_LAYOUT;
+}
+
 export async function createInvitation(
   eventId: number,
   guestId: number
@@ -347,6 +369,12 @@ export async function getInvitationByToken(
       normalizeInvitationTemplate(
         invitation
           .invitation_template
+      ),
+
+    photo_layout:
+      normalizePhotoLayout(
+        invitation
+          .photo_layout
       ),
 
     allowed_guests:

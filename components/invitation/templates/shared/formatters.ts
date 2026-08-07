@@ -1,5 +1,7 @@
 type Language = "sw" | "en";
 
+export type PhotoLayout = "top_banner" | "side_by_side" | "text_only";
+
 export function formatEventDate(date: string | null, language: Language): string {
   if (!date) return "—";
 

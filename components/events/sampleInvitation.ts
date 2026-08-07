@@ -1,8 +1,9 @@
-import type { EventLanguage, InvitationTemplate } from "@/services/eventService";
+import type { EventLanguage, InvitationTemplate, PhotoLayout } from "@/services/eventService";
 import type { PublicInvitation } from "@/services/invitationService";
 
 export type SampleInvitationInput = {
   template: InvitationTemplate;
+  photoLayout?: PhotoLayout;
   language: EventLanguage;
   primaryColor: string;
   secondaryColor: string;
@@ -76,6 +77,7 @@ export function buildSampleInvitation(input: SampleInvitationInput): PublicInvit
     groom_name: input.groomName?.trim() || copy.groomName,
     language: input.language,
     invitation_template: input.template,
+    photo_layout: input.photoLayout ?? "top_banner",
     ceremony_title: input.ceremonyTitle?.trim() || copy.ceremonyTitle,
     ceremony_date: input.ceremonyDate?.trim() || SAMPLE_CEREMONY_DATE,
     ceremony_time: input.ceremonyTime?.trim() || SAMPLE_CEREMONY_TIME,

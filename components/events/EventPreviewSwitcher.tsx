@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
-import PremiumWhatsAppCard, { type PremiumWhatsAppCardData, type PremiumWhatsAppTemplate } from "@/lib/PremiumWhatsAppCard";
+import PremiumWhatsAppCard, { whatsAppCardTotalHeight, type PremiumWhatsAppCardData, type PremiumWhatsAppTemplate } from "@/lib/PremiumWhatsAppCard";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
-import type { EventLanguage, InvitationTemplate } from "@/services/eventService";
+import type { EventLanguage, InvitationTemplate, PhotoLayout } from "@/services/eventService";
 
 const CARD_WIDTH = 1080;
-const CONTENT_HEIGHT = 1180;
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
-const MAX_BANNER_HEIGHT = 2400;
+const MAX_BANNER_HEIGHT = 1500;
 const PREVIEW_BOX_WIDTH = 300;
 const PREVIEW_SCALE = PREVIEW_BOX_WIDTH / CARD_WIDTH;
 
@@ -46,7 +45,7 @@ function useCoverImageBannerHeight(coverImageUrl: string | null) {
 
 export type EventPreviewData = {
   title:string; eventType:string; brideName:string; groomName:string; language:EventLanguage;
-  template:InvitationTemplate; invitationMessage?:string; coverImageUrl:string|null;
+  template:InvitationTemplate; photoLayout:PhotoLayout; invitationMessage?:string; coverImageUrl:string|null;
   eventDate:string; eventTime:string; venue:string; ceremonyTitle:string; ceremonyDate:string; ceremonyTime:string;
   ceremonyVenue:string; ceremonyMapUrl?:string; receptionMapUrl?:string; dressCode:string; primary:string; secondary:string; accent:string;
 };
@@ -61,13 +60,14 @@ export default function EventPreviewSwitcher({data,invitationPreview}:{data:Even
   const modes: Array<[Mode,string]>=[["invitation",t("preview.invitation")],["whatsapp",t("preview.whatsappCard")],["pass",t("preview.eventPass")]];
   const names=data.brideName&&data.groomName?`${data.brideName} & ${data.groomName}`:data.brideName||data.title|| (data.language==="sw"?"Tukio Lako":"Your Event");
   const bannerHeight=useCoverImageBannerHeight(data.coverImageUrl);
-  const totalCardHeight=bannerHeight+CONTENT_HEIGHT;
+  const totalCardHeight=whatsAppCardTotalHeight(data.photoLayout,bannerHeight);
   const payload=useMemo<PremiumWhatsAppCardData>(()=>({
     title:names, invitationMessage:data.invitationMessage?.trim()||(data.language==="sw"?"Tunayo furaha kukualika kushiriki nasi katika tukio hili maalumu.":"We are delighted to invite you to celebrate this special occasion with us."),
     date:data.eventDate||(data.language==="sw"?"Tarehe ya tukio":"Event date"), eventTime:data.eventTime||(data.language==="sw"?"Muda wa tukio":"Event time"), venue:data.venue||(data.language==="sw"?"Ukumbi wa sherehe":"Reception venue"),
     ceremonyTitle:data.ceremonyTitle, ceremonyTime:data.ceremonyTime, ceremonyVenue:data.ceremonyVenue, receptionVenue:data.venue,
     guestName:"Mr & Mrs Mgeni", dressCode:data.dressCode, allowedGuests:2, eventPassId:"SEP-PREVIEW", language:data.language,
     coverImageDataUrl:data.coverImageUrl, coverImageBannerHeight:bannerHeight, qrCodeDataUrl:null, primary:data.primary, secondary:data.secondary, accent:data.accent,
+    photoLayout:data.photoLayout,
   }),[data,names,bannerHeight]);
 
   function keyNavigation(event:KeyboardEvent<HTMLButtonElement>,index:number){if(!["ArrowLeft","ArrowRight"].includes(event.key))return;event.preventDefault();const next=(index+(event.key==="ArrowRight"?1:-1)+modes.length)%modes.length;setMode(modes[next][0]);document.getElementById(`event-preview-${modes[next][0]}`)?.focus();}

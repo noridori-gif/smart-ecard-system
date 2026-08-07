@@ -7,6 +7,8 @@ import DateBadge from "./shared/DateBadge";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
+import SideBySidePhoto from "./shared/SideBySidePhoto";
+import TextOnlyHero from "./shared/TextOnlyHero";
 import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -63,102 +65,166 @@ export default function RoyalPortrait({ invitation, heroTitle, displayedMessage,
     },
   ];
 
+  const layout = invitation.photo_layout;
+  const monogramText = coupleInitials(invitation.bride_name, invitation.groom_name, "SEP");
+
+  const dateBadge = (
+    <DateBadge
+      date={invitation.event_date}
+      language={language}
+      shape="circle"
+      primaryColor="var(--theme-primary)"
+      accentColor="var(--theme-accent)"
+      className="bg-white shadow-lg"
+    />
+  );
+
+  const heroTextBlock = (
+    <div className="mx-auto max-w-xl text-center">
+      <p className="font-script text-xl sm:text-2xl" style={{ color: "var(--theme-accent)" }}>
+        {t.eyebrow}
+      </p>
+      <h1
+        className="mt-3 font-serif leading-[1.05] tracking-tight text-slate-950"
+        style={{ fontSize: heroNameFontSize(heroTitle) }}
+      >
+        {heroTitle}
+      </h1>
+    </div>
+  );
+
+  const contentBody = (
+    <>
+      <div className="mx-auto max-w-xl text-center">
+        <p className="mt-6 whitespace-pre-line text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
+          {displayedMessage}
+        </p>
+        <div className="mx-auto my-5 h-px w-16" style={{ backgroundColor: "var(--theme-accent)" }} />
+        <h2 className="font-serif text-3xl leading-tight text-slate-950 sm:text-4xl">{invitation.guest_name}</h2>
+      </div>
+
+      <div className="my-10 flex items-center gap-4">
+        <div className="h-px flex-1 bg-black/10" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{t.details}</p>
+        <div className="h-px flex-1 bg-black/10" />
+      </div>
+
+      <ScheduleGrid entries={entries} language={language} primaryColor="var(--theme-primary)" accentColor="var(--theme-accent)" />
+
+      <DressCodeSwatches
+        dressCode={invitation.dress_code}
+        language={language}
+        primaryColor="var(--theme-primary)"
+        secondaryColor="var(--theme-secondary)"
+        accentColor="var(--theme-accent)"
+        className="mt-8 rounded-2xl bg-black/[0.03] px-5 py-5"
+      />
+
+      <div className="mt-8">
+        <Countdown
+          eventDate={invitation.event_date}
+          eventTime={invitation.event_time}
+          language={language}
+        />
+
+        <RsvpButtons
+          invitationToken={invitation.invitation_token}
+          currentStatus={invitation.rsvp_status}
+          language={language}
+          variant="editorial"
+        />
+
+        <EventPass
+          guestName={invitation.guest_name}
+          qrToken={invitation.qr_token}
+          eventPassId={invitation.event_pass_id}
+          allowedGuests={invitation.allowed_guests}
+          category={invitation.category}
+          language={language}
+        />
+
+        <div className="mt-10"><WishForm invitationToken={invitation.invitation_token} guestName={invitation.guest_name} language={language} /></div>
+      </div>
+    </>
+  );
+
+  const footer = (
+    <footer className="px-5 py-8 text-center text-white sm:px-10" style={{ backgroundColor: "var(--theme-primary)" }}>
+      <p className="font-serif text-xl">{t.closing}</p>
+      <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.3em] text-white/60">Smart Event Pass</p>
+    </footer>
+  );
+
+  if (layout === "side_by_side") {
+    return (
+      <CardShell backgroundColor="var(--theme-secondary)">
+        <SideBySidePhoto
+          coverImageUrl={invitation.cover_image_url}
+          alt={heroTitle}
+          ornament="frame"
+          primaryColor="var(--theme-primary)"
+          accentColor="var(--theme-accent)"
+          blendColor="var(--theme-secondary)"
+          monogramText={monogramText}
+        >
+          <div className="px-6 py-10 sm:px-9 sm:py-12">
+            <div className="flex justify-start">{dateBadge}</div>
+            <div className="mt-6">{heroTextBlock}</div>
+            {contentBody}
+          </div>
+        </SideBySidePhoto>
+        {footer}
+      </CardShell>
+    );
+  }
+
+  if (layout === "text_only") {
+    return (
+      <CardShell backgroundColor="var(--theme-secondary)">
+        <TextOnlyHero
+          eyebrow={t.eyebrow}
+          heroTitle={heroTitle}
+          titleClassName="font-serif text-slate-950"
+          titleStyle={{ fontSize: heroNameFontSize(heroTitle) }}
+          monogramText={monogramText}
+          primaryColor="var(--theme-primary)"
+          secondaryColor="var(--theme-secondary)"
+          accentColor="var(--theme-accent)"
+          ornament="none"
+        >
+          <div className="mt-6 flex justify-center">{dateBadge}</div>
+        </TextOnlyHero>
+
+        <section className="px-5 pb-9 pt-2 sm:px-10 sm:pb-12">{contentBody}</section>
+
+        {footer}
+      </CardShell>
+    );
+  }
+
   return (
     <CardShell backgroundColor="var(--theme-secondary)">
       <PhotoHero
         coverImageUrl={invitation.cover_image_url}
         alt={heroTitle}
         overlay={false}
+        ornament="frame"
         heightClassName="h-[36vh] min-h-[300px] max-h-[560px]"
         primaryColor="var(--theme-primary)"
         accentColor="var(--theme-accent)"
-        monogramText={coupleInitials(invitation.bride_name, invitation.groom_name, "SEP")}
+        monogramText={monogramText}
       />
 
       <div className="flex justify-center">
-        <div className="-mt-10 sm:-mt-12">
-          <DateBadge
-            date={invitation.event_date}
-            language={language}
-            shape="circle"
-            primaryColor="var(--theme-primary)"
-            accentColor="var(--theme-accent)"
-            className="bg-white shadow-lg"
-          />
-        </div>
+        <div className="-mt-10 sm:-mt-12">{dateBadge}</div>
       </div>
 
       <section className="px-5 pb-9 pt-6 sm:px-10 sm:pb-12">
-        <div className="mx-auto max-w-xl text-center">
-          <p className="font-script text-xl sm:text-2xl" style={{ color: "var(--theme-accent)" }}>
-            {t.eyebrow}
-          </p>
-          <h1
-            className="mt-3 font-serif leading-[1.05] tracking-tight text-slate-950"
-            style={{ fontSize: heroNameFontSize(heroTitle) }}
-          >
-            {heroTitle}
-          </h1>
-
-          <p className="mt-6 whitespace-pre-line text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-            {displayedMessage}
-          </p>
-          <div className="mx-auto my-5 h-px w-16" style={{ backgroundColor: "var(--theme-accent)" }} />
-          <h2 className="font-serif text-3xl leading-tight text-slate-950 sm:text-4xl">{invitation.guest_name}</h2>
-        </div>
-
-        <div className="my-10 flex items-center gap-4">
-          <div className="h-px flex-1 bg-black/10" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{t.details}</p>
-          <div className="h-px flex-1 bg-black/10" />
-        </div>
-
-        <ScheduleGrid entries={entries} language={language} primaryColor="var(--theme-primary)" accentColor="var(--theme-accent)" />
-
-        <DressCodeSwatches
-          dressCode={invitation.dress_code}
-          language={language}
-          primaryColor="var(--theme-primary)"
-          secondaryColor="var(--theme-secondary)"
-          accentColor="var(--theme-accent)"
-          className="mt-8 rounded-2xl bg-black/[0.03] px-5 py-5"
-        />
-
-        <div className="mt-8">
-          <Countdown
-            eventDate={invitation.event_date}
-            eventTime={invitation.event_time}
-            language={language}
-            accentTextClass="text-[var(--theme-primary)]"
-            boxClassName="bg-white"
-          />
-
-          <RsvpButtons
-            invitationToken={invitation.invitation_token}
-            currentStatus={invitation.rsvp_status}
-            language={language}
-            variant="editorial"
-          />
-
-          <EventPass
-            guestName={invitation.guest_name}
-            qrToken={invitation.qr_token}
-            eventPassId={invitation.event_pass_id}
-            allowedGuests={invitation.allowed_guests}
-            category={invitation.category}
-            language={language}
-            accentTextClass="text-[var(--theme-primary)]"
-            boxClassName="bg-white"
-          />
-
-          <WishForm invitationToken={invitation.invitation_token} guestName={invitation.guest_name} language={language} />
-        </div>
+        {heroTextBlock}
+        {contentBody}
       </section>
 
-      <footer className="px-5 py-8 text-center text-white sm:px-10" style={{ backgroundColor: "var(--theme-primary)" }}>
-        <p className="font-serif text-xl">{t.closing}</p>
-        <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.3em] text-white/60">Smart Event Pass</p>
-      </footer>
+      {footer}
     </CardShell>
   );
 }

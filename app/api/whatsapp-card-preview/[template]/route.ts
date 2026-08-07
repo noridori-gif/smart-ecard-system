@@ -1,9 +1,11 @@
 import {
   createCompactWhatsAppInvitationCard,
   createWhatsAppInvitationCard,
+  normalizeWhatsAppCardPhotoLayout,
   normalizeWhatsAppCardTemplate,
   type WhatsAppCardTemplate,
 } from "@/lib/whatsappInvitationCard";
+import type { PhotoLayout } from "@/services/eventService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,12 +23,15 @@ type RouteContext = {
   params: Promise<{ template: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { template: requestedTemplate } = await context.params;
+  const photoLayout = normalizeWhatsAppCardPhotoLayout(
+    new URL(request.url).searchParams.get("layout")
+  );
 
   if (requestedTemplate === "compact_horizontal") {
     return createCompactWhatsAppInvitationCard(
-      previewData("royal_portrait", requestedTemplate)
+      previewData("royal_portrait", requestedTemplate, photoLayout)
     );
   }
 
@@ -41,13 +46,14 @@ export async function GET(_request: Request, context: RouteContext) {
 
   return createWhatsAppInvitationCard(
     template,
-    previewData(template, requestedTemplate)
+    previewData(template, requestedTemplate, photoLayout)
   );
 }
 
 function previewData(
   template: WhatsAppCardTemplate,
-  qrVariant: string
+  qrVariant: string,
+  photoLayout: PhotoLayout
 ) {
   return {
     title: "Samwel & Dio",
@@ -67,6 +73,7 @@ function previewData(
     qrToken: `preview-only:${qrVariant}:SEP-8F42KD`,
     language: "sw",
     invitationTemplate: template,
+    photoLayout,
     coverImageUrl: null,
     primary: "#145A46",
     secondary: "#FFF8EC",

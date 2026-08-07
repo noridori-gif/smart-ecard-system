@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type Ornament = "none" | "botanical" | "geometric";
+type Ornament = "none" | "botanical" | "geometric" | "frame";
 
 type PhotoHeroProps = {
   coverImageUrl: string | null;
@@ -34,6 +34,20 @@ function BotanicalCorners({ accentColor }: { accentColor: string }) {
         className="pointer-events-none absolute bottom-7 right-7 h-9 w-9 rotate-45 rounded-tl-full rounded-br-full border sm:bottom-10 sm:right-10 sm:h-11 sm:w-11"
         style={{ borderColor: `${accentColor}CC` }}
       />
+    </>
+  );
+}
+
+/** A thin, refined picture-frame corner motif - four fine L-shaped brackets inset from the edge. */
+function FrameCorners({ accentColor }: { accentColor: string }) {
+  const bracketClass = "pointer-events-none absolute h-9 w-9 sm:h-12 sm:w-12";
+
+  return (
+    <>
+      <div className={`${bracketClass} left-3 top-3 border-l border-t sm:left-5 sm:top-5`} style={{ borderColor: accentColor }} />
+      <div className={`${bracketClass} right-3 top-3 border-r border-t sm:right-5 sm:top-5`} style={{ borderColor: accentColor }} />
+      <div className={`${bracketClass} bottom-3 left-3 border-b border-l sm:bottom-5 sm:left-5`} style={{ borderColor: accentColor }} />
+      <div className={`${bracketClass} bottom-3 right-3 border-b border-r sm:bottom-5 sm:right-5`} style={{ borderColor: accentColor }} />
     </>
   );
 }
@@ -95,6 +109,7 @@ export default function PhotoHero({
 
         {ornament === "botanical" && <BotanicalCorners accentColor={accentColor} />}
         {ornament === "geometric" && <GeometricBorder accentColor={accentColor} />}
+        {ornament === "frame" && <FrameCorners accentColor={accentColor} />}
 
         {children}
       </div>
@@ -126,6 +141,7 @@ export default function PhotoHero({
 
       {ornament === "botanical" && <BotanicalCorners accentColor={accentColor} />}
       {ornament === "geometric" && <GeometricBorder accentColor={accentColor} />}
+      {ornament === "frame" && <FrameCorners accentColor={accentColor} />}
 
       {children}
     </div>
