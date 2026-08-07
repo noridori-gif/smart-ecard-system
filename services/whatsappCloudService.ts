@@ -285,6 +285,15 @@ export async function sendWhatsAppInvitationTemplate({
     ],
   });
 
+  /*
+   * The approved template's button 3 (index "2", "Fungua Mwaliko") has a
+   * fixed base URL of https://www.smarteventpass.co.tz/invite/{{1}} -
+   * invitationToken fills that dynamic suffix. Button 4 (index "3",
+   * directions) is a fully dynamic URL button where {{1}} is the entire
+   * link, so it takes locationUrl. These were previously swapped, which
+   * sent guests to https://www.smarteventpass.co.tz/invite/<locationUrl>
+   * (a 404) when they tapped "Fungua Mwaliko".
+   */
   components.push({
     type: "button",
     sub_type: "url",
@@ -292,15 +301,11 @@ export async function sendWhatsAppInvitationTemplate({
     parameters: [
       {
         type: "text",
-        text: locationUrl,
+        text: invitationToken,
       },
     ],
   });
 
-  /*
-   * The approved template keeps the existing public invitation URL pattern.
-   * invitationToken fills the dynamic suffix of button 4.
-   */
   components.push({
     type: "button",
     sub_type: "url",
@@ -309,7 +314,7 @@ export async function sendWhatsAppInvitationTemplate({
     parameters: [
       {
         type: "text",
-        text: invitationToken,
+        text: locationUrl,
       },
     ],
   });
