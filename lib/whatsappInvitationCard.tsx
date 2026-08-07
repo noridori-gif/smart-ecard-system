@@ -53,7 +53,11 @@ const CARD_HEIGHT = 1800;
 const CONTENT_HEIGHT = 1180;
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
-const MAX_BANNER_HEIGHT = 2400;
+// Capped well below the photo's true aspect ratio for very tall portrait
+// photos: an uncapped banner nearly doubles total canvas pixels vs. the old
+// fixed-height card, which is what caused the oversized (4.47MB) PNG payload
+// that made Meta time out fetching the media (error 131053).
+const MAX_BANNER_HEIGHT = 1500;
 const COVER_FETCH_TIMEOUT_MS = 6_000;
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -266,8 +270,21 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
       throw new Error("Cover image is not a supported PNG, JPEG, or WebP file.");
     }
 
-    const dataUrl = `data:${mimeType};base64,${Buffer.from(buffer).toString("base64")}`;
-    const bannerHeight = await bannerHeightFromImageBytes(buffer);
+    // Downscale + re-encode before embedding: originals can be several
+    // thousand pixels wide, and embedding that directly bloats the final
+    // rasterized PNG the card renderer produces. Capping to the card's own
+    // render width keeps the embedded photo at the resolution it's actually
+    // displayed at.
+    const { data: processedBuffer, info } = await sharp(Buffer.from(buffer))
+      .rotate()
+      .resize({ width: CARD_WIDTH, withoutEnlargement: true })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer({ resolveWithObject: true });
+
+    const dataUrl = `data:image/jpeg;base64,${processedBuffer.toString("base64")}`;
+    const bannerHeight = clampBannerHeight(
+      Math.round((CARD_WIDTH / info.width) * info.height)
+    );
 
     return { dataUrl, bannerHeight };
   } catch (error) {
@@ -280,21 +297,8 @@ async function fetchCoverImageDataUrl(urlValue: string | null) {
   }
 }
 
-async function bannerHeightFromImageBytes(buffer: ArrayBuffer) {
-  try {
-    const { width, height } = await sharp(Buffer.from(buffer)).metadata();
-
-    if (!width || !height) {
-      return DEFAULT_BANNER_HEIGHT;
-    }
-
-    const naturalHeight = Math.round((CARD_WIDTH / width) * height);
-
-    return Math.min(MAX_BANNER_HEIGHT, Math.max(MIN_BANNER_HEIGHT, naturalHeight));
-  } catch (error) {
-    console.warn("WhatsApp card banner height fallback:", error);
-    return DEFAULT_BANNER_HEIGHT;
-  }
+function clampBannerHeight(naturalHeight: number) {
+  return Math.min(MAX_BANNER_HEIGHT, Math.max(MIN_BANNER_HEIGHT, naturalHeight));
 }
 
 function getUrlHost(urlValue: string) {
@@ -365,11 +369,32 @@ async function materializePng(
   return buffer;
 }
 
-function pngResponse(buffer: ArrayBuffer) {
-  return new Response(buffer, {
+/**
+ * ImageResponse only outputs PNG, which is lossless and badly suited to
+ * photo-heavy cards (multi-MB files even after bounding canvas size).
+ * Re-encode to JPEG so the response transfers fast enough for WhatsApp's
+ * media fetch (Meta error 131053 "media upload error" fires when the host
+ * is too slow / the file is too large) and stays well under WhatsApp's
+ * 5MB media limit.
+ */
+async function materializeJpeg(
+  element: ReactElement,
+  width = CARD_WIDTH,
+  height = CARD_HEIGHT
+) {
+  const pngBuffer = await materializePng(element, width, height);
+
+  return sharp(Buffer.from(pngBuffer))
+    .flatten({ background: "#ffffff" })
+    .jpeg({ quality: 84, mozjpeg: true })
+    .toBuffer();
+}
+
+function jpegResponse(buffer: Buffer) {
+  return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {
-      "Content-Type": "image/png",
+      "Content-Type": "image/jpeg",
       "Content-Length": String(buffer.byteLength),
       "Cache-Control": "public, max-age=300, s-maxage=300, immutable",
       "X-Content-Type-Options": "nosniff",
@@ -412,8 +437,8 @@ export async function createWhatsAppInvitationCard(
   );
 
   try {
-    return pngResponse(
-      await materializePng(
+    return jpegResponse(
+      await materializeJpeg(
         renderWhatsAppCard(template, normalizedData),
         CARD_WIDTH,
         normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
@@ -425,8 +450,8 @@ export async function createWhatsAppInvitationCard(
       normalizedData = renderData(data, null, DEFAULT_BANNER_HEIGHT, qrCodeDataUrl);
 
       try {
-        return pngResponse(
-          await materializePng(
+        return jpegResponse(
+          await materializeJpeg(
             renderWhatsAppCard(template, normalizedData),
             CARD_WIDTH,
             normalizedData.coverImageBannerHeight + CONTENT_HEIGHT
@@ -439,8 +464,8 @@ export async function createWhatsAppInvitationCard(
       console.error("WhatsApp card template render failed:", error);
     }
 
-    return pngResponse(
-      await materializePng(<SafeFallbackCard data={normalizedData} />)
+    return jpegResponse(
+      await materializeJpeg(<SafeFallbackCard data={normalizedData} />)
     );
   }
 }
@@ -451,8 +476,8 @@ export async function createCompactWhatsAppInvitationCard(
   const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
   const normalizedData = renderData(data, null, DEFAULT_BANNER_HEIGHT, qrCodeDataUrl);
 
-  return pngResponse(
-    await materializePng(
+  return jpegResponse(
+    await materializeJpeg(
       <CompactHorizontalCard data={normalizedData} />,
       1080,
       520
