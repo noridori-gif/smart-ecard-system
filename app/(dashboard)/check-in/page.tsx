@@ -4,9 +4,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import AttendanceCards, { type AttendanceMetrics } from "@/components/check-in/AttendanceCards";
 import ManualEntryPanel from "@/components/check-in/ManualEntryPanel";
 import ProgressCards from "@/components/check-in/ProgressCards";
-import RecentCheckins from "@/components/check-in/RecentCheckins";
+import RecentActivity, { passLabel, type ActivityEntry, type ActivityStatus } from "@/components/check-in/RecentActivity";
 import ScannerPanel from "@/components/check-in/ScannerPanel";
+import StatStrip from "@/components/check-in/StatStrip";
 import ValidationPanel from "@/components/check-in/ValidationPanel";
+import CheckInIcon from "@/components/check-in/CheckInIcons";
+import EventSelector from "@/components/dashboard/EventSelector";
 import { getEvents, type Event } from "@/services/eventService";
 import {
   checkInGuest,
@@ -18,12 +21,33 @@ import {
 import { getInvitationsByEvent, type Invitation } from "@/services/invitationService";
 
 type CheckInMethod = "qr" | "event_pass";
+type SecondaryTab = "activity" | "stats";
+
+function describeCameraError(error: unknown): string {
+  const name = error instanceof DOMException ? error.name : "";
+  switch (name) {
+    case "NotAllowedError":
+    case "PermissionDeniedError":
+      return "Camera access was denied. Allow camera permission for this site, or use manual entry below.";
+    case "NotFoundError":
+    case "DevicesNotFoundError":
+      return "No camera was found on this device. Use manual entry below.";
+    case "NotReadableError":
+    case "TrackStartError":
+      return "The camera is already in use by another app or browser tab. Close it and try again, or use manual entry below.";
+    case "OverconstrainedError":
+      return "This device's camera does not support the required settings. Use manual entry below.";
+    default:
+      return "The camera could not be started. Use manual entry below.";
+  }
+}
 
 export default function CheckInPage() {
   const [eventPassId, setEventPassId] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pageError, setPageError] = useState("");
   const [scannerReady, setScannerReady] = useState(false);
   const [checkInMethod, setCheckInMethod] = useState<CheckInMethod | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
@@ -33,72 +57,142 @@ export default function CheckInPage() {
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [duplicateAttempts, setDuplicateAttempts] = useState(0);
   const [rejectedPasses, setRejectedPasses] = useState(0);
+  const [scanLog, setScanLog] = useState<ActivityEntry[]>([]);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("activity");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [scannerRetryToken, setScannerRetryToken] = useState(0);
   const scanLockedRef = useRef(false);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      setPageError("");
+      const data = await getEvents();
+      setEvents(data);
+      return data;
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "Events could not be loaded.");
+      return [];
+    }
+  }, []);
+
+  const loadAttendance = useCallback(async (eventId: number) => {
+    try {
+      const [guestData, invitationData] = await Promise.all([getGuestsByEvent(eventId), getInvitationsByEvent(eventId)]);
+      setGuests(guestData);
+      setInvitations(invitationData);
+    } catch (error) {
+      setPageError(error instanceof Error ? error.message : "Attendance dashboard could not be loaded.");
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
-    void getEvents().then((data) => {
+    void loadEvents().then((data) => {
       if (!active) return;
-      setEvents(data);
       setSelectedEventId(data[0]?.id ?? null);
       if (!data.length) setDashboardLoading(false);
-    }).catch((error) => {
-      if (active) { setErrorMessage(error instanceof Error ? error.message : "Events could not be loaded."); setDashboardLoading(false); }
     });
     return () => { active = false; };
-  }, []);
+  }, [loadEvents]);
 
   useEffect(() => {
     if (selectedEventId === null) return;
     let active = true;
-    void Promise.all([getGuestsByEvent(selectedEventId), getInvitationsByEvent(selectedEventId)])
-      .then(([guestData, invitationData]) => { if (active) { setGuests(guestData); setInvitations(invitationData); } })
-      .catch((error) => { if (active) setErrorMessage(error instanceof Error ? error.message : "Attendance dashboard could not be loaded."); })
-      .finally(() => { if (active) setDashboardLoading(false); });
+    void loadAttendance(selectedEventId).finally(() => { if (active) setDashboardLoading(false); });
     return () => { active = false; };
-  }, [selectedEventId]);
+  }, [selectedEventId, loadAttendance]);
 
-  const applyVerification = useCallback((verification: CheckInResult) => {
+  const pushScanLog = useCallback((entry: { status: Exclude<ActivityStatus, "checked_in">; guestName: string | null; passId: string | null; detail: string }) => {
+    setScanLog((current) => [
+      { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, occurredAt: new Date().toISOString() },
+      ...current,
+    ].slice(0, 25));
+  }, []);
+
+  const applyVerification = useCallback((verification: CheckInResult, method: CheckInMethod, rawInput?: string) => {
     setResult(verification);
-    if (verification.status === "already_checked_in") setDuplicateAttempts((value) => value + 1);
-    if (verification.status === "invalid") setRejectedPasses((value) => value + 1);
+    if (verification.status === "already_checked_in") {
+      setDuplicateAttempts((value) => value + 1);
+      pushScanLog({ status: "already_checked_in", guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
+    }
+    if (verification.status === "invalid") {
+      setRejectedPasses((value) => value + 1);
+      pushScanLog({ status: "invalid", guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
+    }
     if (verification.status === "checked_in" && verification.guest) {
       setGuests((current) => verification.guest?.event_id === selectedEventId
         ? current.map((guest) => guest.id === verification.guest?.id ? verification.guest : guest)
         : current);
     }
-  }, [selectedEventId]);
+  }, [selectedEventId, pushScanLog]);
 
   const verifyQrToken = useCallback(async (token: string) => {
     const cleanedToken = token.trim();
     if (!cleanedToken || scanLockedRef.current) return;
     scanLockedRef.current = true;
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("qr");
-    try { applyVerification(await checkInGuest(cleanedToken)); }
+    try { applyVerification(await checkInGuest(cleanedToken), "qr"); }
     catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "QR verification failed.");
+      const message = error instanceof Error ? error.message : "QR verification failed.";
+      setErrorMessage(message);
       setRejectedPasses((value) => value + 1);
+      pushScanLog({ status: "invalid", guestName: null, passId: null, detail: message });
       scanLockedRef.current = false;
     } finally { setIsChecking(false); }
-  }, [applyVerification]);
+  }, [applyVerification, pushScanLog]);
+
+  const handleRetryCamera = useCallback(() => {
+    setScannerRetryToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     let scanner: import("html5-qrcode").Html5QrcodeScanner | null = null;
+    let preflightStream: MediaStream | null = null;
     let componentActive = true;
+
     async function startScanner() {
+      setCameraError(null);
+      setScannerReady(false);
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        if (componentActive) { setCameraError("This browser does not support camera scanning. Use manual entry below."); setShowManualEntry(true); }
+        return;
+      }
+
+      // Pre-flight our own getUserMedia call so we control error messaging instead of
+      // letting Html5QrcodeScanner's internal UI surface a raw technical error to staff.
+      try {
+        preflightStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      } catch (error) {
+        if (componentActive) { setCameraError(describeCameraError(error)); setShowManualEntry(true); }
+        return;
+      } finally {
+        preflightStream?.getTracks().forEach((track) => track.stop());
+        preflightStream = null;
+      }
+
+      if (!componentActive) return;
+
       try {
         const { Html5QrcodeScanner } = await import("html5-qrcode");
         if (!componentActive) return;
-        scanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true }, false);
+        scanner = new Html5QrcodeScanner("qr-reader", { fps: 15, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true }, false);
         scanner.render((decodedText) => void verifyQrToken(decodedText), () => {});
         setScannerReady(true);
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Camera scanner could not start.");
+        setPageError(error instanceof Error ? error.message : "Camera scanner could not start.");
+        setShowManualEntry(true);
       }
     }
+
     void startScanner();
-    return () => { componentActive = false; if (scanner) scanner.clear().catch(() => {}); };
-  }, [verifyQrToken]);
+    return () => {
+      componentActive = false;
+      preflightStream?.getTracks().forEach((track) => track.stop());
+      if (scanner) scanner.clear().catch(() => {});
+    };
+  }, [verifyQrToken, scannerRetryToken]);
 
   function normalizeEventPassId(value: string) {
     const cleanedValue = value.trim().toUpperCase().replace(/\s+/g, "");
@@ -115,10 +209,12 @@ export default function CheckInPage() {
     setEventPassId(normalizedPassId);
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("event_pass");
     scanLockedRef.current = true;
-    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId)); }
+    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId), "event_pass", normalizedPassId); }
     catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Event Pass ID verification failed.");
+      const message = error instanceof Error ? error.message : "Event Pass ID verification failed.";
+      setErrorMessage(message);
       setRejectedPasses((value) => value + 1);
+      pushScanLog({ status: "invalid", guestName: null, passId: normalizedPassId, detail: message });
       scanLockedRef.current = false;
     } finally { setIsChecking(false); }
   }
@@ -126,6 +222,20 @@ export default function CheckInPage() {
   function handleNextGuest() {
     setEventPassId(""); setResult(null); setErrorMessage(""); setCheckInMethod(null); scanLockedRef.current = false;
   }
+
+  function handleEventChange(eventId: number) {
+    setDashboardLoading(true);
+    setSelectedEventId(eventId);
+    handleNextGuest();
+  }
+
+  const handleRefresh = useCallback(async () => {
+    setDashboardLoading(true);
+    const data = await loadEvents();
+    const eventId = selectedEventId ?? data[0]?.id ?? null;
+    if (eventId !== null) await loadAttendance(eventId);
+    setDashboardLoading(false);
+  }, [loadEvents, loadAttendance, selectedEventId]);
 
   const checkedGuests = useMemo(() => guests.filter((guest) => guest.status === "checked_in" || guest.checked_in_at), [guests]);
   const recentCheckins = useMemo(() => [...checkedGuests].sort((a, b) => new Date(b.checked_in_at ?? 0).getTime() - new Date(a.checked_in_at ?? 0).getTime()).slice(0, 10), [checkedGuests]);
@@ -147,24 +257,107 @@ export default function CheckInPage() {
   const doubleChecked = checkedGuests.filter((guest) => guest.allowed_guests === 2).length;
   const attendancePercentage = metrics.invitedGuests ? (metrics.checkedInGuests / metrics.invitedGuests) * 100 : 0;
 
-  return <main className="mx-auto max-w-[1600px] space-y-8 pb-8">
-    <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-      <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Attendance Operations</p><h1 className="sep-page-title mt-2">Guest Check-In</h1><p className="mt-2 max-w-2xl text-slate-600">Scan a guest QR code or verify an Event Pass ID while monitoring live attendance.</p></div>
-      <label className="w-full text-sm font-semibold text-slate-700 lg:w-80">Event<select value={selectedEventId ?? ""} onChange={(event) => { setDashboardLoading(true); setSelectedEventId(Number(event.target.value)); handleNextGuest(); }} className="sep-control mt-1"><option value="" disabled>Select event</option>{events.map((event) => <option key={event.id} value={event.id}>{event.title}</option>)}</select></label>
+  const activityEntries = useMemo<ActivityEntry[]>(() => {
+    const successEntries: ActivityEntry[] = recentCheckins.map((guest) => ({
+      id: `guest-${guest.id}`,
+      status: "checked_in",
+      guestName: guest.full_name,
+      passId: guest.event_pass_id,
+      detail: passLabel(guest.allowed_guests),
+      occurredAt: guest.checked_in_at ?? new Date(0).toISOString(),
+    }));
+    return [...successEntries, ...scanLog]
+      .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+      .slice(0, 15);
+  }, [recentCheckins, scanLog]);
+
+  return <main className="mx-auto max-w-[1600px] space-y-6 pb-8">
+    <header className="flex flex-col gap-1">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Attendance Operations</p>
+      <h1 className="sep-page-title">Guest Check-In</h1>
+      <p className="hidden text-sm text-slate-600 sm:block">Scan a guest QR code or verify an Event Pass ID.</p>
     </header>
 
-    {dashboardLoading ? <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div> : <>
-      <AttendanceCards metrics={metrics} />
-      <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: singleChecked, maximum: metrics.singlePasses }} double={{ current: doubleChecked, maximum: metrics.doublePasses }} />
-    </>}
+    <EventSelector events={events} selectedEventId={selectedEventId} isLoading={dashboardLoading} onRefresh={handleRefresh} onChange={handleEventChange} />
 
-    <section aria-labelledby="check-in-tools-title"><div className="mb-4"><h2 id="check-in-tools-title" className="sep-section-title">Check-In Tools</h2><p className="sep-secondary mt-1">Use the scanner for the fastest entry, with manual verification as a fallback.</p></div><div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.85fr)_minmax(320px,1fr)]"><ScannerPanel scannerReady={scannerReady} checking={isChecking && checkInMethod === "qr"} /><ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} /></div></section>
+    {pageError && (
+      <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{pageError}</div>
+    )}
 
-    <ValidationPanel result={result} errorMessage={errorMessage} checking={isChecking} onNext={handleNextGuest} />
+    {!dashboardLoading && events.length === 0 ? (
+      <div className="sep-card p-6 text-center text-sm text-slate-600">No events found. Create an event first to start checking in guests.</div>
+    ) : dashboardLoading ? (
+      <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
+    ) : (
+      <>
+        <StatStrip checkedIn={metrics.checkedInGuests} invited={metrics.invitedGuests} remaining={metrics.remainingGuests} attendancePercentage={attendancePercentage} />
 
-    <section className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
-      <RecentCheckins guests={recentCheckins} />
-      <aside className="sep-card p-4 sm:p-6" aria-labelledby="insights-title"><h2 id="insights-title" className="sep-card-title">Check-In Insights</h2><p className="sep-secondary mt-1">Event totals and validation activity for this session.</p><div className="mt-5 grid grid-cols-2 gap-3">{[["Duplicate Scan Attempts", duplicateAttempts], ["Rejected Passes", rejectedPasses], ["Successful Today", successfulToday], ["Attendance", `${attendancePercentage.toFixed(1)}%`]].map(([label, value]) => <div key={label} className="rounded-xl border border-[#e7e1d7] bg-stone-50 p-4"><p className="text-xs font-semibold leading-5 text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p></div>)}</div></aside>
-    </section>
+        <section aria-labelledby="check-in-tools-title">
+          <div className="mb-4">
+            <h2 id="check-in-tools-title" className="sep-section-title">Check-In Tools</h2>
+            <p className="sep-secondary mt-1">Use the scanner for the fastest entry, with manual verification as a fallback.</p>
+          </div>
+          <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1.3fr)_minmax(300px,1fr)]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <ScannerPanel scannerReady={scannerReady} checking={isChecking && checkInMethod === "qr"} cameraError={cameraError} onRetry={handleRetryCamera} />
+
+              <button
+                type="button"
+                onClick={() => setShowManualEntry((value) => !value)}
+                aria-expanded={showManualEntry}
+                aria-controls="manual-entry-panel"
+                className="sep-card flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-stone-50 sm:p-5"
+              >
+                <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                  <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
+                  {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
+                </span>
+                <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              </button>
+
+              {showManualEntry && (
+                <div id="manual-entry-panel">
+                  <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
+                </div>
+              )}
+            </div>
+
+            <ValidationPanel result={result} errorMessage={errorMessage} checking={isChecking} onNext={handleNextGuest} />
+          </div>
+        </section>
+
+        <section aria-labelledby="secondary-title">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 id="secondary-title" className="sep-section-title">Event Overview</h2>
+              <p className="sep-secondary mt-1">Detailed stats and scan activity for this event.</p>
+            </div>
+            <div className="inline-flex rounded-xl border border-[#e7e1d7] bg-white p-1" role="tablist" aria-label="Event overview sections">
+              <button type="button" role="tab" aria-selected={secondaryTab === "activity"} onClick={() => setSecondaryTab("activity")} className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition ${secondaryTab === "activity" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-stone-100"}`}>Recent Activity</button>
+              <button type="button" role="tab" aria-selected={secondaryTab === "stats"} onClick={() => setSecondaryTab("stats")} className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition ${secondaryTab === "stats" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-stone-100"}`}>Live Statistics</button>
+            </div>
+          </div>
+
+          {secondaryTab === "activity" ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[["Duplicate Scan Attempts", duplicateAttempts], ["Rejected Passes", rejectedPasses], ["Successful Today", successfulToday]].map(([label, value]) => (
+                  <div key={label} className="rounded-xl border border-[#e7e1d7] bg-stone-50 p-4">
+                    <p className="text-xs font-semibold leading-5 text-slate-500">{label}</p>
+                    <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <RecentActivity entries={activityEntries} />
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <AttendanceCards metrics={metrics} />
+              <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: singleChecked, maximum: metrics.singlePasses }} double={{ current: doubleChecked, maximum: metrics.doublePasses }} />
+            </div>
+          )}
+        </section>
+      </>
+    )}
   </main>;
 }
