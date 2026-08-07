@@ -17,6 +17,7 @@ import {
   type GuestImportRow,
   type GuestImportValidationResult,
 } from "@/services/guestImportService";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 export type GuestImportEventOption = {
   id: number;
@@ -781,8 +782,9 @@ export default function GuestImportPanel({
                             </td>
 
                             <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">
-                              {row.eventPassId ||
-                                "Will be generated"}
+                              {row.eventPassId
+                                ? formatPassIdForDisplay(row.eventPassId)
+                                : "Will be generated"}
                             </td>
 
                             <td className="px-4 py-3">

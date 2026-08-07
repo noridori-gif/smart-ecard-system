@@ -17,6 +17,7 @@ import {
   type ReportInvitation,
   type ReportWish,
 } from "@/services/reportService";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 type ReportTab =
   | "attendance"
@@ -1097,8 +1098,9 @@ export default function ReportsPage() {
                           </td>
 
                           <td className="px-5 py-4 font-mono text-sm font-semibold">
-                            {invitation.guests
-                              ?.event_pass_id ?? "-"}
+                            {invitation.guests?.event_pass_id
+                              ? formatPassIdForDisplay(invitation.guests.event_pass_id)
+                              : "-"}
                           </td>
 
                           <td className="px-5 py-4">
@@ -1185,7 +1187,9 @@ export default function ReportsPage() {
                         </td>
 
                         <td className="px-5 py-4 font-mono text-sm font-semibold">
-                          {guest.event_pass_id ?? "-"}
+                          {guest.event_pass_id
+                            ? formatPassIdForDisplay(guest.event_pass_id)
+                            : "-"}
                         </td>
 
                         {activeTab === "guests" && (

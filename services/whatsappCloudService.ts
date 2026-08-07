@@ -2,6 +2,7 @@ import {
   getFinancialWhatsAppTemplate,
   type FinancialWhatsAppTemplateKind,
 } from "@/lib/financialWhatsAppConfig";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 type WhatsAppLanguageCode =
   | "sw"
@@ -250,7 +251,9 @@ export async function sendWhatsAppInvitationTemplate({
       },
       {
         type: "text",
-        text: eventPassId || "-",
+        text: eventPassId
+          ? formatPassIdForDisplay(eventPassId)
+          : "-",
       },
       {
         type: "text",

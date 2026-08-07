@@ -17,6 +17,7 @@ import {
   getAllInvitations,
   type InvitationWithDetails,
 } from "@/services/invitationService";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 import {
   buildWhatsAppMessage,
@@ -722,8 +723,9 @@ function DesktopInvitationsTable({
 
                   <td className="px-5 py-4">
                     <span className="font-mono text-sm font-semibold text-slate-800">
-                      {invitation.event_pass_id ??
-                        "-"}
+                      {invitation.event_pass_id
+                        ? formatPassIdForDisplay(invitation.event_pass_id)
+                        : "-"}
                     </span>
                   </td>
 
@@ -847,12 +849,14 @@ function MobileInvitationsList({
                 <p
                   className="truncate font-mono text-xs font-semibold text-slate-800"
                   title={
-                    invitation.event_pass_id ??
-                    "Not available"
+                    invitation.event_pass_id
+                      ? formatPassIdForDisplay(invitation.event_pass_id)
+                      : "Not available"
                   }
                 >
-                  {invitation.event_pass_id ??
-                    "-"}
+                  {invitation.event_pass_id
+                    ? formatPassIdForDisplay(invitation.event_pass_id)
+                    : "-"}
                 </p>
               </div>
             </div>

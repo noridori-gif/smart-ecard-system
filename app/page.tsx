@@ -96,7 +96,7 @@ function LiveGuestJourney() {
 
             <div className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-b from-slate-800/90 to-slate-900 p-3">
               <div className="flex items-center justify-between gap-2">
-                <div><p className="text-[8px] font-bold uppercase tracking-[0.22em] text-cyan-300">Secure Event Pass</p><p className="mt-1 font-mono text-xs font-bold text-white">SEP-8F42KD</p></div>
+                <div><p className="text-[8px] font-bold uppercase tracking-[0.22em] text-cyan-300">Secure Event Pass</p><p className="mt-1 font-mono text-xs font-bold text-white">8F42KD</p></div>
                 <span className="rounded border border-indigo-300/25 bg-indigo-400/10 px-2 py-1 text-[9px] font-bold text-indigo-200">VIP</span>
               </div>
               <div className="relative mx-auto mt-3 aspect-square w-[7.25rem] overflow-hidden rounded-xl border border-white/15 bg-white p-1.5 shadow-[0_10px_25px_rgba(0,0,0,.25)] sm:w-[8rem]">

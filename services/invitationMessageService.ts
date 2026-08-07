@@ -2,6 +2,8 @@ import type {
   InvitationWithDetails,
 } from "@/services/invitationService";
 
+import { formatPassIdForDisplay } from "@/lib/passId";
+
 export type MessageLanguage =
   | "sw"
   | "en";
@@ -280,8 +282,11 @@ export function buildWhatsAppMessage(
     event?.venue ?? "";
 
   const eventPassId =
-    guest?.event_pass_id?.trim() ||
-    "";
+    guest?.event_pass_id?.trim()
+      ? formatPassIdForDisplay(
+          guest.event_pass_id
+        )
+      : "";
 
   const allowedGuests =
     guest?.allowed_guests ?? 1;
@@ -377,10 +382,17 @@ export function buildSmsMessage(
   const venue =
     event?.venue?.trim() || "";
 
-  const eventPassId =
+  const rawEventPassId =
     invitation.event_pass_id ??
     guest?.event_pass_id ??
-    "-";
+    null;
+
+  const eventPassId =
+    rawEventPassId
+      ? formatPassIdForDisplay(
+          rawEventPassId
+        )
+      : "-";
 
   const allowedGuests =
     invitation.allowed_guests ??

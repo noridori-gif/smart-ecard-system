@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import GuestImportPanel from "@/components/guest-import/GuestImportPanel";
 import { supabase } from "@/lib/supabase";
+import { formatPassIdForDisplay } from "@/lib/passId";
 
 type GuestStatus = "pending" | "checked_in";
 
@@ -665,8 +666,9 @@ export default function GuestsPage() {
 
                           <td className="px-5 py-4">
                             <span className="font-mono text-sm font-semibold text-slate-800">
-                              {guest.event_pass_id ??
-                                "-"}
+                              {guest.event_pass_id
+                                ? formatPassIdForDisplay(guest.event_pass_id)
+                                : "-"}
                             </span>
                           </td>
 
@@ -825,8 +827,9 @@ export default function GuestsPage() {
                     </p>
 
                     <p className="mt-1 font-mono font-bold">
-                      {guest.event_pass_id ??
-                        "-"}
+                      {guest.event_pass_id
+                        ? formatPassIdForDisplay(guest.event_pass_id)
+                        : "-"}
                     </p>
                   </div>
 

@@ -120,7 +120,7 @@ export default function WhatsAppCardPreviewPage() {
                   </div>
                   <div className="mt-3">
                     <p>
-                      🎫 Event Pass ID: <strong>SEP-8F42KD</strong>
+                      🎫 Event Pass ID: <strong>8F42KD</strong>
                     </p>
                     <p>
                       👥 Idadi ya Wageni: <strong>2</strong>
