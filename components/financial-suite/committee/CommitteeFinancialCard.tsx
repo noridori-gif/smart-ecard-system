@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { FinancialPledge } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
-import { committeeTheme, progressColour } from "./theme";
+import { progressColour } from "./theme";
 
 type DisplayStatus = "completed" | "partial" | "pledged" | "cancelled";
 
@@ -111,7 +111,7 @@ export function CommitteeFinancialCard({
 }) {
   const panelId = `committee-card-${item.id}`;
   return (
-    <article className={`min-w-0 overflow-hidden rounded-2xl border ${committeeTheme.card}`}>
+    <article className="sep-card min-w-0 overflow-hidden">
       <button
         type="button"
         onClick={onToggle}

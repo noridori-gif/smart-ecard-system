@@ -1,7 +1,6 @@
 import type { FinanceSummary } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
 import { CommitteeSectionProgress } from "./CommitteeFinancialCard";
-import { committeeTheme } from "./theme";
 
 function compactTzs(value: string | number) {
   const amount = Number(value);
@@ -71,7 +70,7 @@ export function CommitteeOverview({
         {cards.map(([label, value, fullValue]) => (
           <section
             key={label}
-            className={`min-w-0 rounded-2xl border p-3.5 ${committeeTheme.card}`}
+            className="sep-card min-w-0 p-3.5"
           >
             <p className="text-[13px] leading-snug text-slate-500">{label}</p>
             <p
@@ -85,7 +84,7 @@ export function CommitteeOverview({
         ))}
       </div>
 
-      <section className={`space-y-4 rounded-2xl border p-4 ${committeeTheme.card}`}>
+      <section className="sep-card space-y-4 p-4">
         <CommitteeSectionProgress
           label={labels.pledgeProgress}
           value={collection}
@@ -99,7 +98,7 @@ export function CommitteeOverview({
       </section>
 
       <section
-        className={`grid grid-cols-2 gap-x-3 gap-y-4 rounded-2xl border p-4 min-[410px]:grid-cols-3 ${committeeTheme.card}`}
+        className="sep-card grid grid-cols-2 gap-x-3 gap-y-4 p-4 min-[410px]:grid-cols-3"
       >
         {deadlineItems.map(([label, value]) => (
           <div key={label} className="min-w-0">

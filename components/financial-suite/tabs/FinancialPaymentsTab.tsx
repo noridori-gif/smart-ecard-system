@@ -135,7 +135,7 @@ export default function FinancialPaymentsTab({
         </p>
       )}
 
-      <section className={`overflow-hidden ${financialDesktop.card}`}>
+      <section className="sep-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ece7df] p-5">
           <div>
             <h2 className="text-xl font-bold">{t("payments.history")}</h2>
@@ -331,7 +331,7 @@ export default function FinancialPaymentsTab({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <div className={`p-5 ${financialDesktop.card}`}>
+        <div className="sep-card p-5">
           <h2 className="text-xl font-bold">Daily Collection Summary</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
@@ -390,7 +390,7 @@ export default function FinancialPaymentsTab({
           )}
         </div>
 
-        <div className={`p-5 ${financialDesktop.card}`}>
+        <div className="sep-card p-5">
           <h2 className="text-xl font-bold">Payment Methods</h2>
           <p className="text-sm text-slate-500">Valid transactions only.</p>
           <div className="mt-4 space-y-3">

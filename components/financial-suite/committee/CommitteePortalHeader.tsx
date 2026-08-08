@@ -41,7 +41,7 @@ export function CommitteePortalHeader({
             <p className="text-[13px] font-bold uppercase tracking-[0.14em] text-emerald-400">
               Smart Event Pass · {portalLabel}
             </p>
-            <h1 className="mt-1 break-words text-[23px] font-bold leading-tight">
+            <h1 className="mt-1 break-words font-serif text-[23px] font-bold leading-tight">
               {eventTitle}
             </h1>
             <p className="mt-1 text-sm text-slate-300">{eventDate}</p>

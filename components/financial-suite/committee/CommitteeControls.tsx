@@ -40,7 +40,7 @@ export function CommitteeSearchBar({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className={`min-h-12 w-full rounded-2xl border py-3 pl-12 pr-4 text-base text-slate-900 placeholder:text-slate-400 ${committeeTheme.card} ${committeeTheme.focus} focus-visible:ring-emerald-600`}
+        className={`sep-card min-h-12 w-full py-3 pl-12 pr-4 text-base text-slate-900 placeholder:text-slate-400 ${committeeTheme.focus} focus-visible:ring-emerald-600`}
       />
     </label>
   );
@@ -90,7 +90,7 @@ export function CommitteeEmptyState({
   message: string;
 }) {
   return (
-    <div className={`rounded-2xl border px-4 py-10 text-center ${committeeTheme.card}`}>
+    <div className="sep-card px-4 py-10 text-center">
       <p className="text-[15px] text-slate-500">{message}</p>
     </div>
   );

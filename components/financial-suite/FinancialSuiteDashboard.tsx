@@ -162,7 +162,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     return (
       <div
         role="status"
-        className={`p-10 text-center text-[15px] text-slate-500 ${financialDesktop.card}`}
+        className="sep-card p-10 text-center text-[15px] text-slate-500"
       >
         Loading Financial Suite...
       </div>
@@ -376,7 +376,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           <BudgetDeadlineEditor eventId={eventId} summary={data.summary} onSaved={load} />
           <ContributorGuestEligibilitySettings eventId={eventId} onSaved={load} />
           <OrganiserAccessPanel eventId={eventId} />
-          <section className={`p-5 ${financialDesktop.card}`}>
+          <section className="sep-card p-5">
             <h2 className="text-xl font-bold">Notification provider readiness</h2>
             <p className="mt-1 text-sm text-slate-600">
               Provider readiness is checked safely in reminder previews. Secret credentials are never displayed.

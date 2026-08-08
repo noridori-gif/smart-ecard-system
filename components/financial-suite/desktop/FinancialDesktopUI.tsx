@@ -150,7 +150,7 @@ export function FinancialStatusBadge({
       : status === "partial"
         ? "bg-amber-100 text-amber-800"
         : status === "cancelled"
-          ? "bg-red-100 text-red-700"
+          ? "bg-slate-200 text-slate-700"
           : "bg-rose-100 text-rose-800";
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold ${style}`}>
@@ -176,7 +176,7 @@ export function FinancialDesktopHeader({
     <header className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
       <div>
         {back}
-        <h1 className="mt-3 text-[32px] font-bold leading-tight text-slate-950">
+        <h1 className="mt-3 font-serif text-[32px] font-bold leading-tight text-slate-950">
           Michango &amp; Ahadi
         </h1>
         <p className="mt-1 text-[15px] text-slate-600">
@@ -184,7 +184,7 @@ export function FinancialDesktopHeader({
           Manage contributions, payments, reminders and reports.
         </p>
       </div>
-      <section className={`flex w-full items-center gap-4 p-4 lg:w-auto lg:min-w-[300px] ${financialDesktop.card}`}>
+      <section className="sep-card flex w-full items-center gap-4 p-4 lg:w-auto lg:min-w-[300px]">
         <div
           className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
           style={{
@@ -246,11 +246,11 @@ export function FinancialOverviewContent({
         </div>
       </section>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <section className={`space-y-6 p-5 ${financialDesktop.card}`}>
+        <section className="sep-card space-y-6 p-5">
           <Progress label={t("overview.contributionProgress")} value={collection} colour="emerald" />
           <Progress label={t("overview.budgetProgress")} value={budget} colour="amber" />
         </section>
-        <section className={`p-5 ${financialDesktop.card}`}>
+        <section className="sep-card p-5">
           <dl className="grid grid-cols-2 gap-5">
             {[
               [t("overview.eventBudget"), summary.budget_amount ? formatAppTzs(Number(summary.budget_amount), language) : t("overview.budgetNotSet")],

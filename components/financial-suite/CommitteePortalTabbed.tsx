@@ -1203,7 +1203,7 @@ function Reports({
   ];
   return (
     <div className="space-y-3">
-      <section className={`rounded-2xl border p-4 ${committeeTheme.card}`}>
+      <section className={`sep-card p-4`}>
         <h2 className="text-xl font-bold">{t.report}</h2>
         <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {metrics.map(([label, value]) => (
@@ -1218,7 +1218,7 @@ function Reports({
       </section>
       {report && (
         <>
-          <section className={`rounded-2xl border p-4 ${committeeTheme.card}`}>
+          <section className={`sep-card p-4`}>
             <h2 className="text-lg font-bold">{t.trend}</h2>
             <div className="mt-3 h-56">
               {report.trend.length ? (
@@ -1264,7 +1264,7 @@ function Rank({
   rows: Array<{ name: string; amount: string }>;
 }) {
   return (
-    <section className={`rounded-2xl border p-4 ${committeeTheme.card}`}>
+    <section className={`sep-card p-4`}>
       <h2 className="text-lg font-bold">{title}</h2>
       <div className="mt-3 space-y-2">
         {rows.map((row, index) => (
