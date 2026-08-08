@@ -74,8 +74,18 @@ export default function ContributorEligibilityDashboard({
       <div className="border-b border-[#e7e1d7] p-4"><label className="text-sm font-semibold">{t("eligibility.filter")}<select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} className="mt-1 min-h-12 w-full rounded-xl border border-[#e7e1d7] px-3 md:max-w-xs">{[
         ["all",t("common.all")],["eligible",t("eligibility.eligible")],["single",t("eligibility.single")],["double",t("eligibility.double")],["below_minimum",t("eligibility.belowMinimum")],["needs_review",t("eligibility.needsReview")],["linked",t("eligibility.linkedGuests")],["not_linked",t("eligibility.notLinked")],["invitation_sent",t("queue.sent")],["invitation_not_sent",t("eligibility.notSent")],
       ].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-      <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[1500px] text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>{[t("eligibility.contributor"),t("common.phone"),t("eligibility.paidAmount"),t("eligibility.pledgedAmount"),t("eligibility.classificationBasis"),t("eligibility.status"),t("eligibility.cardType"),t("eligibility.allowedGuests"),t("eligibility.linkedGuest"),t("eligibility.invitationStatus"),t("common.actions")].map((heading) => <th key={heading} className="p-3">{heading}</th>)}</tr></thead><tbody className="divide-y divide-stone-200">{filtered.map((row) => <EligibilityTableRow key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</tbody></table></div>
-      <div className="grid gap-3 p-3 lg:hidden">{filtered.map((row) => <EligibilityMobileCard key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</div>
+      {filtered.length > 0 && <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+        <th className="p-3">{t("eligibility.contributor")}</th>
+        <th className="hidden p-3 xl:table-cell">{t("common.phone")}</th>
+        <th className="hidden p-3 lg:table-cell">{t("eligibility.paidAmount")}</th>
+        <th className="hidden p-3 lg:table-cell">{t("eligibility.pledgedAmount")}</th>
+        <th className="hidden p-3 xl:table-cell">{t("eligibility.classificationBasis")}</th>
+        <th className="p-3">{t("eligibility.status")}</th>
+        <th className="hidden p-3 lg:table-cell">{t("eligibility.cardType")}</th>
+        <th className="hidden p-3 lg:table-cell">{t("eligibility.allowedGuests")}</th>
+        <th className="hidden p-3 xl:table-cell">{t("eligibility.invitationStatus")}</th>
+        <th className="p-3">{t("common.actions")}</th>
+      </tr></thead><tbody className="divide-y divide-stone-200">{filtered.map((row) => <EligibilityTableRow key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</tbody></table></div>}
       {!filtered.length && <p className="p-10 text-center text-sm text-slate-500">{t("eligibility.noMatches")}</p>}
     </section>
   </div>;
@@ -95,9 +105,20 @@ function Actions({ row, eventId, busy, onEdit, onUnlink, onRecalculate }: { row:
 }
 function EligibilityTableRow({ row, settings, ...actions }: { row: Row; settings: ContributorGuestSettings; eventId: number; busy: boolean; onEdit: (pledge: FinancialPledge) => void; onUnlink: (pledge: FinancialPledge) => Promise<void>; onRecalculate: (pledge: FinancialPledge) => Promise<void> }) {
   const status = row.pledge.guest_eligibility_status ?? "not_linked";
-  return <tr><td className="p-3 font-bold">{row.pledge.full_name}</td><td className="p-3">{row.pledge.phone}</td><td className="p-3 tabular-nums">{formatTzs(row.pledge.total_paid)}</td><td className="p-3 tabular-nums">{formatTzs(row.pledge.pledged_amount)}</td><td className="p-3 capitalize">{settings.classification_basis.replace("_"," ")}</td><td className="p-3"><EligibilityBadge value={status} /></td><td className="p-3 capitalize">{["single","double"].includes(status) ? status : "—"}</td><td className="p-3">{row.guest?.allowed_guests ?? "—"}</td><td className="p-3">{row.guest?.full_name ?? "Not linked"}</td><td className="p-3">{row.invitationSent ? "Sent" : row.invitation ? row.invitation.invitation_status : "Not sent"}</td><td className="p-3"><Actions row={row} {...actions} /></td></tr>;
-}
-function EligibilityMobileCard({ row, settings, ...actions }: { row: Row; settings: ContributorGuestSettings; eventId: number; busy: boolean; onEdit: (pledge: FinancialPledge) => void; onUnlink: (pledge: FinancialPledge) => Promise<void>; onRecalculate: (pledge: FinancialPledge) => Promise<void> }) {
-  const status = row.pledge.guest_eligibility_status ?? "not_linked";
-  return <article className="rounded-xl border border-[#e7e1d7] p-4"><div className="flex justify-between gap-3"><div><h3 className="font-bold">{row.pledge.full_name}</h3><p className="text-sm text-slate-500">{row.pledge.phone}</p></div><EligibilityBadge value={status} /></div><dl className="mt-4 grid grid-cols-2 gap-3 text-sm">{[["Paid",formatTzs(row.pledge.total_paid)],["Pledged",formatTzs(row.pledge.pledged_amount)],["Basis",settings.classification_basis.replace("_"," ")],["Card",["single","double"].includes(status) ? status : "—"],["Allowed",String(row.guest?.allowed_guests ?? "—")],["Invitation",row.invitationSent ? "Sent" : "Not sent"]].map(([label,value]) => <div key={label}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 font-semibold capitalize">{value}</dd></div>)}</dl><div className="mt-4"><Actions row={row} {...actions} /></div></article>;
+  return <tr className="hover:bg-stone-50">
+    <td className="min-w-0 p-3">
+      <p className="truncate font-bold text-slate-950">{row.pledge.full_name}</p>
+      <p className="mt-0.5 truncate text-xs text-slate-500">{row.pledge.phone || "—"}</p>
+      <p className="mt-0.5 truncate text-xs text-slate-400">{row.guest ? row.guest.full_name : "Not linked"}</p>
+    </td>
+    <td className="hidden p-3 xl:table-cell">{row.pledge.phone || "—"}</td>
+    <td className="hidden p-3 tabular-nums lg:table-cell">{formatTzs(row.pledge.total_paid)}</td>
+    <td className="hidden p-3 tabular-nums lg:table-cell">{formatTzs(row.pledge.pledged_amount)}</td>
+    <td className="hidden p-3 capitalize xl:table-cell">{settings.classification_basis.replace("_"," ")}</td>
+    <td className="p-3"><EligibilityBadge value={status} /></td>
+    <td className="hidden p-3 capitalize lg:table-cell">{["single","double"].includes(status) ? status : "—"}</td>
+    <td className="hidden p-3 lg:table-cell">{row.guest?.allowed_guests ?? "—"}</td>
+    <td className="hidden p-3 xl:table-cell">{row.invitationSent ? "Sent" : row.invitation ? row.invitation.invitation_status : "Not sent"}</td>
+    <td className="p-3"><Actions row={row} {...actions} /></td>
+  </tr>;
 }
