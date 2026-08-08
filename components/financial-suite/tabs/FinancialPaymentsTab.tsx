@@ -170,16 +170,16 @@ export default function FinancialPaymentsTab({
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-[15px]">
+              <table className="w-full table-fixed text-left text-[15px]">
                 <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-5 py-4">{t("eligibility.contributor")}</th>
-                    <th className="px-5 py-4">{t("payments.amount")}</th>
-                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.receipt")}</th>
-                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.date")}</th>
-                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.method")}</th>
-                    <th className="px-5 py-4">{t("common.status")}</th>
-                    <th className="px-5 py-4">{t("common.actions")}</th>
+                    <th className="w-[46%] break-words px-3 py-3 sm:px-5 sm:py-4 lg:w-[22%]">{t("eligibility.contributor")}</th>
+                    <th className="hidden break-words px-5 py-4 lg:table-cell lg:w-[12%]">{t("payments.amount")}</th>
+                    <th className="hidden break-words px-5 py-4 lg:table-cell lg:w-[14%]">{t("payments.receipt")}</th>
+                    <th className="hidden break-words px-5 py-4 lg:table-cell lg:w-[12%]">{t("payments.date")}</th>
+                    <th className="hidden break-words px-5 py-4 lg:table-cell lg:w-[12%]">{t("payments.method")}</th>
+                    <th className="w-[30%] break-words px-3 py-3 sm:px-5 sm:py-4 lg:w-[10%]">{t("common.status")}</th>
+                    <th className="w-[24%] break-words px-3 py-3 sm:px-5 sm:py-4 lg:w-[18%]">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eee9e1]">
@@ -194,15 +194,20 @@ export default function FinancialPaymentsTab({
                             : "hover:bg-[#fcfbf8]"
                         }
                       >
-                        <td className="min-w-0 px-5 py-4">
-                          <p className="break-words font-semibold">
-                            {pledge?.full_name ?? "Contributor"}
-                          </p>
+                        <td className="min-w-0 px-3 py-3 sm:px-5 sm:py-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="break-words font-semibold">
+                              {pledge?.full_name ?? "Contributor"}
+                            </p>
+                            <b className="shrink-0 whitespace-nowrap tabular-nums lg:hidden">
+                              {formatTzs(payment.amount)}
+                            </b>
+                          </div>
                           <p className="mt-0.5 text-xs text-slate-500 lg:hidden">
                             {payment.receipt_number} · {payment.payment_date} · {payment.payment_method.replaceAll("_", " ")}
                           </p>
                         </td>
-                        <td className="whitespace-nowrap px-5 py-4 font-semibold tabular-nums">
+                        <td className="hidden whitespace-nowrap px-5 py-4 font-semibold tabular-nums lg:table-cell">
                           {formatTzs(payment.amount)}
                         </td>
                         <td className="hidden whitespace-nowrap px-5 py-4 font-mono text-sm lg:table-cell">
@@ -214,9 +219,9 @@ export default function FinancialPaymentsTab({
                         <td className="hidden px-5 py-4 capitalize lg:table-cell">
                           {payment.payment_method.replaceAll("_", " ")}
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-3 sm:px-5 sm:py-4">
                           <span
-                            className={`rounded-full px-3 py-1.5 text-[13px] font-bold ${
+                            className={`inline-flex rounded-full px-3 py-1.5 text-[13px] font-bold ${
                               payment.voided_at
                                 ? "bg-red-100 text-red-700"
                                 : "bg-emerald-100 text-emerald-800"
@@ -225,7 +230,7 @@ export default function FinancialPaymentsTab({
                             {payment.voided_at ? "Voided" : "Valid"}
                           </span>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-3 sm:px-5 sm:py-4">
                           <div className="flex flex-wrap gap-2">
                             <FinancialActionIconButton
                               icon="receipt"

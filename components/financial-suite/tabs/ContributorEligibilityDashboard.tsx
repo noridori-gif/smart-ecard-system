@@ -74,17 +74,17 @@ export default function ContributorEligibilityDashboard({
       <div className="border-b border-[#e7e1d7] p-4"><label className="text-sm font-semibold">{t("eligibility.filter")}<select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} className="mt-1 min-h-12 w-full rounded-xl border border-[#e7e1d7] px-3 md:max-w-xs">{[
         ["all",t("common.all")],["eligible",t("eligibility.eligible")],["single",t("eligibility.single")],["double",t("eligibility.double")],["below_minimum",t("eligibility.belowMinimum")],["needs_review",t("eligibility.needsReview")],["linked",t("eligibility.linkedGuests")],["not_linked",t("eligibility.notLinked")],["invitation_sent",t("queue.sent")],["invitation_not_sent",t("eligibility.notSent")],
       ].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-      {filtered.length > 0 && <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>
-        <th className="p-3">{t("eligibility.contributor")}</th>
-        <th className="hidden p-3 xl:table-cell">{t("common.phone")}</th>
-        <th className="hidden p-3 lg:table-cell">{t("eligibility.paidAmount")}</th>
-        <th className="hidden p-3 lg:table-cell">{t("eligibility.pledgedAmount")}</th>
-        <th className="hidden p-3 xl:table-cell">{t("eligibility.classificationBasis")}</th>
-        <th className="p-3">{t("eligibility.status")}</th>
-        <th className="hidden p-3 lg:table-cell">{t("eligibility.cardType")}</th>
-        <th className="hidden p-3 lg:table-cell">{t("eligibility.allowedGuests")}</th>
-        <th className="hidden p-3 xl:table-cell">{t("eligibility.invitationStatus")}</th>
-        <th className="p-3">{t("common.actions")}</th>
+      {filtered.length > 0 && <div className="overflow-x-auto"><table className="w-full table-fixed text-left text-sm"><thead className="bg-stone-50 text-xs uppercase tracking-wide text-slate-500"><tr>
+        <th className="w-[32%] break-words p-3 lg:w-[20%] xl:w-[14%]">{t("eligibility.contributor")}</th>
+        <th className="hidden break-words p-3 xl:table-cell xl:w-[10%]">{t("common.phone")}</th>
+        <th className="hidden break-words p-3 lg:table-cell lg:w-[10%] xl:w-[9%]">{t("eligibility.paidAmount")}</th>
+        <th className="hidden break-words p-3 lg:table-cell lg:w-[10%] xl:w-[9%]">{t("eligibility.pledgedAmount")}</th>
+        <th className="hidden break-words p-3 xl:table-cell xl:w-[10%]">{t("eligibility.classificationBasis")}</th>
+        <th className="w-[34%] break-words p-3 lg:w-[12%] xl:w-[8%]">{t("eligibility.status")}</th>
+        <th className="hidden break-words p-3 lg:table-cell lg:w-[10%] xl:w-[8%]">{t("eligibility.cardType")}</th>
+        <th className="hidden break-words p-3 lg:table-cell lg:w-[10%] xl:w-[8%]">{t("eligibility.allowedGuests")}</th>
+        <th className="hidden break-words p-3 xl:table-cell xl:w-[9%]">{t("eligibility.invitationStatus")}</th>
+        <th className="w-[34%] break-words p-3 lg:w-[28%] xl:w-[15%]">{t("common.actions")}</th>
       </tr></thead><tbody className="divide-y divide-stone-200">{filtered.map((row) => <EligibilityTableRow key={row.pledge.id} row={row} settings={settings} busy={busyId === row.pledge.id} eventId={eventId} onEdit={onEdit} onUnlink={onUnlink} onRecalculate={recalculate} />)}</tbody></table></div>}
       {!filtered.length && <p className="p-10 text-center text-sm text-slate-500">{t("eligibility.noMatches")}</p>}
     </section>
