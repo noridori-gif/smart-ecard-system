@@ -169,17 +169,17 @@ export default function FinancialPaymentsTab({
           </p>
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[1080px] text-left text-[15px]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[15px]">
                 <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    {[
-                      t("eligibility.contributor"), t("payments.amount"), t("payments.receipt"), t("payments.date"), t("payments.method"), t("common.status"), t("common.actions"),
-                    ].map((label) => (
-                      <th key={label} className="px-5 py-4">
-                        {label}
-                      </th>
-                    ))}
+                    <th className="px-5 py-4">{t("eligibility.contributor")}</th>
+                    <th className="px-5 py-4">{t("payments.amount")}</th>
+                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.receipt")}</th>
+                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.date")}</th>
+                    <th className="hidden px-5 py-4 lg:table-cell">{t("payments.method")}</th>
+                    <th className="px-5 py-4">{t("common.status")}</th>
+                    <th className="px-5 py-4">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eee9e1]">
@@ -194,19 +194,24 @@ export default function FinancialPaymentsTab({
                             : "hover:bg-[#fcfbf8]"
                         }
                       >
-                        <td className="px-5 py-4 font-semibold">
-                          {pledge?.full_name ?? "Contributor"}
+                        <td className="min-w-0 px-5 py-4">
+                          <p className="break-words font-semibold">
+                            {pledge?.full_name ?? "Contributor"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-500 lg:hidden">
+                            {payment.receipt_number} · {payment.payment_date} · {payment.payment_method.replaceAll("_", " ")}
+                          </p>
                         </td>
                         <td className="whitespace-nowrap px-5 py-4 font-semibold tabular-nums">
                           {formatTzs(payment.amount)}
                         </td>
-                        <td className="whitespace-nowrap px-5 py-4 font-mono text-sm">
+                        <td className="hidden whitespace-nowrap px-5 py-4 font-mono text-sm lg:table-cell">
                           {payment.receipt_number}
                         </td>
-                        <td className="whitespace-nowrap px-5 py-4">
+                        <td className="hidden whitespace-nowrap px-5 py-4 lg:table-cell">
                           {payment.payment_date}
                         </td>
-                        <td className="px-5 py-4 capitalize">
+                        <td className="hidden px-5 py-4 capitalize lg:table-cell">
                           {payment.payment_method.replaceAll("_", " ")}
                         </td>
                         <td className="px-5 py-4">
@@ -258,73 +263,6 @@ export default function FinancialPaymentsTab({
                   })}
                 </tbody>
               </table>
-            </div>
-            <div className="grid gap-3 p-3 md:hidden">
-              {payments.map((payment) => {
-                const pledge = contributors.get(payment.pledge_id);
-                return (
-                  <article
-                    key={payment.id}
-                    className={`rounded-xl border p-4 ${
-                      payment.voided_at
-                        ? "border-red-200 bg-red-50/50"
-                        : "border-[#e7e1d7]"
-                    }`}
-                  >
-                    <div className="flex justify-between gap-3">
-                      <div>
-                        <h3 className="font-bold">
-                          {pledge?.full_name ?? "Contributor"}
-                        </h3>
-                        <p className="text-sm text-slate-500">
-                          {payment.receipt_number} · {payment.payment_date}
-                        </p>
-                      </div>
-                      <b className="tabular-nums">{formatTzs(payment.amount)}</b>
-                    </div>
-                    <p
-                      className={`mt-2 text-sm font-semibold ${
-                        payment.voided_at
-                          ? "text-red-700"
-                          : "text-emerald-700"
-                      }`}
-                    >
-                      {payment.voided_at ? "Voided" : "Valid"} ·{" "}
-                      {payment.payment_method.replaceAll("_", " ")}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <FinancialActionIconButton
-                        icon="receipt"
-                        label="View / PDF"
-                        tone="blue"
-                        onClick={() => void receiptAction(payment, "view")}
-                      />
-                      <FinancialActionIconButton
-                        icon="copy"
-                        label="Copy link"
-                        tone="slate"
-                        onClick={() => void receiptAction(payment, "copy")}
-                      />
-                      {pledge && !payment.voided_at && (
-                        <>
-                          <FinancialActionIconButton
-                            icon="edit"
-                            label="Edit"
-                            tone="amber"
-                            onClick={() => onEdit(pledge, payment)}
-                          />
-                          <FinancialActionIconButton
-                            icon="void"
-                            label="Void"
-                            tone="red"
-                            onClick={() => onVoid(pledge, payment)}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
             </div>
           </>
         )}
