@@ -162,7 +162,7 @@ export default function ChangePasswordPage() {
     <section className="mx-auto w-full max-w-3xl">
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Account Security
           </p>
 
@@ -293,12 +293,12 @@ export default function ChangePasswordPage() {
             }
           />
 
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-            <p className="text-sm font-semibold text-blue-900">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-semibold text-emerald-900">
               Password requirements
             </p>
 
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-blue-800">
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-emerald-800">
               <li>
                 Characters 8 au zaidi
               </li>
@@ -332,7 +332,7 @@ export default function ChangePasswordPage() {
               disabled={
                 isSaving
               }
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving
                 ? "Changing Password..."
@@ -406,7 +406,7 @@ function PasswordField({
               event.target.value
             )
           }
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
         />
 
         <button
@@ -417,7 +417,7 @@ function PasswordField({
           onClick={
             onToggleVisibility
           }
-          className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-60"
+          className="absolute inset-y-0 right-0 px-4 text-sm font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-60"
         >
           {showPassword
             ? "Hide"

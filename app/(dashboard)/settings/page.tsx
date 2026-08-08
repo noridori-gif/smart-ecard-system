@@ -326,7 +326,7 @@ export default function SettingsPage() {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-700" />
 
           <p className="mt-4 font-semibold text-slate-600">
             Inapakia settings...
@@ -384,9 +384,9 @@ export default function SettingsPage() {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-blue-800 to-indigo-800 px-6 py-8 text-white">
+        <div className="bg-gradient-to-r from-emerald-800 to-teal-800 px-6 py-8 text-white">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-blue-800 shadow-lg">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-emerald-800 shadow-lg">
               {initial}
             </div>
 
@@ -395,7 +395,7 @@ export default function SettingsPage() {
                 {profile?.fullName}
               </h2>
 
-              <p className="mt-1 text-blue-100">
+              <p className="mt-1 text-emerald-100">
                 {profile?.email}
               </p>
 
@@ -458,7 +458,7 @@ export default function SettingsPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
 
@@ -491,7 +491,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={savingProfile}
-            className="mt-5 rounded-xl bg-blue-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-5 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {savingProfile
               ? "Saving..."
@@ -542,7 +542,7 @@ export default function SettingsPage() {
                   )
                 }
                 placeholder="Minimum characters 8"
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
 
@@ -572,7 +572,7 @@ export default function SettingsPage() {
                   )
                 }
                 placeholder="Rudia password"
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
           </div>
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                   event.target.checked
                 )
               }
-              className="h-4 w-4 rounded border-slate-300 text-blue-700"
+              className="h-4 w-4 rounded border-slate-300 text-emerald-700"
             />
 
             Show passwords

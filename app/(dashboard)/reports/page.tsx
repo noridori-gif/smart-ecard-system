@@ -667,7 +667,7 @@ export default function ReportsPage() {
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <h1 className="text-4xl font-bold text-blue-700">
+          <h1 className="text-4xl font-bold text-emerald-700">
             Reports
           </h1>
 
@@ -693,7 +693,7 @@ export default function ReportsPage() {
               onChange={(event) =>
                 setSelectedEventId(event.target.value)
               }
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100"
             >
               {events.length === 0 && (
                 <option value="">
@@ -751,8 +751,8 @@ export default function ReportsPage() {
       )}
 
       {selectedEvent && (
-        <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+        <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
             Report For
           </p>
 
@@ -808,7 +808,7 @@ export default function ReportsPage() {
 
       {loadingReport ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
           <p className="mt-4 text-sm text-slate-500">
             Loading report...
@@ -911,7 +911,7 @@ export default function ReportsPage() {
                   }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "attendance"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-emerald-700 text-white"
                       : "bg-slate-100 text-slate-700"
                   }`}
                 >
@@ -926,7 +926,7 @@ export default function ReportsPage() {
                   }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "guests"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-emerald-700 text-white"
                       : "bg-slate-100 text-slate-700"
                   }`}
                 >
@@ -941,7 +941,7 @@ export default function ReportsPage() {
                   }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "invitations"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-emerald-700 text-white"
                       : "bg-slate-100 text-slate-700"
                   }`}
                 >
@@ -956,7 +956,7 @@ export default function ReportsPage() {
                   }}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold ${
                     activeTab === "wishes"
-                      ? "bg-blue-600 text-white"
+                      ? "bg-emerald-700 text-white"
                       : "bg-slate-100 text-slate-700"
                   }`}
                 >
@@ -974,7 +974,7 @@ export default function ReportsPage() {
                   setCurrentPage(1);
                 }}
                 placeholder="Tafuta jina, simu au Event Pass ID..."
-                className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
 
               {activeTab !== "invitations" &&
@@ -985,7 +985,7 @@ export default function ReportsPage() {
                     setStatusFilter(event.target.value as StatusFilter);
                     setCurrentPage(1);
                   }}
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                 >
                   <option value="all">
                     Status zote

@@ -303,7 +303,7 @@ export default function UsersPage() {
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Administration
           </p>
 
@@ -321,7 +321,7 @@ export default function UsersPage() {
           type="button"
           onClick={loadUsers}
           disabled={isLoading}
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading
             ? "Refreshing..."
@@ -347,7 +347,7 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-xl font-bold text-slate-900">
           Create New User
         </h2>
@@ -376,7 +376,7 @@ export default function UsersPage() {
                   full_name: event.target.value,
                 }))
               }
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
             />
           </div>
 
@@ -403,7 +403,7 @@ export default function UsersPage() {
                   password: event.target.value,
                 }))
               }
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
             />
             <p className="mt-2 text-xs text-slate-500">
               Password iwe na characters 8 au zaidi.
@@ -425,7 +425,7 @@ export default function UsersPage() {
                     | "scanner",
                 }))
               }
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
             >
               <option value="organizer">
                 Event Organizer
@@ -442,7 +442,7 @@ export default function UsersPage() {
             <button
               type="submit"
               disabled={isCreating}
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isCreating
                 ? "Creating User..."
@@ -498,7 +498,7 @@ export default function UsersPage() {
         {isLoading ? (
           <div className="flex min-h-72 items-center justify-center">
             <div className="text-center">
-              <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+              <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
               <p className="mt-4 text-sm font-medium text-slate-600">
                 Inapakia users...
@@ -555,7 +555,7 @@ export default function UsersPage() {
                     >
                       <td className="whitespace-nowrap px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-bold text-blue-700">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-800">
                             {getInitial(
                               profile.full_name
                             )}
@@ -571,7 +571,7 @@ export default function UsersPage() {
                             {profile.login_username&&<p className="mt-1 text-xs font-semibold text-slate-600">👤 {profile.login_username}</p>}
 
                             {isCurrentUser && (
-                              <p className="mt-0.5 text-xs font-semibold text-blue-600">
+                              <p className="mt-0.5 text-xs font-semibold text-emerald-700">
                                 Your account
                               </p>
                             )}
@@ -593,7 +593,7 @@ export default function UsersPage() {
                                 .value as UserRole
                             )
                           }
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                         >
                           {availableRoles.map(
                             (role) => (
