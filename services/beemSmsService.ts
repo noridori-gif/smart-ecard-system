@@ -197,6 +197,17 @@ export async function sendBeemSms({
     const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
     try {
+      // TEMPORARY DIAGNOSTIC LOGGING - remove after the SMS delivery investigation is resolved.
+      console.log("[beem-diagnostic] outgoing request", {
+        attempt,
+        url: "https://apisms.beem.africa/v1/send",
+        apiKeyFingerprint: `${config.apiKey?.slice(0, 4)}...${config.apiKey?.slice(-4)} (len ${config.apiKey?.length})`,
+        secretKeyFingerprint: `${config.secretKey?.slice(0, 4)}...${config.secretKey?.slice(-4)} (len ${config.secretKey?.length})`,
+        senderName: config.senderName,
+        destPhone: normalizedPhone,
+        payload,
+      });
+
       const response = await fetch(
         "https://apisms.beem.africa/v1/send",
         {
@@ -215,6 +226,14 @@ export async function sendBeemSms({
 
       const responseText = await response.text();
       const responseBody = parseResponseBody(responseText);
+
+      // TEMPORARY DIAGNOSTIC LOGGING - remove after the SMS delivery investigation is resolved.
+      console.log("[beem-diagnostic] raw response", {
+        attempt,
+        status: response.status,
+        ok: response.ok,
+        rawBody: responseText,
+      });
 
       if (response.ok) {
         const providerMessageId = responseBody?.data?.id || responseBody?.data?.messageId || responseBody?.data?.providerMessageId;
