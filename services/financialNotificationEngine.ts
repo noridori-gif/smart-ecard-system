@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService";
-import { buildCompactFinancialSmsMessage, buildPledgeMessage, formatTzs } from "@/services/pledgeMessageService";
+import { buildCompactFinancialSmsMessage, buildPledgeMessage, formatTzs, renderCustomSmsTemplate } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
 import { getFinancialWhatsAppTemplate } from "@/lib/financialWhatsAppConfig";
 import { automaticMessagingEnabled } from "@/services/automationMasterServer";
@@ -19,6 +19,7 @@ type SettingRow = {
   stop_after_completion: boolean; stop_after_event_date: boolean; allow_after_event_date: boolean;
   next_reminder_at: string | null; reminder_cooldown_hours: number; owner_summary_phone: string | null;
   daily_summary_enabled: boolean; daily_summary_channel: "sms" | "whatsapp" | "both"; daily_summary_time: string;
+  custom_reminder_message: string | null;
 };
 type PledgeRow = {
   id: number; event_id: number; full_name: string; normalized_phone: string | null;
@@ -93,7 +94,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
     reminder_frequency: "manual", custom_interval_days: null, stop_after_completion: true,
     stop_after_event_date: true, allow_after_event_date: false, next_reminder_at: null,
     reminder_cooldown_hours: 24, owner_summary_phone: null, daily_summary_enabled: false,
-    daily_summary_channel: "sms", daily_summary_time: "18:00",
+    daily_summary_channel: "sms", daily_summary_time: "18:00", custom_reminder_message: null,
   }) as SettingRow;
   let pledgeQuery = db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id", input.eventId).in("calculated_status", ["pledged", "partial"]).gt("balance", 0);
   if (input.pledgeId) pledgeQuery = pledgeQuery.eq("id", input.pledgeId);
@@ -123,10 +124,15 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
         channel, eligible: !reason, skippedReason: reason, lastReminderAt,
         cooldownUntil: lastReminderAt ? new Date(new Date(lastReminderAt).getTime() + Number(effectiveSetting.reminder_cooldown_hours) * 3_600_000).toISOString() : null,
         idempotencyKey: key,
-        message: buildPledgeMessage("pledge_reminder", language, {
-          guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
-          totalPaid: pledge.total_paid, balance: pledge.balance,
-        }),
+        message: channel === "sms" && effectiveSetting.custom_reminder_message?.trim()
+          ? renderCustomSmsTemplate(effectiveSetting.custom_reminder_message, {
+              guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
+              totalPaid: pledge.total_paid, balance: pledge.balance,
+            })
+          : buildPledgeMessage("pledge_reminder", language, {
+              guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
+              totalPaid: pledge.total_paid, balance: pledge.balance,
+            }),
       });
     }
   }
@@ -183,8 +189,12 @@ function safeThankYouFailure(log:{
 }
 
 export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:number;requestedChannels:FinancialChannel[];pledgeId?:number;language?:"sw"|"en"}):Promise<ThankYouPreview>{
-  const {data:event,error:eventError}=await db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single();
+  const [{data:event,error:eventError},{data:setting}]=await Promise.all([
+    db.from("events").select("id,title,event_date,language,archived_at").eq("id",input.eventId).single(),
+    db.from("event_finance_automation_settings").select("custom_thank_you_message").eq("event_id",input.eventId).maybeSingle(),
+  ]);
   if(eventError||!event)throw new Error("Event could not be loaded.");
+  const customThankYouMessage=(setting as {custom_thank_you_message:string|null}|null)?.custom_thank_you_message??null;
   let query=db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id",input.eventId).eq("calculated_status","completed").eq("balance",0);
   if(input.pledgeId)query=query.eq("id",input.pledgeId);
   const {data,error}=await query;if(error)throw new Error("Completed contributors could not be loaded.");
@@ -199,7 +209,11 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
       const successful=existing&&["sent","delivered","read"].includes(existing.delivery_status);
       let reason:ThankYouSkipReason|null=null;
       if(event.archived_at)reason="archived";else if(pledge.calculated_status==="cancelled")reason="cancelled";else if(Number(pledge.balance)!==0||Number(pledge.total_paid)<Number(pledge.pledged_amount))reason="not_completed";else if(!pledge.normalized_phone)reason="missing_phone";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="invalid_phone";else if(successful)reason="already_thanked";
-      rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message:buildPledgeMessage("pledge_thank_you",language,{guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance}),eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key,latestFailure:existing&&!successful?safeThankYouFailure(existing):null});
+      const thankYouValues={guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance};
+      const message=channel==="sms"&&customThankYouMessage?.trim()
+        ?renderCustomSmsTemplate(customThankYouMessage,thankYouValues)
+        :buildPledgeMessage("pledge_thank_you",language,thankYouValues);
+      rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message,eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key,latestFailure:existing&&!successful?safeThankYouFailure(existing):null});
     }
   }
   return {event:{...event,language} as EventRow,rows,completed:new Set(rows.filter(row=>row.skippedReason!=="not_completed"&&row.skippedReason!=="cancelled").map(row=>row.pledgeId)).size,eligible:rows.filter(row=>row.eligible).length,alreadyThanked:rows.filter(row=>row.skippedReason==="already_thanked").length,missingPhone:rows.filter(row=>row.skippedReason==="missing_phone").length,invalidPhone:rows.filter(row=>row.skippedReason==="invalid_phone").length,skipped:rows.filter(row=>!row.eligible).length,provider:{sms:financialProviderStatus("sms",language,"pledge_thank_you"),whatsapp:financialProviderStatus("whatsapp",language,"pledge_thank_you")}};

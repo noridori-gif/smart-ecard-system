@@ -22,6 +22,20 @@ export function formatTzs(value: string | number) {
   return `TZS ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
+export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance"] as const;
+export type CustomSmsTemplatePlaceholder = (typeof CUSTOM_SMS_TEMPLATE_PLACEHOLDERS)[number];
+
+export function renderCustomSmsTemplate(template: string, values: PledgeMessageValues) {
+  const tokens: Record<CustomSmsTemplatePlaceholder, string> = {
+    name: values.guestName.trim() || "Contributor",
+    event: values.eventTitle,
+    pledged: formatTzs(values.pledgedAmount),
+    paid: formatTzs(values.totalPaid),
+    balance: formatTzs(values.balance),
+  };
+  return template.replace(/\{(name|event|pledged|paid|balance)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
+}
+
 export function normalizeTanzanianPhone(phone: string) {
   let value = phone.trim().replace(/\D/g, "");
   if (!value) return "";

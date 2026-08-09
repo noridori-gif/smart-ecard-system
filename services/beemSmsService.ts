@@ -35,18 +35,17 @@ type BeemPayload = {
 };
 
 type BeemApiResponse = {
-  status?: string | number;
+  successful?: boolean;
+  request_id?: number | string;
+  code?: number;
   message?: string;
-  error?: {
-    message?: string;
-    code?: string;
-  };
-  data?: {
-    id?: string;
-    messageId?: string;
-    providerMessageId?: string;
-    status?: string;
-  };
+  valid?: number;
+  invalid?: number;
+  duplicates?: number;
+  error_code?: string;
+  status_code?: number;
+  retryable?: boolean;
+  context?: { field?: string };
 };
 
 function getBeemConfig() {
@@ -197,17 +196,6 @@ export async function sendBeemSms({
     const timeoutId = setTimeout(() => controller.abort(), 20_000);
 
     try {
-      // TEMPORARY DIAGNOSTIC LOGGING - remove after the SMS delivery investigation is resolved.
-      console.log("[beem-diagnostic] outgoing request", {
-        attempt,
-        url: "https://apisms.beem.africa/v1/send",
-        apiKeyFingerprint: `${config.apiKey?.slice(0, 4)}...${config.apiKey?.slice(-4)} (len ${config.apiKey?.length})`,
-        secretKeyFingerprint: `${config.secretKey?.slice(0, 4)}...${config.secretKey?.slice(-4)} (len ${config.secretKey?.length})`,
-        senderName: config.senderName,
-        destPhone: normalizedPhone,
-        payload,
-      });
-
       const response = await fetch(
         "https://apisms.beem.africa/v1/send",
         {
@@ -227,16 +215,8 @@ export async function sendBeemSms({
       const responseText = await response.text();
       const responseBody = parseResponseBody(responseText);
 
-      // TEMPORARY DIAGNOSTIC LOGGING - remove after the SMS delivery investigation is resolved.
-      console.log("[beem-diagnostic] raw response", {
-        attempt,
-        status: response.status,
-        ok: response.ok,
-        rawBody: responseText,
-      });
-
       if (response.ok) {
-        const providerMessageId = responseBody?.data?.id || responseBody?.data?.messageId || responseBody?.data?.providerMessageId;
+        const providerMessageId = responseBody?.request_id != null ? String(responseBody.request_id) : undefined;
 
         return {
           success: true,
@@ -246,7 +226,7 @@ export async function sendBeemSms({
         };
       }
 
-      const providerMessage = responseBody?.error?.message || responseBody?.message || "BEEM SMS request failed.";
+      const providerMessage = responseBody?.message || responseBody?.error_code || "BEEM SMS request failed.";
       const statusCode = response.status;
 
       if (statusCode === 429 || statusCode >= 500) {

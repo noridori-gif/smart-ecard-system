@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CompletedThankYouPanel from "./CompletedThankYouPanel";
 import MeetingInvitationsPanel from "./MeetingInvitationsPanel";
@@ -13,7 +13,10 @@ import {
   type AuthoritativeDailySummary, type ReminderPreview, type ReminderPreviewRow, type ThankYouPreview,
 } from "@/services/financialAutomationService";
 import type { FinancialPledge } from "@/services/financialSuiteService";
-import { formatTzs, normalizeTanzanianPhone } from "@/services/pledgeMessageService";
+import {
+  formatTzs, normalizeTanzanianPhone, analyzeSms, buildPledgeMessage, renderCustomSmsTemplate,
+  CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, type PledgeMessageValues,
+} from "@/services/pledgeMessageService";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { formatAppDate } from "@/lib/i18n/formatters";
 
@@ -69,6 +72,9 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const selectedChannels = useMemo<ReminderChannel[]>(() => deliveryMode === "both" ? ["whatsapp", "sms"] : [deliveryMode], [deliveryMode]);
   const dailyChannels = useMemo<ReminderChannel[]>(() => settings?.daily_summary_channel === "both" ? ["whatsapp", "sms"] : settings ? [settings.daily_summary_channel] : [], [settings]);
   const normalizedOwnerPhone=(()=>{try{return settings?.owner_summary_phone?normalizeTanzanianPhone(settings.owner_summary_phone):""}catch{return ""}})();
+  const sampleMessageValues = useMemo<PledgeMessageValues>(() => pledges[0]
+    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance }
+    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000" }, [pledges]);
 
   const load = useCallback(async () => {
     try {
@@ -206,6 +212,26 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
       {policy&&<fieldset><legend className="font-bold">Pledge reminder policy</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.is_enabled} onChange={event=>setPolicy({...policy,is_enabled:event.target.checked})}/>Enable reminder automation</label><SettingSelect label="Reminder mode" value={policy.reminder_mode} onChange={value=>setPolicy({...policy,reminder_mode:value as PledgeReminderPolicy["reminder_mode"],no_date_behavior:value!=="automatic"&&policy.no_date_behavior==="automatic_after_days"?"manual_only":policy.no_date_behavior})} options={[["manual","Manual"],["automatic","Automatic"],["hybrid","Hybrid"]]}/><SettingInput label="Before due date (days)" type="number" value={policy.before_due_days} onChange={value=>setPolicy({...policy,before_due_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.on_due_date_enabled} onChange={event=>setPolicy({...policy,on_due_date_enabled:event.target.checked})}/>On due date</label><SettingInput label="After due date (days)" type="number" value={policy.after_due_days} onChange={value=>setPolicy({...policy,after_due_days:Number(value)})}/><SettingInput label="Repeat interval (minimum 3 days)" type="number" value={policy.repeat_after_due_days??""} onChange={value=>setPolicy({...policy,repeat_after_due_days:value?Number(value):null})}/><SettingInput label="Maximum reminders" type="number" value={policy.maximum_automatic_reminders} onChange={value=>setPolicy({...policy,maximum_automatic_reminders:Number(value)})}/><SettingSelect label="No completion date" value={policy.no_date_behavior} onChange={value=>setPolicy({...policy,no_date_behavior:value as PledgeReminderPolicy["no_date_behavior"]})} options={[["manual_only","Manual reminder"],["recommend_after_days","Recommend after delay"],...(policy.reminder_mode==="automatic"?[["automatic_after_days","Send automatically after delay"]]:[])]}/><SettingInput label="No-date delay (days)" type="number" value={policy.no_date_delay_days} onChange={value=>setPolicy({...policy,no_date_delay_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.stop_after_event} onChange={event=>setPolicy({...policy,stop_after_event:event.target.checked})}/>Stop after event date</label></div><div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><p className="font-bold">Example timeline · Expected date: 30 September 2026</p><p className="mt-2">{30-policy.before_due_days} Sep — Before due reminder · 30 Sep — Due-date reminder · {policy.after_due_days<=31?`${String(policy.after_due_days).padStart(2,"0")} Oct`:"Configured interval"} — Overdue reminder</p></div>{(policy.repeat_after_due_days??99)<3&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Repeat intervals shorter than 3 days are not allowed.</p>}</fieldset>}
       <fieldset><legend className="font-bold">Reminder delivery</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.reminders_enabled} onChange={(event) => setSettings({...settings, reminders_enabled: event.target.checked})} />Reminders enabled</label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.allow_after_deadline} onChange={(event) => setSettings({...settings, allow_after_deadline: event.target.checked})} />Allow after deadline</label><SettingSelect label="Channel" value={settings.reminder_channel} onChange={(value) => setSettings({...settings, reminder_channel: value as AutomationSettings["reminder_channel"]})} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} /><SettingSelect label="Frequency" value={settings.reminder_frequency} onChange={(value) => setSettings({...settings, reminder_frequency: value as AutomationSettings["reminder_frequency"]})} options={[["manual","Manual only"],["weekly","Weekly"],["custom","Custom interval"]]} />{settings.reminder_frequency === "custom" && <SettingInput label="Interval days" type="number" value={settings.custom_interval_days ?? 7} onChange={(value) => setSettings({...settings, custom_interval_days: Number(value)})} />}<SettingInput label="Cooldown hours" type="number" value={settings.reminder_cooldown_hours} onChange={(value) => setSettings({...settings, reminder_cooldown_hours: Number(value)})} /></div></fieldset>
       <fieldset>
+        <legend className="font-bold">Message Templates</legend>
+        <p className="mt-1 text-sm text-slate-600">Customize the SMS wording sent for reminders and thank-you messages. This only affects SMS — WhatsApp uses separate Meta-approved templates that can&apos;t be edited here.</p>
+        <div className="mt-3 grid gap-4 lg:grid-cols-2">
+          <MessageTemplateEditor
+            label="Reminder SMS"
+            value={settings.custom_reminder_message ?? ""}
+            onChange={(value) => setSettings({...settings, custom_reminder_message: value || null})}
+            sampleValues={sampleMessageValues}
+            buildDefault={() => buildPledgeMessage("pledge_reminder", language === "en" ? "en" : "sw", sampleMessageValues)}
+          />
+          <MessageTemplateEditor
+            label="Thank You SMS"
+            value={settings.custom_thank_you_message ?? ""}
+            onChange={(value) => setSettings({...settings, custom_thank_you_message: value || null})}
+            sampleValues={sampleMessageValues}
+            buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
+          />
+        </div>
+      </fieldset>
+      <fieldset>
         <legend className="font-bold">Owner summary</legend>
         <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.daily_summary_enabled} onChange={(event) => {setSettings({...settings,daily_summary_enabled:event.target.checked,daily_summary_time:event.target.checked?"06:00":settings.daily_summary_time});setDailyPreview(null);setDailyConfirmed(false)}} />Daily summary enabled</label>
@@ -232,4 +258,25 @@ function SettingInput({ label, value, type = "text", onChange }: { label: string
 }
 function SettingSelect({ label, value, options, onChange }: { label: string; value: string; options: string[][]; onChange: (value: string) => void }) {
   return <label className="text-sm font-semibold">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal">{options.map(([option, text]) => <option key={option} value={option}>{text}</option>)}</select></label>;
+}
+function MessageTemplateEditor({ label, value, onChange, sampleValues, buildDefault }: {
+  label: string; value: string; onChange: (value: string) => void; sampleValues: PledgeMessageValues; buildDefault: () => string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  function insertPlaceholder(token: string) {
+    const el = textareaRef.current;
+    const start = el?.selectionStart ?? value.length, end = el?.selectionEnd ?? value.length;
+    const next = `${value.slice(0, start)}{${token}}${value.slice(end)}`;
+    onChange(next);
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(start + token.length + 2, start + token.length + 2); });
+  }
+  const previewText = value.trim() ? renderCustomSmsTemplate(value, sampleValues) : buildDefault();
+  const analysis = analyzeSms(previewText);
+  return <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 sm:p-4">
+    <div className="flex items-center justify-between gap-2"><p className="font-semibold">{label}</p>{value.trim() && <button type="button" onClick={() => onChange("")} className="text-xs font-bold text-emerald-700 underline">Reset to default</button>}</div>
+    <textarea ref={textareaRef} value={value} onChange={(event) => onChange(event.target.value)} placeholder="Leave blank to use the default message" rows={5} className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2 text-sm font-normal" />
+    <div className="mt-2 flex flex-wrap gap-1.5">{CUSTOM_SMS_TEMPLATE_PLACEHOLDERS.map((token) => <button key={token} type="button" onClick={() => insertPlaceholder(token)} className="rounded-full border border-stone-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-stone-100">{`{${token}}`}</button>)}</div>
+    <p className={`mt-2 text-xs font-semibold ${analysis.segments > 1 ? "text-amber-700" : "text-slate-500"}`}>{analysis.units}/{analysis.singleLimit} characters · {analysis.segments} SMS segment{analysis.segments === 1 ? "" : "s"} ({analysis.encoding})</p>
+    <div className="mt-3 rounded-lg border border-stone-200 bg-white p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Preview{!value.trim() && " (default)"}</p><p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{previewText}</p></div>
+  </div>;
 }

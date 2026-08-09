@@ -10,6 +10,7 @@ export type AutomationSettings = {
   next_reminder_at:string|null; reminder_cooldown_hours:number; owner_summary_phone:string|null;
   daily_summary_enabled:boolean; daily_summary_channel:"sms"|"whatsapp"|"both"; daily_summary_time:string;
   allow_after_deadline:boolean;
+  custom_reminder_message:string|null; custom_thank_you_message:string|null;
 };
 export type PledgeReminderPolicy={event_id:number;reminder_mode:"manual"|"automatic"|"hybrid";date_based_enabled:boolean;before_due_days:number;on_due_date_enabled:boolean;after_due_days:number;repeat_after_due_days:number|null;maximum_automatic_reminders:number;no_date_behavior:"manual_only"|"recommend_after_days"|"automatic_after_days";no_date_delay_days:number;stop_after_event:boolean;is_enabled:boolean};
 export type PledgeReminderSchedule={id:number;event_id:number;pledge_id:number;schedule_type:"before_due"|"due_date"|"after_due"|"repeat_after_due"|"no_date_follow_up"|"manual";scheduled_for:string;status:"scheduled"|"recommended"|"queued"|"processing"|"sent"|"delivered"|"failed"|"cancelled"|"skipped";sequence_number:number;delivery_id:number|null;cancel_reason:string|null;last_error:string|null;event_pledges:{full_name:string;normalized_phone:string|null;expected_completion_date:string|null;reminder_paused_at:string|null}|Array<{full_name:string;normalized_phone:string|null;expected_completion_date:string|null;reminder_paused_at:string|null}>|null};
@@ -31,7 +32,7 @@ export type ClosingReport={
   financial:{activePledges:number;totalContributors:number;totalPledged:number;totalCollected:number;outstanding:number;percentage:number;completed:number;partial:number;pending:number;cancelled:number;validTransactions:number;voidedTransactions:number;target:FinanceTargetReport};
   pledges:FinancialPledge[];payments:PledgePayment[];trend:TrendPoint[];paymentMethods:{method:string;amount:number}[];
 };
-const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false});
+const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false,custom_reminder_message:null,custom_thank_you_message:null});
 const policyDefaults=(eventId:number):PledgeReminderPolicy=>({event_id:eventId,reminder_mode:"manual",date_based_enabled:true,before_due_days:3,on_due_date_enabled:true,after_due_days:3,repeat_after_due_days:null,maximum_automatic_reminders:3,no_date_behavior:"manual_only",no_date_delay_days:14,stop_after_event:true,is_enabled:false});
 
 export async function getAutomationSettings(eventId:number){
