@@ -2,7 +2,6 @@
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 
 export type ReminderSection =
-  | "overview"
   | "send"
   | "meetings"
   | "schedule"
@@ -14,7 +13,17 @@ export const reminderSections: Array<{
   value: ReminderSection;
   label: string;
 }> = [
-  { value: "overview", label: "Overview" }, { value: "send", label: "Send Reminders" }, { value: "meetings", label: "Meeting Invitations" }, { value: "schedule", label: "Schedule" }, { value: "thank-you", label: "Thank You" }, { value: "activity", label: "Activity" }, { value: "settings", label: "Settings" },
+  { value: "send", label: "Send" }, { value: "meetings", label: "Meeting Invitations" }, { value: "schedule", label: "Schedule" }, { value: "thank-you", label: "Thank You" }, { value: "activity", label: "History" }, { value: "settings", label: "Settings" },
+];
+
+const primarySections: Array<{ value: ReminderSection; label: string; matches: ReminderSection[] }> = [
+  { value: "send", label: "Send", matches: ["send", "thank-you"] },
+  { value: "schedule", label: "Schedule", matches: ["schedule"] },
+  { value: "activity", label: "History", matches: ["activity"] },
+];
+const secondarySections: Array<{ value: ReminderSection; label: string }> = [
+  { value: "meetings", label: "Meeting Invitations" },
+  { value: "settings", label: "Settings" },
 ];
 
 export function isReminderSection(value: string | null): value is ReminderSection {
@@ -30,26 +39,45 @@ export default function ReminderSectionNavigation({
 }) {
   const { t } = useAppLanguage();
   return (
-    <div className="overflow-x-auto pb-1">
+    <div className="flex flex-wrap items-center justify-between gap-3 overflow-x-auto pb-1">
       <div
         role="tablist"
         aria-label={t("reminders.navigation")}
         className="flex min-w-max gap-1 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-sm"
       >
-        {reminderSections.map((section) => (
+        {primarySections.map((section) => {
+          const isActive = section.matches.includes(active);
+          return (
+            <button
+              key={section.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onChange(section.value)}
+              className={`min-h-11 rounded-xl px-4 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${
+                isActive
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"
+              }`}
+            >
+              {section.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex min-w-max flex-wrap gap-1">
+        {secondarySections.map((section) => (
           <button
             key={section.value}
             type="button"
-            role="tab"
-            aria-selected={active === section.value}
             onClick={() => onChange(section.value)}
-            className={`min-h-11 rounded-xl px-4 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${
+            className={`min-h-11 rounded-xl px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${
               active === section.value
-                ? "bg-slate-900 text-white"
-                : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"
+                ? "text-emerald-700 underline underline-offset-4"
+                : "text-slate-500 hover:text-slate-800"
             }`}
           >
-              {section.label}
+            {section.label}
           </button>
         ))}
       </div>

@@ -42,7 +42,7 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const requestedSection = searchParams.get("section");
-  const section: ReminderSection = isReminderSection(requestedSection) ? requestedSection : "overview";
+  const section: ReminderSection = isReminderSection(requestedSection) ? requestedSection : "send";
   const [settings, setSettings] = useState<AutomationSettings | null>(null);
   const [policy,setPolicy]=useState<PledgeReminderPolicy|null>(null);
   const [schedules,setSchedules]=useState<PledgeReminderSchedule[]>([]);
@@ -151,18 +151,12 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   async function buildPreview() { try { setBusy(true); setError(""); setPreview(await previewReminders(eventId, selectedChannels)); setBulkConfirmed(false); } catch (err) { setError(err instanceof Error ? err.message : "Reminder preview failed."); } finally { setBusy(false); } }
   async function send() { try { setBusy(true); const result = await sendReminders(eventId, selectedChannels); setNotice(`Reminder run: ${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped.`); setSelected(null); setConfirmed(false); setBulkConfirmed(false); await load(); await buildPreview(); } catch (err) { setError(err instanceof Error ? err.message : "Reminder run failed."); } finally { setBusy(false); } }
 
-  const summary = [
-    ["Reminder status", settings?.reminders_enabled ? "Enabled" : "Disabled"],
-    ["Default channel", settings?.reminder_channel ?? "—"],
+  const sendStats = [
     ["Eligible reminders", eligibleCount],
     ["Eligible thank-you", thankYou?.eligible ?? "—"],
     [t("reminders.sent"), history.filter((item) => item.delivery_status === "sent").length],
-    ["Read", history.filter((item) => item.delivery_status === "read").length],
     [t("reminders.failed"), history.filter((item) => item.delivery_status === "failed").length],
     [t("reminders.ready"), settings?.next_reminder_at ? formatAppDate(settings.next_reminder_at, language, { dateStyle: "medium", timeStyle: "short" }) : t("common.notSet")],
-    ["Recommended",schedules.filter(item=>item.status==="recommended").length],
-    ["Scheduled",schedules.filter(item=>item.status==="scheduled").length],
-    ["No date",pledges.filter(item=>!item.expected_completion_date&&item.calculated_status!=="cancelled").length],
   ];
 
   return <div className="space-y-5">
@@ -172,19 +166,12 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
     {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
     {warning&&<p role="status" className="rounded-xl bg-amber-50 p-3 text-amber-900">{warning}</p>}
 
-    {section === "overview" && <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-      <div><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{t("financial.reminders")}</p><h2 className="mt-1 text-2xl font-bold">{t("reminders.overview")}</h2></div>
-      <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
-        {summary.map(([label, value]) => <div key={label} className="min-h-24 rounded-xl border border-stone-200 bg-stone-50 p-3"><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 break-words text-lg font-bold capitalize tabular-nums text-slate-950">{value}</p></div>)}
-      </div>
-      <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigate("send")} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold text-white">{t("reminders.send")}</button>
-        {[["Send Thank You", "thank-you"], ["View Activity", "activity"], ["Open Settings", "settings"]].map(([label, value]) => <button key={value} type="button" onClick={() => navigate(value as ReminderSection)} className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 font-semibold text-slate-700 hover:bg-stone-50">{label}</button>)}
-      </div>
-    </section>}
-
     {section === "send" && <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
-      <div><h2 className="text-xl font-bold">Send Pledge Reminders</h2><p className="mt-1 max-w-3xl text-sm text-slate-600">Only contributors who have not started paying or still have an outstanding balance are included. Completed contributors are available under Thank You.</p></div><div className="mt-4"><p className="text-sm font-bold">Audience</p><div className="mt-2 inline-flex rounded-xl bg-stone-100 p-1"><button type="button" aria-pressed className="min-h-11 rounded-lg bg-white px-4 text-sm font-semibold shadow-sm">Outstanding Reminders</button><button type="button" onClick={()=>navigate("thank-you")} className="min-h-11 rounded-lg px-4 text-sm font-semibold text-slate-600">Completed — Thank You</button></div></div><div aria-label="Reminder channel" className="mt-4 inline-flex w-fit rounded-xl bg-stone-100 p-1">{(["whatsapp", "sms", "both"] as ReminderDeliveryMode[]).map((value) => <button key={value} type="button" aria-pressed={deliveryMode === value} onClick={() => { setDeliveryMode(value); setPreview(null); setBulkConfirmed(false); setPage(1); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${deliveryMode === value ? "bg-white shadow-sm" : "text-slate-600"}`}>{value === "both" ? "Both" : value === "whatsapp" ? "WhatsApp" : "SMS"}</button>)}</div>
+      <div><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{t("financial.reminders")}</p><h2 className="mt-1 text-xl font-bold">Send Pledge Reminders</h2><p className="mt-1 max-w-3xl text-sm text-slate-600">Only contributors who have not started paying or still have an outstanding balance are included. Completed contributors are available under Thank You.</p></div>
+      <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+        {sendStats.map(([label, value]) => <div key={label} className="min-h-20 rounded-xl border border-stone-200 bg-stone-50 p-3"><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 break-words text-lg font-bold capitalize tabular-nums text-slate-950">{value}</p></div>)}
+      </div>
+      <div className="mt-4"><p className="text-sm font-bold">Audience</p><div className="mt-2 inline-flex rounded-xl bg-stone-100 p-1"><button type="button" aria-pressed className="min-h-11 rounded-lg bg-white px-4 text-sm font-semibold shadow-sm">Outstanding Reminders</button><button type="button" onClick={()=>navigate("thank-you")} className="min-h-11 rounded-lg px-4 text-sm font-semibold text-slate-600">Completed — Thank You</button></div></div><div aria-label="Reminder channel" className="mt-4 inline-flex w-fit rounded-xl bg-stone-100 p-1">{(["whatsapp", "sms", "both"] as ReminderDeliveryMode[]).map((value) => <button key={value} type="button" aria-pressed={deliveryMode === value} onClick={() => { setDeliveryMode(value); setPreview(null); setBulkConfirmed(false); setPage(1); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${deliveryMode === value ? "bg-white shadow-sm" : "text-slate-600"}`}>{value === "both" ? "Both" : value === "whatsapp" ? "WhatsApp" : "SMS"}</button>)}</div>
       <div className="mt-5 flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void buildPreview()} className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold">Load Recipients</button>{preview && <><label className="flex min-h-11 items-center gap-2 rounded-xl border border-stone-300 px-3 text-sm"><input type="checkbox" checked={bulkConfirmed} onChange={(event) => setBulkConfirmed(event.target.checked)} />Confirm sending to {recipientCount} contributors ({messageCount} messages{deliveryMode === "both" ? ": WhatsApp + SMS" : ""})</label><button type="button" disabled={busy || !bulkConfirmed || recipientCount === 0 || !providerReady} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold text-white disabled:opacity-40">Send Reminders</button></>}</div>
       {preview && <><div className="mt-4 grid gap-2 sm:grid-cols-2">{selectedChannels.map((value) => <p key={value} className={`rounded-xl p-3 text-sm ${preview.provider[value].configured ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}><b>{value === "whatsapp" ? "WhatsApp" : "SMS"}:</b> {preview.provider[value].message}</p>)}</div><div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-5">{[["Total Outstanding",new Set(outstandingPreviewRows.map(row=>row.pledgeId)).size],["Ready Contributors",recipientCount],["Eligible Messages",messageCount],["Already Sent/Cooldown",alreadySentOrCooldownCount],["Missing/Invalid Phone",new Set(outstandingPreviewRows.filter(row=>["missing_phone","invalid_phone"].includes(row.skippedReason??"")).map(row=>row.pledgeId)).size]].map(([label, value]) => <article key={label} className="rounded-xl border bg-stone-50 p-3"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-xl font-bold">{value}</p></article>)}</div>
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="text-sm font-semibold">Search contributors<input aria-label="Search reminder contributors by name or phone" value={query} onChange={(event) => {setQuery(event.target.value);setPage(1)}} placeholder="Search name or phone" className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal" /></label>
