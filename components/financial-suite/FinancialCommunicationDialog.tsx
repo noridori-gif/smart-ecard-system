@@ -1,19 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import type { FinancialPledge } from "@/services/financialSuiteService";
-import { previewPledgeThankYous, previewReminders, sendPledgeThankYous, sendReminders, type ReminderChannel } from "@/services/financialAutomationService";
+import type { CommunicationAdapter, CommunicationKind, ReminderChannel } from "@/services/financialAutomationService";
 import { formatTzs } from "@/services/pledgeMessageService";
 
-type MessageKind = "reminder" | "thank-you";
 type ChannelChoice = ReminderChannel | "both";
 
-export default function FinancialCommunicationDialog({ eventId, pledge, kind, initialChannel = "sms", onClose, onSent }: {
-  eventId: number; pledge: FinancialPledge; kind: MessageKind; initialChannel?: ChannelChoice;
+export default function FinancialCommunicationDialog({
+  pledge, kind, initialChannel = "sms", language, adapter,
+  allowBothChannel = true, requireExplicitConfirmation = false,
+  onClose, onSent,
+}: {
+  pledge: FinancialPledge; kind: CommunicationKind; initialChannel?: ChannelChoice; language: "sw" | "en";
+  adapter: CommunicationAdapter; allowBothChannel?: boolean; requireExplicitConfirmation?: boolean;
   onClose: () => void; onSent: () => Promise<void> | void;
 }) {
-  const { language } = useAppLanguage();
   const [channel, setChannel] = useState<ChannelChoice>(initialChannel);
   const [message, setMessage] = useState("");
   const [providerReady, setProviderReady] = useState(false);
@@ -21,6 +23,7 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
   const [providerMessage, setProviderMessage] = useState("");
   const [previewed, setPreviewed] = useState(false);
   const [approvedPreviewKey, setApprovedPreviewKey] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [sendError, setSendError] = useState("");
@@ -31,44 +34,33 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
   const preview = useCallback(async () => {
     try {
       setBusy(true); setPreviewError(""); setSendError(""); setApprovedPreviewKey("");
-      let nextMessage = "", nextProviderMessage = "", nextFailure = "", nextReady = false, nextConfigured = false;
-      if (kind === "reminder") {
-        const result = await previewReminders(eventId, channels, pledge.id);
-        const rows = result.rows.filter((row) => row.pledgeId === pledge.id);
-        nextMessage = rows[0]?.message ?? "No eligible reminder preview is available.";
-        nextConfigured = channels.every((value) => result.provider[value].configured);
-        nextReady = rows.some((row) => row.eligible) && nextConfigured;
-        if (!rows.some((row) => row.eligible)) nextFailure = previewFailure(rows[0]?.skippedReason ?? "unavailable", language);
-        else if (!nextConfigured) nextFailure = previewFailure("provider_unavailable", language);
-        nextProviderMessage = channels.map((value) => `${value === "sms" ? "SMS" : "WhatsApp"}: ${result.provider[value].message}`).join(" · ");
-      } else {
-        const result = await previewPledgeThankYous(eventId, channels, pledge.id);
-        const row = result.rows.find((item) => item.pledgeId === pledge.id);
-        nextMessage = row?.message ?? "No eligible thank-you preview is available.";
-        nextConfigured = channels.every((value) => result.provider[value].configured);
-        nextReady = Boolean(row?.eligible) && nextConfigured;
-        if (!row?.eligible) nextFailure = previewFailure(row?.skippedReason ?? "unavailable", language);
-        else if (!nextConfigured) nextFailure = previewFailure("provider_unavailable", language);
-        nextProviderMessage = channels.map((value) => `${value === "sms" ? "SMS" : "WhatsApp"}: ${result.provider[value].message}`).join(" · ");
-      }
+      const result = await adapter.preview(kind, channels, pledge.id);
+      const rows = result.rows.filter((row) => row.pledgeId === pledge.id);
+      const nextMessage = rows[0]?.message ?? (kind === "reminder" ? "No eligible reminder preview is available." : "No eligible thank-you preview is available.");
+      const nextConfigured = channels.every((value) => result.provider[value].configured);
+      const nextReady = rows.some((row) => row.eligible) && nextConfigured;
+      const nextFailure = !rows.some((row) => row.eligible)
+        ? previewFailure(rows[0]?.skippedReason ?? "unavailable", language)
+        : !nextConfigured ? previewFailure("provider_unavailable", language) : "";
+      const nextProviderMessage = channels.map((value) => `${value === "sms" ? "SMS" : "WhatsApp"}: ${result.provider[value].message}`).join(" · ");
       setMessage(nextMessage); setProviderConfigured(nextConfigured); setProviderReady(nextReady); setProviderMessage(nextProviderMessage); setPreviewed(true); setPreviewError(nextFailure);
       if (nextReady) setApprovedPreviewKey(JSON.stringify({ channel, recipient: pledge.id, phone: pledge.normalized_phone ?? "", language, template: kind, message: nextMessage }));
     } catch (err) {
       setPreviewed(false); setProviderReady(false); setProviderConfigured(false);
       setPreviewError(err instanceof Error ? err.message : language === "sw" ? "Hakiki ya ujumbe imeshindikana." : "Message preview failed.");
     } finally { setBusy(false); }
-  }, [channel, channels, eventId, kind, language, pledge.id, pledge.normalized_phone]);
+  }, [adapter, channel, channels, kind, language, pledge.id, pledge.normalized_phone]);
 
   useEffect(() => { firstControl.current?.focus(); }, []);
   useEffect(() => { const close = (event: KeyboardEvent) => event.key === "Escape" && onClose(); window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [onClose]);
 
   function resetPreview(nextChannel: ChannelChoice) {
-    setChannel(nextChannel); setPreviewed(false); setProviderReady(false); setProviderConfigured(false); setApprovedPreviewKey(""); setPreviewError(""); setSendError("");
+    setChannel(nextChannel); setPreviewed(false); setProviderReady(false); setProviderConfigured(false); setApprovedPreviewKey(""); setPreviewError(""); setSendError(""); setConfirmed(false);
   }
   async function send() {
     try {
       setBusy(true); setSendError("");
-      const result = kind === "reminder" ? await sendReminders(eventId, channels, pledge.id) : await sendPledgeThankYous(eventId, channels, pledge.id);
+      const result = await adapter.send(kind, channels, pledge.id);
       if (result.failed || !result.sent) throw new Error(result.errors[0] ?? "The provider did not accept the message.");
       await onSent(); onClose();
     } catch (err) { setSendError(err instanceof Error ? err.message : language === "sw" ? "Utumaji wa ujumbe umeshindikana." : "Message send failed."); }
@@ -77,13 +69,15 @@ export default function FinancialCommunicationDialog({ eventId, pledge, kind, in
 
   const title = kind === "reminder" ? "Send Reminder" : "Send Thank You";
   const previewRequired = approvedPreviewKey !== previewKey;
+  const confirmationRequired = requireExplicitConfirmation && !confirmed;
   return <section aria-labelledby="communication-dialog-title" className="space-y-5">
     <div className="flex items-start justify-between gap-4"><div><h2 id="communication-dialog-title" className="text-xl font-bold">{title}</h2><p className="mt-1 text-sm text-slate-600">{kind === "reminder" ? "Send a payment reminder to this contributor?" : "Thank this contributor for completing their contribution."}</p></div><button type="button" onClick={onClose} aria-label="Close communication dialog" className="min-h-11 rounded-xl px-3 font-semibold hover:bg-stone-100">Close</button></div>
     <dl className="grid grid-cols-2 gap-3 rounded-xl bg-stone-50 p-4 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="font-bold">{pledge.full_name}</dd></div><div><dt className="text-slate-500">Phone</dt><dd className="font-bold">{pledge.normalized_phone || pledge.phone || "Missing"}</dd></div><div className="col-span-2"><dt className="text-slate-500">{kind === "reminder" ? "Outstanding Balance" : "Completed Contribution"}</dt><dd className="font-bold">{formatTzs(kind === "reminder" ? pledge.balance : pledge.total_paid)}</dd></div></dl>
-    <label className="block text-sm font-semibold">Preferred Channel<select ref={firstControl} value={channel} onChange={(event) => resetPreview(event.target.value as ChannelChoice)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="both">Both</option></select></label>
+    <label className="block text-sm font-semibold">Preferred Channel<select ref={firstControl} value={channel} onChange={(event) => resetPreview(event.target.value as ChannelChoice)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option>{allowBothChannel && <option value="both">Both</option>}</select></label>
     {previewed && <><pre className="whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50 p-4 font-sans text-sm leading-6">{message}</pre><p className={`rounded-xl p-3 text-sm ${providerConfigured ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>{providerMessage}</p></>}
+    {requireExplicitConfirmation && previewed && providerReady && <label className="flex min-h-11 items-start gap-3 rounded-xl border border-stone-200 p-3 text-sm"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-0.5 h-5 w-5" />{language === "sw" ? "Nathibitisha kutuma ujumbe huu." : "I confirm sending this message."}</label>}
     {sendError && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{sendError}</p>}
-    <div><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className="min-h-11 rounded-xl border px-4 font-semibold">Cancel</button><button type="button" disabled={busy} onClick={() => void preview()} className="min-h-11 rounded-xl border border-emerald-600 px-4 font-bold text-emerald-700">{busy ? "Loading…" : "Preview"}</button><button type="button" disabled={busy || !providerReady || previewRequired} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-600 px-5 font-bold text-white disabled:opacity-40">Send</button></div>{previewError && <p role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">{previewError}</p>}{!busy && previewRequired && !previewError && <p className="mt-2 text-sm text-slate-600">{language === "sw" ? "Bonyeza Preview kwanza kuthibitisha ujumbe kabla ya kutuma." : "Preview the message before sending."}</p>}</div>
+    <div><div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={onClose} className="min-h-11 rounded-xl border px-4 font-semibold">Cancel</button><button type="button" disabled={busy} onClick={() => void preview()} className="min-h-11 rounded-xl border border-emerald-600 px-4 font-bold text-emerald-700">{busy ? "Loading…" : "Preview"}</button><button type="button" disabled={busy || !providerReady || previewRequired || confirmationRequired} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-600 px-5 font-bold text-white disabled:opacity-40">Send</button></div>{previewError && <p role="alert" className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">{previewError}</p>}{!busy && previewRequired && !previewError && <p className="mt-2 text-sm text-slate-600">{language === "sw" ? "Bonyeza Preview kwanza kuthibitisha ujumbe kabla ya kutuma." : "Preview the message before sending."}</p>}</div>
   </section>;
 }
 

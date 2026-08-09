@@ -105,6 +105,21 @@ export function previewReminders(eventId:number,channels:ReminderChannel[],pledg
 export function sendReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
 export function previewPledgeThankYous(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"thank_you_preview",channels,pledgeId}) as Promise<ThankYouPreview>;}
 export function sendPledgeThankYous(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"thank_you_send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
+
+export type CommunicationKind="reminder"|"thank-you";
+export type CommunicationPreviewRow={pledgeId:number;message:string;eligible:boolean;skippedReason:string|null};
+export type CommunicationPreviewResult={rows:CommunicationPreviewRow[];provider:Record<ReminderChannel,{configured:boolean;message:string}>};
+export type CommunicationSendResult={queued:number;sent:number;failed:number;skipped:number;errors:string[]};
+export type CommunicationAdapter={
+  preview:(kind:CommunicationKind,channels:ReminderChannel[],pledgeId:number)=>Promise<CommunicationPreviewResult>;
+  send:(kind:CommunicationKind,channels:ReminderChannel[],pledgeId:number)=>Promise<CommunicationSendResult>;
+};
+export function buildAdminCommunicationAdapter(eventId:number):CommunicationAdapter{
+  return {
+    preview:(kind,channels,pledgeId)=>kind==="reminder"?previewReminders(eventId,channels,pledgeId):previewPledgeThankYous(eventId,channels,pledgeId),
+    send:(kind,channels,pledgeId)=>kind==="reminder"?sendReminders(eventId,channels,pledgeId):sendPledgeThankYous(eventId,channels,pledgeId),
+  };
+}
 export async function getReminderHistory(eventId:number){const result=await notificationRequest(eventId,{action:"history"});return (result.reminders??[]) as ReminderHistoryRow[];}
 export function previewDailySummary(eventId:number,date:string){return notificationRequest(eventId,{action:"daily_preview",date}) as Promise<AuthoritativeDailySummary>;}
 export function sendDailySummaryNow(eventId:number,date:string,channels:ReminderChannel[]){return notificationRequest(eventId,{action:"daily_send",date,channels,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}

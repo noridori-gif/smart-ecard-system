@@ -27,6 +27,7 @@ import {
 import { CommitteeFinancialCard } from "./committee/CommitteeFinancialCard";
 import { CommitteeOverview } from "./committee/CommitteeOverview";
 import { committeeTheme } from "./committee/theme";
+import FinancialCommunicationDialog from "./FinancialCommunicationDialog";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import type {
   FinanceSummary,
@@ -34,10 +35,8 @@ import type {
   PledgeInput,
   PledgePayment,
 } from "@/services/financialSuiteService";
-import {
-  buildPledgeMessage,
-  formatTzs,
-} from "@/services/pledgeMessageService";
+import { formatTzs } from "@/services/pledgeMessageService";
+import type { CommunicationAdapter, CommunicationKind } from "@/services/financialAutomationService";
 
 type Tab = "overview" | "contributors" | "payments" | "messages" | "reports";
 type Dialog = "create" | "edit" | "payment" | "history" | null;
@@ -78,12 +77,6 @@ type MessageStatus = {
   channel: "sms" | "whatsapp";
   delivery_status: string;
   created_at: string;
-};
-
-type ProviderStatus = { configured: boolean; message: string };
-type MessageProviders = {
-  reminder: Record<"sms" | "whatsapp", ProviderStatus>;
-  thank_you: Record<"sms" | "whatsapp", ProviderStatus>;
 };
 
 const copy = {
@@ -248,6 +241,21 @@ async function request(token: string, body: Record<string, unknown>) {
   return payload;
 }
 
+function buildOrganiserCommunicationAdapter(token: string, language: "sw" | "en"): CommunicationAdapter {
+  return {
+    preview: (kind: CommunicationKind, channels, pledgeId) =>
+      request(token, {
+        action: kind === "thank-you" ? "thank_you_preview" : "reminder_preview",
+        pledgeId, channel: channels[0], language,
+      }),
+    send: (kind: CommunicationKind, channels, pledgeId) =>
+      request(token, {
+        action: kind === "thank-you" ? "thank_you_send" : "send_reminder",
+        pledgeId, channel: channels[0], language, confirmed: true,
+      }),
+  };
+}
+
 function derivedStatus(item: FinancialPledge) {
   if (
     Number(item.balance) === 0 &&
@@ -266,35 +274,6 @@ function statusLabel(item: FinancialPledge, t: Translation) {
     : status === "partial"
       ? t.partial
       : t.pending;
-}
-
-function providerMessage(
-  language: "sw" | "en",
-  kind: "reminder" | "thank_you",
-  channel: "sms" | "whatsapp",
-  configured: boolean
-) {
-  if (channel === "sms") {
-    if (configured)
-      return language === "sw"
-        ? "Huduma ya SMS imewekwa."
-        : "SMS provider configured.";
-    return language === "sw"
-      ? "Mipangilio ya huduma ya SMS haijakamilika."
-      : "SMS provider configuration is incomplete.";
-  }
-  if (configured)
-    return language === "sw"
-      ? "Kiolezo cha WhatsApp kimewekwa."
-      : "Approved WhatsApp template configured.";
-  if (language === "sw") {
-    return kind === "thank_you"
-      ? "Kiolezo cha WhatsApp cha shukrani kwa Kiswahili hakijawekwa."
-      : "Kiolezo cha WhatsApp cha kikumbusho kwa Kiswahili hakijawekwa.";
-  }
-  return kind === "thank_you"
-    ? "The approved English WhatsApp thank-you template is not configured."
-    : "The approved English WhatsApp reminder template is not configured.";
 }
 
 export default function CommitteePortalTabbed({
@@ -317,7 +296,6 @@ export default function CommitteePortalTabbed({
   const [messageStatus, setMessageStatus] =
     useState<FinancialStatus>("all");
   const [delivery, setDelivery] = useState<DeliveryStatus>("all");
-  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
   const [expandedContributor, setExpandedContributor] = useState<number | null>(
     null
   );
@@ -335,7 +313,6 @@ export default function CommitteePortalTabbed({
   } | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [messageStatuses, setMessageStatuses] = useState<MessageStatus[]>([]);
-  const [providers, setProviders] = useState<MessageProviders | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
   const pathname = usePathname();
@@ -408,28 +385,28 @@ export default function CommitteePortalTabbed({
         .includes(paymentQuery.toLowerCase())
   );
 
-  function latest(item: FinancialPledge) {
+  function latestByChannel(item: FinancialPledge) {
     const type =
       derivedStatus(item) === "completed"
         ? "pledge_thank_you"
         : "pledge_reminder";
-    return (
+    const forChannel = (targetChannel: "sms" | "whatsapp") =>
       messageStatuses.find(
         (row) =>
           row.pledge_id === item.id &&
           row.reminder_type === type &&
-          row.channel === channel
-      )?.delivery_status ?? "not_sent"
-    );
+          row.channel === targetChannel
+      )?.delivery_status ?? "not_sent";
+    return { whatsapp: forChannel("whatsapp"), sms: forChannel("sms") };
   }
 
   const messages = activePledges.filter((item) => {
     const financial = derivedStatus(item);
-    const state = latest(item);
+    const states = latestByChannel(item);
+    const matchesState = (state: string) =>
+      state === delivery || (delivery === "sent" && ["delivered", "read"].includes(state));
     const deliveryMatches =
-      delivery === "all" ||
-      state === delivery ||
-      (delivery === "sent" && ["delivered", "read"].includes(state));
+      delivery === "all" || matchesState(states.whatsapp) || matchesState(states.sms);
     return (
       (messageStatus === "all" || financial === messageStatus) &&
       deliveryMatches &&
@@ -458,7 +435,6 @@ export default function CommitteePortalTabbed({
         void request(token, { action: "message_statuses", language })
           .then((result) => {
             setMessageStatuses(result.statuses ?? []);
-            setProviders(result.provider ?? null);
           })
           .catch((reason) => setError(String(reason))),
       0
@@ -756,25 +732,13 @@ export default function CommitteePortalTabbed({
                 { value: "completed", label: t.completed },
               ]}
             />
-            <CommitteeFilterChips
-              label={t.channel}
-              value={channel}
-              onChange={setChannel}
-              options={[
-                { value: "whatsapp", label: "WhatsApp" },
-                { value: "sms", label: "SMS" },
-              ]}
-            />
             <div className="grid gap-3 lg:grid-cols-2">
               {messages.map((item) => {
                 const kind = derivedStatus(item);
-                const messageKind =
-                  kind === "completed" ? "thank_you" : "reminder";
                 const permitted =
                   kind === "completed"
                     ? data.permissions.send_thank_you
                     : data.permissions.send_reminders;
-                const provider = providers?.[messageKind][channel];
                 const validPhone = /^255[67]\d{8}$/.test(
                   item.normalized_phone ?? ""
                 );
@@ -783,19 +747,8 @@ export default function CommitteePortalTabbed({
                     ? Number(item.balance) === 0 &&
                       Number(item.total_paid) >= Number(item.pledged_amount)
                     : Number(item.balance) > 0;
-                const reason = !validPhone
-                  ? t.invalidPhone
-                  : !eligible
-                    ? t.notEligible
-                    : provider
-                      ? providerMessage(
-                          language,
-                          messageKind,
-                          channel,
-                          provider.configured
-                        )
-                      : t.providerChecking;
-                const deliveryState = latest(item);
+                const reason = !validPhone ? t.invalidPhone : !eligible ? t.notEligible : "";
+                const states = latestByChannel(item);
                 return (
                   <CommitteeFinancialCard
                     key={item.id}
@@ -819,7 +772,7 @@ export default function CommitteePortalTabbed({
                       <div className="flex justify-between gap-3">
                         <dt className="text-slate-500">{t.deliveryStatus}</dt>
                         <dd className="font-semibold">
-                          {deliveryLabel(deliveryState, t)}
+                          WhatsApp: {deliveryLabel(states.whatsapp, t)} · SMS: {deliveryLabel(states.sms, t)}
                         </dd>
                       </div>
                       <div className="flex justify-between gap-3">
@@ -921,18 +874,19 @@ export default function CommitteePortalTabbed({
       )}
 
       {selected && messageType && (
-        <MessageDialog
-          token={token}
-          pledge={selected}
-          event={{ ...data.event, language }}
-          type={messageType}
-          channel={channel}
-          t={t}
-          onClose={() => {
-            setSelected(null);
-            setMessageType(null);
-          }}
-        />
+        <Modal onClose={() => { setSelected(null); setMessageType(null); }} closeLabel={t.close}>
+          <FinancialCommunicationDialog
+            pledge={selected}
+            kind={messageType === "thank_you" ? "thank-you" : "reminder"}
+            initialChannel="whatsapp"
+            language={language}
+            adapter={buildOrganiserCommunicationAdapter(token, language)}
+            allowBothChannel={false}
+            requireExplicitConfirmation
+            onClose={() => { setSelected(null); setMessageType(null); }}
+            onSent={refresh}
+          />
+        </Modal>
       )}
 
       {receipt && (
@@ -1011,176 +965,6 @@ function Modal({
         {children}
       </div>
     </div>
-  );
-}
-
-function MessageDialog({
-  token,
-  pledge,
-  event,
-  type,
-  channel,
-  t,
-  onClose,
-}: {
-  token: string;
-  pledge: FinancialPledge;
-  event: PortalData["event"];
-  type: "reminder" | "thank_you";
-  channel: "sms" | "whatsapp";
-  t: Translation;
-  onClose: () => void;
-}) {
-  const [preview, setPreview] = useState<{
-    rows: Array<{
-      message: string;
-      eligible: boolean;
-      skippedReason: string | null;
-    }>;
-    provider: Record<"sms" | "whatsapp", ProviderStatus>;
-  } | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const row = preview?.rows[0];
-  const fallback = buildPledgeMessage(
-    type === "thank_you" ? "pledge_thank_you" : "pledge_reminder",
-    event.language,
-    {
-      guestName: pledge.full_name,
-      eventTitle: event.title,
-      pledgedAmount: pledge.pledged_amount,
-      totalPaid: pledge.total_paid,
-      balance: pledge.balance,
-    }
-  );
-
-  async function load() {
-    try {
-      setBusy(true);
-      setError("");
-      setPreview(
-        await request(token, {
-          action:
-            type === "thank_you" ? "thank_you_preview" : "reminder_preview",
-          pledgeId: pledge.id,
-          channel,
-          language: event.language,
-        })
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Preview could not load."
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    const timer = setTimeout(() => void load(), 0);
-    return () => clearTimeout(timer);
-    // This dialog is recreated when its pledge, type, channel, or language changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pledge.id, type, channel, event.language]);
-
-  return (
-    <Modal onClose={onClose} closeLabel={t.close}>
-      <h2 className="text-xl font-bold">
-        {type === "thank_you" ? t.thankPreview : t.preview}
-      </h2>
-      <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-sm">
-        <div>
-          <dt className="text-slate-500">{t.selectedLanguage}</dt>
-          <dd className="font-semibold">{event.language.toUpperCase()}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">{t.channel}</dt>
-          <dd className="font-semibold">
-            {channel === "whatsapp" ? "WhatsApp" : "SMS"}
-          </dd>
-        </div>
-      </dl>
-      <div className="mt-3 whitespace-pre-wrap rounded-xl border border-slate-200 bg-white p-4 text-[15px] leading-6">
-        {row?.message ?? fallback}
-      </div>
-      <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-5 text-amber-900">
-        <p className="font-semibold">{t.providerReadiness}</p>
-        <p className="mt-1">
-          {preview
-            ? row?.eligible
-              ? providerMessage(
-                  event.language,
-                  type,
-                  channel,
-                  preview.provider[channel].configured
-                )
-              : `${t.failed}: ${row?.skippedReason}`
-            : t.providerChecking}
-        </p>
-      </div>
-      {error && (
-        <p className="mt-3 text-sm text-red-700" role="alert">
-          {error}
-        </p>
-      )}
-      <label className="mt-4 flex min-h-11 items-start gap-3 rounded-xl border border-slate-200 p-3 text-[15px]">
-        <input
-          type="checkbox"
-          checked={confirmed}
-          onChange={(changeEvent) => setConfirmed(changeEvent.target.checked)}
-          className="mt-0.5 h-5 w-5"
-        />
-        <span>{t.confirm}</span>
-      </label>
-      <div className="sticky bottom-0 mt-4 grid grid-cols-1 gap-2 bg-white py-2 min-[380px]:grid-cols-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="min-h-11 rounded-xl border px-4 text-[15px] font-semibold"
-        >
-          {t.close}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void load()}
-          className="min-h-11 rounded-xl border px-4 text-[15px] font-semibold disabled:opacity-50"
-        >
-          {type === "thank_you" ? t.thankPreview : t.preview}
-        </button>
-        <button
-          type="button"
-          disabled={
-            busy ||
-            !confirmed ||
-            !row?.eligible ||
-            !preview?.provider[channel].configured
-          }
-          onClick={async () => {
-            try {
-              setBusy(true);
-              await request(token, {
-                action:
-                  type === "thank_you" ? "thank_you_send" : "send_reminder",
-                pledgeId: pledge.id,
-                channel,
-                language: event.language,
-                confirmed: true,
-              });
-              onClose();
-            } catch (reason) {
-              setError(reason instanceof Error ? reason.message : t.failed);
-            } finally {
-              setBusy(false);
-            }
-          }}
-          className="min-h-11 rounded-xl bg-emerald-700 px-4 text-[15px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"
-        >
-          {type === "thank_you" ? t.thankSend : t.send}
-        </button>
-      </div>
-    </Modal>
   );
 }
 

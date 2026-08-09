@@ -34,7 +34,7 @@ import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsW
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
 import { getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
-import { getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
+import { buildAdminCommunicationAdapter, getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
 import {
   cancelPledge, correctPayment, createPledge, exportPledges, getFinancialSuite, getPayments, recordPayment,
   updatePledge, downloadPledgeTemplate, permanentlyDeletePledge, restorePledge, type FinancialPledge, type PledgeInput,
@@ -408,7 +408,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             ) : mode === "bulk" ? (
               <ContributionBulkActionsDialog eventId={eventId} onClose={() => setMode(null)} onCompleted={load} />
             ) : mode === "communication" && selected ? (
-              <FinancialCommunicationDialog eventId={eventId} pledge={selected} kind={communication.kind} initialChannel={communication.channel} onClose={() => setMode(null)} onSent={load} />
+              <FinancialCommunicationDialog pledge={selected} kind={communication.kind} initialChannel={communication.channel} language={data.event.language} adapter={buildAdminCommunicationAdapter(eventId)} onClose={() => setMode(null)} onSent={load} />
             ) : mode === "correct-payment" && selected && selectedPayment ? (
               <EditPaymentDialog
                 payment={selectedPayment}
