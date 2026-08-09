@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 function Denied({ status }: { status: string }) {
   const message = status === "expired" ? "This access link has expired." : status === "revoked" ? "This access link is no longer active." : "Invalid access link";
-  return <main className="flex min-h-screen items-center justify-center bg-slate-100 p-4"><div className="w-full max-w-md rounded-2xl border bg-white p-8 text-center shadow-sm"><div className="text-4xl">🔐</div><h1 className="mt-4 text-2xl font-bold">{message}</h1><p className="mt-2 text-slate-600">Contact the event administrator for a new committee access link.</p><p className="mt-8 text-sm text-slate-500">Managed securely by Smart Event Pass</p></div></main>;
+  return <main className="flex min-h-screen items-center justify-center bg-[#f6f2e9] p-4"><div className="w-full max-w-md rounded-2xl border bg-white p-8 text-center shadow-sm"><div className="text-4xl">🔐</div><h1 className="mt-4 text-2xl font-bold">{message}</h1><p className="mt-2 text-slate-600">Contact the event administrator for a new committee access link.</p><p className="mt-8 text-sm text-slate-500">Managed securely by Smart Event Pass</p></div></main>;
 }
 export default async function ManageContributionsPage({ params,searchParams }: { params: Promise<{ token: string }>;searchParams:Promise<{tab?:string|string[];lang?:string|string[]}> }) {
   const { token } = await params;

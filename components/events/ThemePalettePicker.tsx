@@ -162,13 +162,13 @@ export default function ThemePalettePicker({
   return (
     <div>
       <div className="mb-4">
-        <h3 className="font-bold text-gray-900">
+        <h3 className="font-bold text-slate-900">
           {language === "sw"
             ? "Palette ya Rangi na Background ya Kadi"
             : "Card Background & Colour Palette"}
         </h3>
 
-        <p className="mt-1 text-sm leading-6 text-gray-500">
+        <p className="mt-1 text-sm leading-6 text-slate-500">
           {language === "sw"
             ? "Chagua palette ili kuweka background ya kadi, rangi za msisitizo, na dress code kwa pamoja."
             : "Choose a palette to set your card's background colour, accent colours, and dress code together."}
@@ -217,8 +217,8 @@ export default function ThemePalettePicker({
                 }
                 className={`rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSelected
-                    ? "border-blue-600 bg-blue-50 shadow-md"
-                    : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm"
+                    ? "border-emerald-600 bg-emerald-50 shadow-md"
+                    : "border-stone-200 bg-white hover:border-emerald-300 hover:shadow-sm"
                 }`}
               >
                 <div
@@ -260,8 +260,8 @@ export default function ThemePalettePicker({
                   <span
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] ${
                       isSelected
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-gray-300 bg-white"
+                        ? "border-emerald-600 bg-emerald-600 text-white"
+                        : "border-stone-300 bg-white"
                     }`}
                   >
                     {isSelected
@@ -270,13 +270,13 @@ export default function ThemePalettePicker({
                   </span>
                 </div>
 
-                <p className="mt-3 font-bold text-gray-900">
+                <p className="mt-3 font-bold text-slate-900">
                   {
                     palette.name
                   }
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-gray-500">
+                <p className="mt-1 text-xs leading-5 text-slate-500">
                   {
                     palette
                       .dressCode

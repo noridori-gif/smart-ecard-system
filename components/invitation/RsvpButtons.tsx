@@ -46,7 +46,7 @@ export default function RsvpButtons({
   invitationToken,
   currentStatus,
   language = "sw",
-  accentTextClass = "text-blue-700",
+  accentTextClass = "text-emerald-700",
   variant = "default",
 }: RsvpButtonsProps) {
   const [selectedStatus, setSelectedStatus] =

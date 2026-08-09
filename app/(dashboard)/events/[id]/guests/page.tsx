@@ -221,8 +221,8 @@ export default function EventGuestsPage() {
   if (isLoading) {
     return (
       <section>
-        <div className="rounded-xl bg-white p-8 shadow-md">
-          <p className="text-gray-500">
+        <div className="sep-card p-8">
+          <p className="text-slate-500">
             Loading event and guests...
           </p>
         </div>
@@ -233,8 +233,8 @@ export default function EventGuestsPage() {
   if (!currentEvent) {
     return (
       <section>
-        <div className="rounded-xl bg-white p-8 shadow-md">
-          <div className="rounded-lg bg-red-50 p-4 text-red-700">
+        <div className="sep-card p-8">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
             {errorMessage || "Event haikupatikana."}
           </div>
 
@@ -252,18 +252,18 @@ export default function EventGuestsPage() {
   return (
     <section>
       <div>
-        <h1 className="text-4xl font-bold text-emerald-700">
+        <h1 className="sep-page-title">
           Guests
         </h1>
 
-        <p className="mt-2 text-gray-600">
+        <p className="mt-2 text-slate-600">
           Add and manage guests for {currentEvent.title}.
         </p>
       </div>
 
-      <div className="mt-8 rounded-xl bg-white p-5 shadow-md sm:p-8">
+      <div className="mt-8 sep-card p-5 sm:p-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="sep-section-title">
             {editingGuestId !== null
               ? "Edit Guest"
               : "Add New Guest"}
@@ -273,7 +273,7 @@ export default function EventGuestsPage() {
             <button
               type="button"
               onClick={resetForm}
-              className="w-fit rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+              className="w-fit min-h-11 rounded-xl bg-stone-100 px-4 text-sm font-semibold text-slate-700 hover:bg-stone-200"
             >
               Cancel Edit
             </button>
@@ -281,20 +281,20 @@ export default function EventGuestsPage() {
         </div>
 
         {editingGuestId !== null && (
-          <div className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-700">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
             Unahariri taarifa za mgeni. QR code na invitation
             link vitabaki vilevile.
           </div>
         )}
 
         {errorMessage && (
-          <div className="mt-5 rounded-lg bg-red-50 p-4 text-red-700">
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
             {errorMessage}
           </div>
         )}
 
         {successMessage && (
-          <div className="mt-5 rounded-lg bg-green-50 p-4 text-green-700">
+          <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
             {successMessage}
           </div>
         )}
@@ -338,15 +338,15 @@ export default function EventGuestsPage() {
         </form>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-xl bg-white shadow-md">
-        <div className="border-b border-gray-200 p-6">
-          <h2 className="text-2xl font-bold text-gray-800">
+      <div className="mt-8 sep-table-shell">
+        <div className="border-b border-stone-200 p-6">
+          <h2 className="sep-section-title">
             Guest List
           </h2>
         </div>
 
         {guests.length === 0 && (
-          <p className="p-8 text-gray-500">
+          <p className="p-8 text-center text-sm text-slate-500">
             No guests have been added yet.
           </p>
         )}
@@ -354,7 +354,7 @@ export default function EventGuestsPage() {
         {guests.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[950px] text-left">
-              <thead className="bg-gray-50 text-sm uppercase text-gray-600">
+              <thead className="bg-stone-100 text-sm uppercase text-slate-600">
                 <tr>
                   <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Phone</th>
@@ -365,29 +365,29 @@ export default function EventGuestsPage() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-stone-200">
                 {guests.map((guest) => (
                   <tr
                     key={guest.id}
                     className={
                       editingGuestId === guest.id
                         ? "bg-emerald-50"
-                        : "hover:bg-gray-50"
+                        : "hover:bg-stone-50"
                     }
                   >
-                    <td className="px-6 py-4 font-semibold text-gray-800">
+                    <td className="px-6 py-4 font-semibold text-slate-900">
                       {guest.full_name}
                     </td>
 
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-slate-600">
                       {guest.phone || "-"}
                     </td>
 
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-slate-600">
                       {guest.category || "Normal"}
                     </td>
 
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-slate-600">
                       {guest.allowed_guests}
                     </td>
 
@@ -395,8 +395,8 @@ export default function EventGuestsPage() {
                       <span
                         className={`rounded-full px-3 py-1 text-sm capitalize ${
                           guest.status === "checked_in"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-800"
                         }`}
                       >
                         {guest.status}

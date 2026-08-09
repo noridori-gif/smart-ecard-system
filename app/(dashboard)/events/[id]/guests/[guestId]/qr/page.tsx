@@ -25,7 +25,7 @@ export default function GuestQRPage() {
 
   if (!guest) {
     return (
-      <div className="p-10">
+      <div className="p-10 text-slate-600">
         Loading QR...
       </div>
     );
@@ -34,13 +34,13 @@ export default function GuestQRPage() {
   return (
     <section className="mx-auto max-w-xl">
 
-      <div className="rounded-xl bg-white p-8 shadow">
+      <div className="sep-card p-8">
 
-        <h1 className="text-3xl font-bold text-center">
+        <h1 className="sep-page-title text-center">
           Guest QR Code
         </h1>
 
-        <p className="mt-3 text-center text-gray-600">
+        <p className="mt-3 text-center text-slate-600">
           {guest.full_name}
         </p>
 
@@ -53,18 +53,18 @@ export default function GuestQRPage() {
 
         </div>
 
-        <div className="mt-8 space-y-2">
+        <div className="mt-8 space-y-2 text-slate-700">
 
           <p>
-            <strong>Category:</strong> {guest.category}
+            <strong className="text-slate-900">Category:</strong> {guest.category}
           </p>
 
           <p>
-            <strong>Allowed Guests:</strong> {guest.allowed_guests}
+            <strong className="text-slate-900">Allowed Guests:</strong> {guest.allowed_guests}
           </p>
 
           <p>
-            <strong>Status:</strong> {guest.status}
+            <strong className="text-slate-900">Status:</strong> {guest.status}
           </p>
 
         </div>
