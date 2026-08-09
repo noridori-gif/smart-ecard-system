@@ -63,7 +63,7 @@ export default function VoidPaymentDialog({ payment, pledge, onVoid, onClose }: 
         className="mt-1 min-h-24 w-full rounded-xl border px-3 py-2"
         placeholder="Explain why this payment was recorded incorrectly." />
     </label>
-    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
       <button disabled={busy} onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button>
       <button disabled={busy || !valid} onClick={() => void submit()}

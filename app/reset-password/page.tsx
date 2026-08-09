@@ -9,6 +9,8 @@ import {
 
 import Link from "next/link";
 
+import Button from "@/components/ui/Button";
+
 import {
   createClient,
 } from "@/lib/supabase/client";
@@ -417,17 +419,11 @@ export default function ResetPasswordPage() {
               }
             />
 
-            <button
-              type="submit"
-              disabled={
-                isSaving
-              }
-              className="w-full rounded-xl bg-emerald-700 px-6 py-3 font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Button type="submit" loading={isSaving} className="w-full">
               {isSaving
                 ? "Saving Password..."
                 : "Save New Password"}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -468,11 +464,11 @@ function PasswordInput({
 }: PasswordInputProps) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-semibold text-slate-700">
+      <label className="sep-label block">
         {label}
       </label>
 
-      <div className="relative">
+      <div className="relative mt-2">
         <input
           type={
             showPassword
@@ -498,7 +494,7 @@ function PasswordInput({
               event.target.value
             )
           }
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+          className="min-h-12 w-full rounded-xl border border-[#e7e1d7] bg-white px-4 pr-24 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
         />
 
         <button

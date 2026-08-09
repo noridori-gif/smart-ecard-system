@@ -85,8 +85,8 @@ export default function InvitationEligibilityQueue({
 
   return <div className="space-y-5">
     <div><h2 className="sep-section-title">{t("queue.title")}</h2></div>
-    {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">{metrics.map(([label,value]) => <article key={label} className="sep-card p-4"><p className="text-xs font-semibold text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold tabular-nums">{value}</p></article>)}</div>
     <section className="sep-card overflow-hidden">
       <div className="space-y-4 border-b border-[#e7e1d7] p-4">

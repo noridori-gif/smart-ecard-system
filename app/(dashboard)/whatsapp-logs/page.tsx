@@ -514,7 +514,7 @@ export default function WhatsAppLogsPage() {
 
                         <td className="max-w-xs px-5 py-4 text-xs">
                           {log.error_message ? (
-                            <div className="rounded-lg bg-red-50 p-3 text-red-700">
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
                               {log.error_code && (
                                 <p className="font-bold">
                                   Code {log.error_code}
@@ -614,7 +614,7 @@ export default function WhatsAppLogsPage() {
                   </div>
 
                   {log.error_message && (
-                    <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">
+                    <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                       {log.error_code && (
                         <p className="font-bold">
                           Meta error code {log.error_code}

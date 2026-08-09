@@ -55,7 +55,7 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
 
   if (confirming) return <div className="space-y-4">
     <h3 className="text-lg font-bold">Confirm payment correction</h3>
-    <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+    <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
       Editing this payment will update financial totals and reports. The original values will remain in the audit history.
     </p>
     <dl className="grid grid-cols-2 gap-3 rounded-xl border p-4 text-sm">
@@ -65,7 +65,7 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
       <div><dt className="text-slate-500">Current pledge balance</dt><dd className="font-bold">{formatTzs(pledge.balance)}</dd></div>
       <div className="col-span-2"><dt className="text-slate-500">New pledge balance</dt><dd className="font-bold">{formatTzs(String(amounts.newBalance))}</dd></div>
     </dl>
-    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
       <button disabled={busy} onClick={() => setConfirming(false)} className="rounded-xl border px-4 py-2">Back</button>
       <button disabled={busy} onClick={() => void submit()} className="rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Confirm correction"}</button>

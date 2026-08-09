@@ -20,7 +20,7 @@ export default function ContributorGuestEligibilitySettings({ eventId, onSaved }
   }
   return <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm">
     <h2 className="text-xl font-bold">{t("settings.title")}</h2><p className="mt-1 text-sm text-slate-600">{t("settings.description")}</p>
-    {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
+    {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
     {!settings ? <p className="mt-5 text-sm text-slate-500">{t("settings.loading")}</p> : <>
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Toggle label={t("settings.enableSync")} checked={settings.contributor_guest_sync_enabled} onChange={(value) => setSettings({...settings, contributor_guest_sync_enabled: value})} />
@@ -30,7 +30,7 @@ export default function ContributorGuestEligibilitySettings({ eventId, onSaved }
         <Money label={t("settings.doubleMinimum")} value={settings.double_card_minimum} onChange={(value) => setSettings({...settings, double_card_minimum: value})} />
         <div className="space-y-2"><Toggle label={t("settings.autoUpgrade")} checked={settings.auto_upgrade_guest_card} onChange={(value) => setSettings({...settings, auto_upgrade_guest_card: value})} /><Toggle label={t("settings.autoDowngrade")} checked={settings.auto_downgrade_guest_card} onChange={(value) => setSettings({...settings, auto_downgrade_guest_card: value})} /></div>
       </div>
-      <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{t("settings.protectionNote")}</p>
+      <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("settings.protectionNote")}</p>
       <button type="button" disabled={busy} onClick={() => void save()} className="mt-5 min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white disabled:opacity-50">{busy ? t("common.saving") : t("settings.save")}</button>
     </>}
   </section>;

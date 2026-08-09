@@ -162,9 +162,9 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   return <div className="space-y-5">
     <ReminderSectionNavigation active={section} onChange={navigate} />
     {loading && <p role="status" className="rounded-xl bg-stone-50 p-3 text-sm text-slate-600">{t("common.loading")}</p>}
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
-    {notice && <p role="status" className="rounded-xl bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
-    {warning&&<p role="status" className="rounded-xl bg-amber-50 p-3 text-amber-900">{warning}</p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</p>}
+    {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
+    {warning&&<p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900">{warning}</p>}
 
     {section === "send" && <section className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
       <div><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{t("financial.reminders")}</p><h2 className="mt-1 text-xl font-bold">Send Pledge Reminders</h2><p className="mt-1 max-w-3xl text-sm text-slate-600">Only contributors who have not started paying or still have an outstanding balance are included. Completed contributors are available under Thank You.</p></div>

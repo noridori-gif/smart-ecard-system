@@ -8,6 +8,8 @@ import {
 
 import Link from "next/link";
 
+import Button from "@/components/ui/Button";
+
 import {
   createClient,
 } from "@/lib/supabase/client";
@@ -174,10 +176,10 @@ export default function ForgotPasswordPage() {
           }
           className="mt-8 space-y-5"
         >
-          <div>
+          <div className="space-y-2">
             <label
               htmlFor="reset-email"
-              className="mb-2 block text-sm font-semibold text-slate-700"
+              className="sep-label block"
             >
               Email Address
             </label>
@@ -200,21 +202,15 @@ export default function ForgotPasswordPage() {
                 setErrorMessage("");
                 setSuccessMessage("");
               }}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
+              className="sep-control disabled:opacity-60"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={
-              isSending
-            }
-            className="w-full rounded-xl bg-emerald-700 px-6 py-3 font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" loading={isSending} className="w-full">
             {isSending
               ? "Sending Reset Link..."
               : "Send Reset Link"}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center">

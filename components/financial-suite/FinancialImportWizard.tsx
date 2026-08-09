@@ -83,7 +83,7 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
       <legend className="font-bold">Import options</legend>
       <label className="flex gap-2"><input type="radio" checked={!options.includeGuests} onChange={() => { setOptions({ ...options, includeGuests: false }); setPreview(null); }} />Import into Contributions only</label>
       <label className="flex gap-2"><input type="radio" checked={options.includeGuests} onChange={() => { setOptions({ ...options, includeGuests: true }); setPreview(null); }} />Create or update Guests from imported contributors</label>
-      {options.includeGuests && <p className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">Guest records are derived from validated contributor rows. Guest-only Excel columns are not required.</p>}
+      {options.includeGuests && <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">Guest records are derived from validated contributor rows. Guest-only Excel columns are not required.</p>}
       <label className="flex gap-2"><input type="checkbox" checked={options.createInitialPayments} onChange={(e) => { setOptions({ ...options, createInitialPayments: e.target.checked }); setPreview(null); }} />Create initial payments from Paid Amount</label>
       <label className="flex gap-2"><input type="checkbox" checked={options.skipDuplicates} onChange={(e) => { setOptions({ ...options, skipDuplicates: e.target.checked }); setPreview(null); }} />Skip duplicates</label>
       <label className="flex gap-2"><input type="checkbox" checked readOnly />Preview before import (required)</label>
@@ -121,6 +121,6 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
       {result.failedRows.length > 0 && <><ul className="max-h-40 overflow-auto rounded-xl border p-3 text-sm">{result.failedRows.map((row) => <li key={row.rowNumber}>Row {row.rowNumber} · {row.fullName}: {row.reason}</li>)}</ul><button onClick={() => downloadFinancialImportErrors(result)} className="font-semibold text-red-700 underline">Download error report</button></>}
       <button onClick={onClose} className="w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800">Done</button>
     </div>}
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
   </div>;
 }

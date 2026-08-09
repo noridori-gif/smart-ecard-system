@@ -125,12 +125,12 @@ export default function FinancialPaymentsTab({
   return (
     <div className="space-y-6">
       {error && (
-        <p role="alert" className="rounded-xl bg-red-50 p-3 text-red-700">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">
           {error}
         </p>
       )}
       {notice && (
-        <p role="status" className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
+        <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">
           {notice}
         </p>
       )}

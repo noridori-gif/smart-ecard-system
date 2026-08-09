@@ -88,8 +88,8 @@ export default function CompletedThankYouPanel({ eventId,onShowReminders }: { ev
           ))}
         </div>
       </div>
-      {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
-      {notice && <p role="status" className="mt-4 rounded-xl bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
+      {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</p>}
+      {notice && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
       <div className="mt-5 flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => void build()} className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold hover:bg-stone-50">Load Completed Contributors</button>
         {preview && <>
