@@ -440,7 +440,7 @@ export default function InvitationsPage() {
 
       <header className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight text-slate-950 sm:text-4xl">
+          <h1 className="sep-page-title">
             Invitations
           </h1>
 

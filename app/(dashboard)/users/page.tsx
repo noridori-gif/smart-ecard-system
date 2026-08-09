@@ -307,7 +307,7 @@ export default function UsersPage() {
             Administration
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+          <h1 className="sep-page-title mt-2">
             User Management
           </h1>
 

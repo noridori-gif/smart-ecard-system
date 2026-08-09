@@ -368,7 +368,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+        <h1 className="sep-page-title">
           Settings
         </h1>
 

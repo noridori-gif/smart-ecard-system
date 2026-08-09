@@ -667,7 +667,7 @@ export default function ReportsPage() {
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <h1 className="text-4xl font-bold text-emerald-700">
+          <h1 className="sep-page-title">
             Reports
           </h1>
 

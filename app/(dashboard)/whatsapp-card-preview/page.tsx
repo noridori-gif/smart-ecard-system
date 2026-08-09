@@ -69,7 +69,7 @@ export default function WhatsAppCardPreviewPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">
             5 Premium Designs • Real WhatsApp Card Preview
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
+          <h1 className="sep-page-title mt-1">
             WhatsApp Invitation Card Review
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-slate-600">

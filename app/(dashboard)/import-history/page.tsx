@@ -139,7 +139,7 @@ export default function ImportHistoryPage() {
     <section className="space-y-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">
+          <h1 className="sep-page-title">
             Guest Import History
           </h1>
 

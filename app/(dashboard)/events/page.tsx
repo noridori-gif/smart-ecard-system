@@ -72,7 +72,7 @@ export default function EventsPage() {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-[32px] font-bold leading-tight text-slate-950 sm:text-4xl">
+          <h1 className="sep-page-title">
             Events
           </h1>
 

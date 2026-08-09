@@ -276,7 +276,7 @@ export default function WhatsAppLogsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="sep-page-title">
             WhatsApp Message Logs
           </h1>
 

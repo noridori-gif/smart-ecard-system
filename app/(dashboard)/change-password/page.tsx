@@ -166,7 +166,7 @@ export default function ChangePasswordPage() {
             Account Security
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+          <h1 className="sep-page-title mt-2">
             Change Password
           </h1>
 

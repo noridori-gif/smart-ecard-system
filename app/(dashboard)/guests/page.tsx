@@ -445,7 +445,7 @@ export default function GuestsPage() {
 
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="sep-page-title">
             Guests
           </h1>
 
