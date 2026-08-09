@@ -89,8 +89,8 @@ export default function EventsPage() {
         </Link>
       </div>
       <div className="flex w-fit gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm" role="tablist" aria-label="Event views">
-        <button type="button" role="tab" aria-selected={!archivedView} onClick={() => setArchivedView(false)} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 ${!archivedView ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Active Events</button>
-        <button type="button" role="tab" aria-selected={archivedView} onClick={() => setArchivedView(true)} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 ${archivedView ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Archived Events</button>
+        <button type="button" role="tab" aria-selected={!archivedView} onClick={() => setArchivedView(false)} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${!archivedView ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Active Events</button>
+        <button type="button" role="tab" aria-selected={archivedView} onClick={() => setArchivedView(true)} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${archivedView ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Archived Events</button>
       </div>
 
       {successMessage && (

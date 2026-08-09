@@ -17,7 +17,7 @@ export const financialDesktop = {
   primary:
     "min-h-11 rounded-xl bg-emerald-700 px-4 text-[15px] font-semibold text-white shadow-sm hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2",
   secondary:
-    "min-h-11 rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] font-semibold text-slate-700 hover:bg-[#faf8f4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500",
+    "min-h-11 rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] font-semibold text-slate-700 hover:bg-[#faf8f4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700",
 } as const;
 
 export type FinanceIconName =

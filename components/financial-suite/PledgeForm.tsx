@@ -37,6 +37,6 @@ export default function PledgeForm({ eventId, guests, pledge, onSave, onClose }:
     <label className="block text-sm font-semibold">{t("pledge.expectedDate")}<input type="date" value={form.expectedDate} onChange={(event)=>setForm({...form,expectedDate:event.target.value})} className={field}/><span className="mt-1 block text-xs font-normal text-slate-500">{t("pledge.expectedDateHelper")}</span></label>
     <label className="block text-sm font-semibold">{t("pledge.notes")}<textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className={field} /></label>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button><button disabled={saving} className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{saving ? t("common.saving") : t("pledge.save")}</button></div>
+    <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">{t("common.cancel")}</button><button disabled={saving} className="rounded-xl bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">{saving ? t("common.saving") : t("pledge.save")}</button></div>
   </form>;
 }

@@ -83,7 +83,7 @@ export default function MessagePreviewDialog({
           type="button"
           disabled={busy || !confirmed || !providerReady || !canSend}
           onClick={onSend}
-          className="mt-4 min-h-11 w-full rounded-xl bg-emerald-600 px-4 font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-4 min-h-11 w-full rounded-xl bg-emerald-700 px-4 font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {sendLabel}
         </button>

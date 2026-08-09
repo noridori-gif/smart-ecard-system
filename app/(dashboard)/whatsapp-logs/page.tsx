@@ -292,7 +292,7 @@ export default function WhatsAppLogsPage() {
           onClick={() =>
             loadLogs(true)
           }
-          className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {refreshing
             ? "Refreshing..."

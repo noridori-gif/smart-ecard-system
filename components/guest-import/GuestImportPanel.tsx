@@ -488,7 +488,7 @@ export default function GuestImportPanel({
                 Invitations Created
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-blue-700">
+              <p className="mt-2 text-3xl font-bold text-emerald-700">
                 {importResult.createdInvitations}
               </p>
             </div>
@@ -533,7 +533,7 @@ export default function GuestImportPanel({
             <button
               type="button"
               onClick={handleStartAnotherImport}
-              className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+              className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800"
             >
               Start Another Import
             </button>
@@ -563,7 +563,7 @@ export default function GuestImportPanel({
 
                   resetFileData();
                 }}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100"
               >
                 <option value="">
                   Chagua event
@@ -591,7 +591,7 @@ export default function GuestImportPanel({
                 disabled={
                   !selectedEvent || isImporting
                 }
-                className="flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="flex w-full items-center justify-center rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 Download Excel Template
               </button>
@@ -618,7 +618,7 @@ export default function GuestImportPanel({
                   isReadingFile ||
                   isImporting
                 }
-                className="flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="flex w-full items-center justify-center rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {isReadingFile
                   ? "Reading Excel..."
@@ -627,7 +627,7 @@ export default function GuestImportPanel({
             </div>
           </div>
 
-          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
             <p className="font-semibold">
               Excel columns:
             </p>
@@ -638,7 +638,7 @@ export default function GuestImportPanel({
               ni optional.
             </p>
 
-            <p className="mt-2 text-xs text-blue-700">
+            <p className="mt-2 text-xs text-emerald-700">
               Category tupu itawekwa Normal, Allowed
               Guests itawekwa 1, na Event Pass ID
               itatengenezwa automatically.
@@ -686,7 +686,7 @@ export default function GuestImportPanel({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <div className="rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-700">
+                  <div className="rounded-full bg-stone-100 px-4 py-2 text-sm font-bold text-slate-700">
                     {previewRows.length} Guests
                   </div>
 
@@ -781,7 +781,7 @@ export default function GuestImportPanel({
                               {row.allowedGuests || 1}
                             </td>
 
-                            <td className="px-4 py-3 font-mono text-sm font-semibold text-blue-700">
+                            <td className="px-4 py-3 font-mono text-sm font-semibold text-slate-700">
                               {row.eventPassId
                                 ? formatPassIdForDisplay(row.eventPassId)
                                 : "Will be generated"}
@@ -1001,7 +1001,7 @@ export default function GuestImportPanel({
                         validationResult.validRows
                           .length === 0
                       }
-                      className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       {isImporting
                         ? "Importing Guests..."

@@ -788,7 +788,7 @@ export default function CommitteePortalTabbed({
                       <button
                         type="button"
                         onClick={() => act(item, "message")}
-                        className="mt-3 min-h-11 w-full rounded-xl bg-blue-50 px-4 text-[15px] font-semibold text-blue-700 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                        className="mt-3 min-h-11 w-full rounded-xl bg-emerald-50 px-4 text-[15px] font-semibold text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                       >
                         ✉{" "}
                         {kind === "completed" ? t.thankPreview : t.preview}

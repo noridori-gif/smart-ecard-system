@@ -149,7 +149,7 @@ export default function FinancialPaymentsTab({
                 key={value}
                 type="button"
                 onClick={() => setFilter(value)}
-                className={`min-h-10 rounded-lg px-4 text-sm font-semibold capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 ${
+                className={`min-h-10 rounded-lg px-4 text-sm font-semibold capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${
                   filter === value
                     ? "bg-slate-900 text-white shadow-sm"
                     : "text-slate-600 hover:bg-white"

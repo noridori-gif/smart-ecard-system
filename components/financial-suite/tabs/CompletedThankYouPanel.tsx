@@ -94,7 +94,7 @@ export default function CompletedThankYouPanel({ eventId,onShowReminders }: { ev
         <button type="button" disabled={busy} onClick={() => void build()} className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold hover:bg-stone-50">Load Completed Contributors</button>
         {preview && <>
           <label className="flex min-h-11 items-center gap-2 rounded-xl border border-stone-300 px-3 text-sm"><input type="checkbox" checked={bulkConfirmed} onChange={(event) => setBulkConfirmed(event.target.checked)} />Confirm sending to {eligibleContributors} contributors ({eligibleRows.length} eligible messages)</label>
-          <button type="button" disabled={!bulkConfirmed || !providersReady || !eligibleRows.length || busy} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-600 px-4 font-bold text-white disabled:opacity-40">Send Thank You</button>
+          <button type="button" disabled={!bulkConfirmed || !providersReady || !eligibleRows.length || busy} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-700 px-4 font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Send Thank You</button>
         </>}
       </div>
       {preview && <>

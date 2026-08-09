@@ -241,7 +241,7 @@ export default function ShareInvitationCardButton({
         type="button"
         disabled={isPreparing}
         onClick={handleShareCard}
-        className={`w-full rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60 ${
+        className={`w-full rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 ${
           mobile
             ? "min-h-11"
             : "py-2"

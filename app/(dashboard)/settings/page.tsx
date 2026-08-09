@@ -665,7 +665,7 @@ export default function SettingsPage() {
               className={`rounded-full px-3 py-1 text-xs font-bold ${
                 whatsappStatus
                   ?.sendConfigurationDetected
-                  ? "bg-blue-100 text-blue-700"
+                  ? "bg-emerald-100 text-emerald-700"
                   : "bg-slate-100 text-slate-600"
               }`}
             >
