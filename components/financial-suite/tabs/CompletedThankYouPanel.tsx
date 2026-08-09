@@ -73,7 +73,7 @@ export default function CompletedThankYouPanel({ eventId,onShowReminders }: { ev
   const eligibleRows=(preview?.rows??[]).filter(row=>row.eligible),eligibleContributors=new Set(eligibleRows.map(row=>row.pledgeId)).size,providersReady=Boolean(preview)&&selectedChannels.every(channel=>preview!.provider[channel].configured);
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
           <h2 className="text-xl font-bold text-slate-950">Completed Thank You</h2>

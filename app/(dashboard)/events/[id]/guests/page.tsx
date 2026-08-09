@@ -240,7 +240,7 @@ export default function EventGuestsPage() {
 
           <Link
             href="/events"
-            className="mt-5 inline-block rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
+            className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-emerald-700 px-4 font-semibold text-white hover:bg-emerald-800"
           >
             Back to Events
           </Link>
@@ -407,7 +407,7 @@ export default function EventGuestsPage() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/events/${eventId}/guests/${guest.id}/qr`}
-                          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                          className="inline-flex min-h-11 items-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800"
                         >
                           View QR
                         </Link>
@@ -420,7 +420,7 @@ export default function EventGuestsPage() {
                           disabled={
                             deletingGuestId === guest.id
                           }
-                          className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="min-h-11 rounded-xl bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Edit
                         </button>
@@ -433,7 +433,7 @@ export default function EventGuestsPage() {
                           disabled={
                             deletingGuestId === guest.id
                           }
-                          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                          className="min-h-11 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
                         >
                           {deletingGuestId === guest.id
                             ? "Deleting..."

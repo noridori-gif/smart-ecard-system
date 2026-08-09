@@ -41,7 +41,7 @@ export default function MeetingInvitationsPanel({eventId,pledges}:{eventId:numbe
   const uniqueCount=(predicate:(row:PreviewRow)=>boolean)=>new Set((preview?.rows??[]).filter(predicate).map(row=>row.pledgeId)).size;
   const selectedMeeting=meetings.find(item=>item.id===meetingId),today=new Date().toISOString().slice(0,10);
 
-  return <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6">
+  return <section className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
     <h2 className="text-xl font-bold">Meeting Invitations</h2><p className="mt-1 text-sm text-slate-600">Create a meeting, choose contributors, review recipients, then confirm sending.</p>
     {error&&<p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{notice&&<p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}{warning&&<p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>}
     <div className="mt-5 grid gap-4 xl:grid-cols-[.8fr_1.4fr]">

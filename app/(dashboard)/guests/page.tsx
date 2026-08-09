@@ -719,7 +719,7 @@ export default function GuestsPage() {
                                     guest
                                   )
                                 }
-                                className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="min-h-11 rounded-xl bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                               >
                                 {isProcessing
                                   ? "Please wait..."
@@ -739,7 +739,7 @@ export default function GuestsPage() {
                                     guest
                                   )
                                 }
-                                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="min-h-11 rounded-xl bg-red-600 px-3 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                               >
                                 Delete
                               </button>
@@ -851,7 +851,7 @@ export default function GuestsPage() {
                       onClick={() =>
                         handleCheckIn(guest)
                       }
-                      className="rounded-lg bg-emerald-700 px-2 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:bg-slate-300"
+                      className="min-h-11 rounded-xl bg-emerald-700 px-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:bg-slate-300"
                     >
                       {guest.status ===
                       "checked_in"
@@ -867,7 +867,7 @@ export default function GuestsPage() {
                           guest
                         )
                       }
-                      className="rounded-lg bg-red-600 px-2 py-2 text-xs font-semibold text-white disabled:bg-slate-300"
+                      className="min-h-11 rounded-xl bg-red-600 px-2 text-xs font-semibold text-white disabled:bg-slate-300"
                     >
                       Delete
                     </button>

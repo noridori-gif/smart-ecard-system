@@ -481,7 +481,7 @@ export default function ImportHistoryPage() {
                     Math.max(1, page - 1)
                   )
                 }
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
@@ -503,7 +503,7 @@ export default function ImportHistoryPage() {
                     )
                   )
                 }
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>

@@ -43,7 +43,7 @@ export default function ReminderSectionNavigation({
       <div
         role="tablist"
         aria-label={t("reminders.navigation")}
-        className="flex min-w-max gap-1 rounded-2xl border border-stone-200 bg-white p-1.5 shadow-sm"
+        className="flex min-w-max gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm"
       >
         {primarySections.map((section) => {
           const isActive = section.matches.includes(active);

@@ -817,7 +817,7 @@ export default function ReportsPage() {
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Total Guests
               </p>
@@ -827,7 +827,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Checked In
               </p>
@@ -837,7 +837,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Pending
               </p>
@@ -847,7 +847,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Attendance
               </p>
@@ -859,7 +859,7 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Invitations
               </p>
@@ -869,7 +869,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 Viewed
               </p>
@@ -879,7 +879,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 RSVP Accepted
               </p>
@@ -889,7 +889,7 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="sep-card p-5">
               <p className="text-sm text-slate-500">
                 No Response
               </p>
@@ -1268,7 +1268,7 @@ export default function ReportsPage() {
                         Math.max(1, page - 1)
                       )
                     }
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Previous
                   </button>
@@ -1291,7 +1291,7 @@ export default function ReportsPage() {
                         )
                       )
                     }
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next
                   </button>

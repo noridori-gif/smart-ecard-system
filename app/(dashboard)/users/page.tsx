@@ -631,7 +631,7 @@ export default function UsersPage() {
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-4 text-right">
-                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={async()=>{const password=window.prompt("Enter a new temporary password (minimum 8 characters):");if(!password)return;try{setUpdatingUserId(profile.id);setSuccessMessage(await resetManagedUserPassword(profile.id,password));setProfiles(current=>current.map(item=>item.id===profile.id?{...item,force_password_change:true}:item));}catch(error){setErrorMessage(error instanceof Error?error.message:"Password reset failed.");}finally{setUpdatingUserId("");}}} className="mr-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 disabled:opacity-50">Reset Password</button>
+                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={async()=>{const password=window.prompt("Enter a new temporary password (minimum 8 characters):");if(!password)return;try{setUpdatingUserId(profile.id);setSuccessMessage(await resetManagedUserPassword(profile.id,password));setProfiles(current=>current.map(item=>item.id===profile.id?{...item,force_password_change:true}:item));}catch(error){setErrorMessage(error instanceof Error?error.message:"Password reset failed.");}finally{setUpdatingUserId("");}}} className="mr-2 min-h-11 rounded-xl bg-amber-50 px-3 text-sm font-bold text-amber-800 disabled:opacity-50">Reset Password</button>
                         <button
                           type="button"
                           disabled={
@@ -643,7 +643,7 @@ export default function UsersPage() {
                               profile
                             )
                           }
-                          className={`rounded-lg px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          className={`min-h-11 rounded-xl px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                             profile.is_active
                               ? "bg-red-50 text-red-700 hover:bg-red-100"
                               : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -655,7 +655,7 @@ export default function UsersPage() {
                               ? "Deactivate"
                               : "Activate"}
                         </button>
-                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={()=>setDeleteTarget(profile)} className="ml-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">Delete Permanently</button>
+                        <button type="button" disabled={isCurrentUser||isUpdating} onClick={()=>setDeleteTarget(profile)} className="ml-2 min-h-11 rounded-xl bg-red-600 px-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">Delete Permanently</button>
                       </td>
                     </tr>
                   );
