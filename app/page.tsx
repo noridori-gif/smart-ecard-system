@@ -40,10 +40,10 @@ const features = [
 ];
 
 const journeyStatuses = [
-  { label: "Invitation Delivered", detail: "WhatsApp · 10:41", color: "bg-cyan-400", ring: "ring-cyan-400/25" },
-  { label: "RSVP Confirmed", detail: "2 guests · 10:44", color: "bg-blue-400", ring: "ring-blue-400/25" },
-  { label: "Pass Generated", detail: "VIP access · 10:44", color: "bg-indigo-400", ring: "ring-indigo-400/25" },
-  { label: "Check-in Verified", detail: "Gate A · Just now", color: "bg-emerald-400", ring: "ring-emerald-400/30" },
+  { label: "Invitation Delivered", detail: "WhatsApp · 10:41", color: "bg-teal-400", ring: "ring-teal-400/25" },
+  { label: "RSVP Confirmed", detail: "2 guests · 10:44", color: "bg-emerald-300", ring: "ring-emerald-300/25" },
+  { label: "Pass Generated", detail: "VIP access · 10:44", color: "bg-emerald-400", ring: "ring-emerald-400/25" },
+  { label: "Check-in Verified", detail: "Gate A · Just now", color: "bg-emerald-500", ring: "ring-emerald-500/30" },
 ];
 
 function QrVisual() {
@@ -61,14 +61,14 @@ function QrVisual() {
 function LiveGuestJourney() {
   return (
     <div className="relative mx-auto w-full max-w-[34rem] lg:ml-auto">
-      <div className="absolute inset-x-8 -bottom-4 top-10 rounded-[2rem] bg-blue-500/10 blur-2xl" aria-hidden="true" />
+      <div className="absolute inset-x-8 -bottom-4 top-10 rounded-[2rem] bg-emerald-500/10 blur-2xl" aria-hidden="true" />
       <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-600/45 bg-slate-900/80 p-3 shadow-[0_28px_80px_rgba(2,8,23,.52)] backdrop-blur-xl sm:p-4">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(56,189,248,.08),transparent_38%,rgba(16,185,129,.05))]" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(45,212,191,.08),transparent_38%,rgba(16,185,129,.05))]" aria-hidden="true" />
 
         <div className="relative rounded-[1.35rem] border border-white/10 bg-[#071426]/90 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-cyan-300">Live Guest Journey</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.34em] text-teal-300">Live Guest Journey</p>
               <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">Newton Ludovick</h2>
               <p className="mt-1 text-xs text-slate-400">Invitation opened · 10:42</p>
             </div>
@@ -80,7 +80,7 @@ function LiveGuestJourney() {
 
           <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(190px,.9fr)]">
             <div className="relative rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-              <div className="absolute bottom-7 left-[1.18rem] top-8 w-px bg-gradient-to-b from-cyan-400/60 via-blue-400/50 to-emerald-400/60" aria-hidden="true" />
+              <div className="absolute bottom-7 left-[1.18rem] top-8 w-px bg-gradient-to-b from-teal-400/60 via-emerald-300/50 to-emerald-500/60" aria-hidden="true" />
               <ol className="relative space-y-4">
                 {journeyStatuses.map((status, index) => (
                   <li key={status.label} className="flex items-center gap-3">
@@ -94,14 +94,14 @@ function LiveGuestJourney() {
               </ol>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-b from-slate-800/90 to-slate-900 p-3">
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-300/20 bg-gradient-to-b from-slate-800/90 to-slate-900 p-3">
               <div className="flex items-center justify-between gap-2">
-                <div><p className="text-[8px] font-bold uppercase tracking-[0.22em] text-cyan-300">Secure Event Pass</p><p className="mt-1 font-mono text-xs font-bold text-white">8F42KD</p></div>
-                <span className="rounded border border-indigo-300/25 bg-indigo-400/10 px-2 py-1 text-[9px] font-bold text-indigo-200">VIP</span>
+                <div><p className="text-[8px] font-bold uppercase tracking-[0.22em] text-emerald-300">Secure Event Pass</p><p className="mt-1 font-mono text-xs font-bold text-white">8F42KD</p></div>
+                <span className="rounded border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-bold text-amber-200">VIP</span>
               </div>
               <div className="relative mx-auto mt-3 aspect-square w-[7.25rem] overflow-hidden rounded-xl border border-white/15 bg-white p-1.5 shadow-[0_10px_25px_rgba(0,0,0,.25)] sm:w-[8rem]">
                 <QrVisual />
-                <span className="journey-scan absolute inset-x-1.5 top-1.5 h-px bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,.9)]" aria-hidden="true" />
+                <span className="journey-scan absolute inset-x-1.5 top-1.5 h-px bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,.9)]" aria-hidden="true" />
               </div>
               <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2 text-[9px]"><span className="text-slate-400">Admission</span><span className="font-semibold text-white">2 Guests</span></div>
             </div>
@@ -109,9 +109,9 @@ function LiveGuestJourney() {
 
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             {[
-              ["WhatsApp", "Delivered", "text-cyan-300"],
-              ["Secure", "Access", "text-blue-300"],
-              ["Live", "Verification", "text-emerald-300"],
+              ["WhatsApp", "Delivered", "text-teal-300"],
+              ["Secure", "Access", "text-emerald-300"],
+              ["Live", "Verification", "text-emerald-400"],
             ].map(([top, bottom, color]) => (
               <div key={top} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-1.5 py-2.5">
                 <p className={`truncate text-[8px] font-bold uppercase tracking-[0.12em] ${color}`}>{top}</p>
@@ -148,11 +148,11 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-slate-950 to-indigo-950" />
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-950 to-teal-950" />
 
-        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute -right-24 top-10 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute -left-24 top-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
+        <div className="absolute -right-24 top-10 h-80 w-80 rounded-full bg-teal-500/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-8 sm:px-8 lg:px-12">
           <nav className="flex items-center justify-between">
@@ -173,13 +173,13 @@ export default function Home() {
 
           <div className="grid items-center gap-10 pb-8 pt-14 md:grid-cols-[minmax(0,.9fr)_minmax(350px,1.1fr)] md:gap-8 md:pt-20 lg:grid-cols-2 lg:gap-14 lg:pt-28">
             <div>
-              <div className="inline-flex rounded-full border border-blue-400/30 bg-blue-400/10 px-4 py-2 text-sm font-semibold text-blue-200">
+              <div className="inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200">
                 Digital invitations. Smart access. Better events.
               </div>
 
               <h1 className="mt-7 max-w-3xl text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
                 Make every guest feel
-                <span className="block bg-gradient-to-r from-blue-400 via-cyan-300 to-purple-400 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300 bg-clip-text text-transparent">
                   truly invited.
                 </span>
               </h1>
@@ -192,7 +192,7 @@ export default function Home() {
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-7 py-4 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500"
+                  className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-7 py-4 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition hover:bg-emerald-600"
                 >
                   Open Admin Dashboard
                 </Link>
@@ -240,7 +240,7 @@ export default function Home() {
       >
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.25em] text-blue-700">
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">
               Complete Event Experience
             </p>
 
@@ -277,8 +277,8 @@ export default function Home() {
       </section>
 
       <section className="bg-white px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 to-indigo-700 px-7 py-14 text-center text-white shadow-xl sm:px-12">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-blue-100">
+        <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 to-teal-700 px-7 py-14 text-center text-white shadow-xl sm:px-12">
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-100">
             Smart Event Pass
           </p>
 
@@ -286,14 +286,14 @@ export default function Home() {
             Turn every invitation into a complete digital event experience.
           </h2>
 
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-blue-100">
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-emerald-100">
             Manage events, guests, RSVP responses, QR passes and check-ins from
             one simple platform.
           </p>
 
           <Link
             href="/login"
-            className="mt-8 inline-flex rounded-xl bg-white px-7 py-4 font-bold text-blue-700 transition hover:bg-blue-50"
+            className="mt-8 inline-flex rounded-xl bg-white px-7 py-4 font-bold text-emerald-700 transition hover:bg-emerald-50"
           >
             Login to Continue
           </Link>
