@@ -23,6 +23,7 @@ import ContributionBulkActionsDialog from "./ContributionBulkActionsDialog";
 import FinancialCommunicationDialog from "./FinancialCommunicationDialog";
 import EditPaymentDialog from "./EditPaymentDialog";
 import VoidPaymentDialog from "./VoidPaymentDialog";
+import ContributorPermanentDeleteDialog from "./ContributorPermanentDeleteDialog";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import {
   FinancialDesktopHeader,
@@ -37,7 +38,7 @@ import { getContributorGuestSettings, type ContributorGuestSettings } from "@/se
 import { buildAdminCommunicationAdapter, getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
 import {
   cancelPledge, correctPayment, createPledge, exportPledges, getFinancialSuite, getPayments, recordPayment,
-  updatePledge, downloadPledgeTemplate, permanentlyDeletePledge, restorePledge, type FinancialPledge, type PledgeInput,
+  updatePledge, downloadPledgeTemplate, restorePledge, type FinancialPledge, type PledgeInput,
   type PledgePayment, voidPayment,
 } from "@/services/financialSuiteService";
 
@@ -58,6 +59,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const [selectedPayment,setSelectedPayment]=useState<PledgePayment|null>(null);
   const [actionPledgeId,setActionPledgeId]=useState<number|null>(null);
   const [newReceipt,setNewReceipt]=useState<{receipt:FinanceReceipt;verificationUrl:string}|null>(null);
+  const [permanentDeletePledge,setPermanentDeletePledge]=useState<FinancialPledge|null>(null);
   const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [guestFilter, setGuestFilter] = useState("all");
   const [page, setPage] = useState(1); const pageSize = 10;
   const load = useCallback(async () => {
@@ -107,22 +109,6 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Restore failed.");
-    } finally {
-      setActionPledgeId(null);
-    }
-  }
-  async function permanentlyDelete(item: FinancialPledge) {
-    const confirmation = window.prompt(
-      `Permanently delete ${item.full_name}'s cancelled pledge? This cannot be undone.\n\nType the contributor's full name to confirm:`,
-    );
-    if (confirmation === null) return;
-    try {
-      setActionPledgeId(item.id); setError("");
-      await permanentlyDeletePledge(item.id, confirmation);
-      setNotice("Cancelled pledge permanently deleted. The linked guest was preserved.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Permanent deletion failed.");
     } finally {
       setActionPledgeId(null);
     }
@@ -285,7 +271,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           }}
           onCancel={(pledge) => void cancel(pledge)}
           onRestore={(pledge) => void restore(pledge)}
-          onDelete={(pledge) => void permanentlyDelete(pledge)}
+          onDelete={(pledge) => setPermanentDeletePledge(pledge)}
           onOpenGuest={() => router.push(`/events/${eventId}/guests`)}
           onGenerateInvitation={() => changeTab("invitation_queue")}
         />
@@ -486,6 +472,18 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             />
           </div>
         </div>
+      )}
+
+      {permanentDeletePledge && (
+        <ContributorPermanentDeleteDialog
+          pledge={permanentDeletePledge}
+          onClose={() => setPermanentDeletePledge(null)}
+          onDeleted={() => {
+            setPermanentDeletePledge(null);
+            setNotice("Contributor permanently deleted. The linked guest was preserved.");
+            void load();
+          }}
+        />
       )}
     </section>
   );

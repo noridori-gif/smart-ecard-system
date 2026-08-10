@@ -174,6 +174,15 @@ export async function permanentlyDeletePledge(id: number, confirmation: string) 
   if (error) throw new Error(error.message);
   return data as { deleted: boolean; pledge_id: number };
 }
+export type PledgeDeletionPreview = {
+  pledgeId: number; fullName: string; isCancelled: boolean; hasProtectedFinancialHistory: boolean;
+  paymentRows: number; reminderHistory: number; meetingInvitations: number; auditLogs: number;
+};
+export async function previewPledgePermanentDeletion(id: number): Promise<PledgeDeletionPreview> {
+  const { data, error } = await supabase.rpc("preview_pledge_permanent_deletion", { target_pledge_id: id });
+  if (error) throw new Error(error.message);
+  return data as PledgeDeletionPreview;
+}
 export async function getPayments(pledgeId: number) {
   const { data, error } = await supabase.from("pledge_payments").select("*")
     .eq("pledge_id", pledgeId).order("created_at", { ascending: false });
