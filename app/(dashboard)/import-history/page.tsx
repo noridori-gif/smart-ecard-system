@@ -168,7 +168,7 @@ export default function ImportHistoryPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">
             Total Imports
           </p>
@@ -178,7 +178,7 @@ export default function ImportHistoryPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">
             Total Rows
           </p>
@@ -209,7 +209,7 @@ export default function ImportHistoryPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm">
         <label
           htmlFor="history-search"
           className="mb-2 block text-sm font-semibold text-slate-700"
@@ -231,7 +231,7 @@ export default function ImportHistoryPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
           <div className="text-center">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
@@ -252,7 +252,7 @@ export default function ImportHistoryPage() {
         </div>
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm md:block">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
@@ -374,7 +374,7 @@ export default function ImportHistoryPage() {
                 return (
                   <article
                     key={historyItem.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -458,7 +458,7 @@ export default function ImportHistoryPage() {
             )}
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)] sm:flex-row">
             <p className="text-sm text-slate-600">
               Showing{" "}
               {(safeCurrentPage - 1) *
@@ -481,12 +481,12 @@ export default function ImportHistoryPage() {
                     Math.max(1, page - 1)
                   )
                 }
-                className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
 
-              <span className="text-sm font-medium text-slate-700">
+              <span className="px-2 text-sm font-medium tabular-nums text-slate-700">
                 Page {safeCurrentPage} of {totalPages}
               </span>
 
@@ -503,7 +503,7 @@ export default function ImportHistoryPage() {
                     )
                   )
                 }
-                className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>

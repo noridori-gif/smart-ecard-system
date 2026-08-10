@@ -56,7 +56,7 @@ export default function WhatsAppCardPreviewPage() {
 
   if (isLoading || !isAuthorized) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+      <div className="rounded-2xl border border-[#e7e1d7] bg-white p-8 text-sm text-slate-600 shadow-sm">
         Loading WhatsApp card preview…
       </div>
     );
@@ -64,7 +64,7 @@ export default function WhatsAppCardPreviewPage() {
 
   return (
     <section>
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">
             5 Premium Designs • Real WhatsApp Card Preview
@@ -89,9 +89,9 @@ export default function WhatsAppCardPreviewPage() {
         {templates.map(([template, label]) => (
           <article
             key={template}
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+            className="overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm"
           >
-            <div className="border-b border-slate-200 px-5 py-4">
+            <div className="border-b border-[#e7e1d7] px-5 py-4">
               <h2 className="font-bold text-slate-900">{label}</h2>
               <p className="mt-1 font-mono text-xs text-slate-500">{template}</p>
             </div>
@@ -168,8 +168,8 @@ export default function WhatsAppCardPreviewPage() {
         ))}
       </div>
 
-      <article className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
+      <article className="mt-8 overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
+        <div className="border-b border-[#e7e1d7] px-5 py-4">
           <h2 className="font-bold text-slate-900">Compact Horizontal</h2>
           <p className="mt-1 text-sm text-slate-500">
             WhatsApp-friendly landscape option with a photo-ready emerald panel.

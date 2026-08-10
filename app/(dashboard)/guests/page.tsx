@@ -456,7 +456,7 @@ export default function GuestsPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="rounded-xl border border-[#e7e1d7] bg-white px-4 py-3 shadow-sm">
             <p className="text-xs font-medium uppercase text-slate-500">
               Total
             </p>
@@ -466,7 +466,7 @@ export default function GuestsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="rounded-xl border border-[#e7e1d7] bg-white px-4 py-3 shadow-sm">
             <p className="text-xs font-medium uppercase text-slate-500">
               Checked In
             </p>
@@ -476,7 +476,7 @@ export default function GuestsPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="rounded-xl border border-[#e7e1d7] bg-white px-4 py-3 shadow-sm">
             <p className="text-xs font-medium uppercase text-slate-500">
               Pending
             </p>
@@ -495,7 +495,7 @@ export default function GuestsPage() {
         }
       />
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm">
         <div className="grid gap-4 lg:grid-cols-3">
           <div>
             <label
@@ -598,7 +598,7 @@ export default function GuestsPage() {
         </div>
       ) : (
         <>
-          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm md:block">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
@@ -768,7 +768,7 @@ export default function GuestsPage() {
               return (
                 <article
                   key={guest.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -877,7 +877,7 @@ export default function GuestsPage() {
             })}
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)] sm:flex-row">
             <p className="text-sm text-slate-600">
               Showing{" "}
               <span className="font-semibold">
@@ -913,12 +913,12 @@ export default function GuestsPage() {
                     )
                   )
                 }
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
 
-              <span className="px-2 text-sm font-medium text-slate-700">
+              <span className="px-2 text-sm font-medium tabular-nums text-slate-700">
                 Page {safeCurrentPage} of{" "}
                 {totalPages}
               </span>
@@ -937,7 +937,7 @@ export default function GuestsPage() {
                     )
                   )
                 }
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>

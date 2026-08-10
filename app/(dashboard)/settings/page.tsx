@@ -383,7 +383,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
         <div className="bg-gradient-to-r from-emerald-800 to-teal-800 px-6 py-8 text-white">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-emerald-800 shadow-lg">
@@ -477,7 +477,7 @@ export default function SettingsPage() {
                   profile?.email ?? ""
                 }
                 disabled
-                className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-slate-500"
+                className="w-full cursor-not-allowed rounded-xl border border-[#e7e1d7] bg-slate-100 px-4 py-3 text-slate-500"
               />
             </div>
           </div>
@@ -500,7 +500,7 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-[#e7e1d7] bg-white p-6 shadow-sm">
         <div>
           <h2 className="text-lg font-bold text-slate-900">
             Security
@@ -613,7 +613,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900">
             System Information
           </h2>
@@ -649,7 +649,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-6 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900">

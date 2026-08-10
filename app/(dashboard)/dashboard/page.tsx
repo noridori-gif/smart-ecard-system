@@ -332,7 +332,7 @@ export default function DashboardPage() {
           </p>
         </div>
       ) : initialLoading ? (
-        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
           <div className="text-center">
             <div className="mx-auto h-11 w-11 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 

@@ -160,7 +160,7 @@ export default function ChangePasswordPage() {
 
   return (
     <section className="mx-auto w-full max-w-3xl">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <div className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm sm:p-8">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Account Security
@@ -313,7 +313,7 @@ export default function ChangePasswordPage() {
             </ul>
           </div>
 
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-3 border-t border-[#e7e1d7] pt-6 sm:flex-row sm:justify-end">
             <button
               type="button"
               disabled={

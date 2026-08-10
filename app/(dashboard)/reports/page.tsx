@@ -678,7 +678,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="w-full space-y-3 lg:w-96">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm">
             <label
               htmlFor="report-event"
               className="mb-2 block text-sm font-semibold text-slate-700"
@@ -807,7 +807,7 @@ export default function ReportsPage() {
       )}
 
       {loadingReport ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-10 text-center shadow-sm">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-700" />
 
           <p className="mt-4 text-sm text-slate-500">
@@ -900,8 +900,8 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 p-4">
+          <div className="rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
+            <div className="border-b border-[#e7e1d7] p-4">
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -965,7 +965,7 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 border-b border-slate-200 p-4 md:grid-cols-2">
+            <div className="grid gap-4 border-b border-[#e7e1d7] p-4 md:grid-cols-2">
               <input
                 type="search"
                 value={searchTerm}
@@ -1244,7 +1244,7 @@ export default function ReportsPage() {
             </div>
 
             {currentRows.length > 0 && (
-              <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row">
+              <div className="flex flex-col items-center justify-between gap-3 border-t border-[#e7e1d7] px-5 py-4 sm:flex-row">
                 <p className="text-sm text-slate-600">
                   Showing{" "}
                   {(safeCurrentPage - 1) *
@@ -1268,12 +1268,12 @@ export default function ReportsPage() {
                         Math.max(1, page - 1)
                       )
                     }
-                    className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Previous
                   </button>
 
-                  <span className="text-sm font-medium">
+                  <span className="px-2 text-sm font-medium tabular-nums text-slate-700">
                     Page {safeCurrentPage} of{" "}
                     {totalPages}
                   </span>
@@ -1291,7 +1291,7 @@ export default function ReportsPage() {
                         )
                       )
                     }
-                    className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    className="min-h-11 rounded-xl border border-[#ddd7cc] px-4 text-sm font-semibold text-slate-700 transition hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Next
                   </button>

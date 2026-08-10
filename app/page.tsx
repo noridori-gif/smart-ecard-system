@@ -259,7 +259,7 @@ export default function Home() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                className="rounded-2xl border border-[#e7e1d7] bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="text-4xl">{feature.icon}</div>
 

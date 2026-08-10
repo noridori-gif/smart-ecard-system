@@ -344,9 +344,9 @@ export default function CheckInPage() {
               <h2 id="secondary-title" className="sep-section-title">Event Overview</h2>
               <p className="sep-secondary mt-1">Detailed stats and scan activity for this event.</p>
             </div>
-            <div className="inline-flex rounded-xl border border-[#e7e1d7] bg-white p-1" role="tablist" aria-label="Event overview sections">
-              <button type="button" role="tab" aria-selected={secondaryTab === "activity"} onClick={() => setSecondaryTab("activity")} className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition ${secondaryTab === "activity" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-stone-100"}`}>Recent Activity</button>
-              <button type="button" role="tab" aria-selected={secondaryTab === "stats"} onClick={() => setSecondaryTab("stats")} className={`min-h-11 rounded-lg px-4 text-sm font-semibold transition ${secondaryTab === "stats" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-stone-100"}`}>Live Statistics</button>
+            <div className="inline-flex gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm" role="tablist" aria-label="Event overview sections">
+              <button type="button" role="tab" aria-selected={secondaryTab === "activity"} onClick={() => setSecondaryTab("activity")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "activity" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Recent Activity</button>
+              <button type="button" role="tab" aria-selected={secondaryTab === "stats"} onClick={() => setSecondaryTab("stats")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "stats" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Live Statistics</button>
             </div>
           </div>
 

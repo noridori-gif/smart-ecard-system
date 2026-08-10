@@ -453,7 +453,7 @@ export default function UsersPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">
             Total Users
           </p>
@@ -494,7 +494,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-sm">
         {isLoading ? (
           <div className="flex min-h-72 items-center justify-center">
             <div className="text-center">
