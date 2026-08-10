@@ -4,6 +4,7 @@ import type {
   ActivityType,
   DashboardActivity,
 } from "@/services/eventDashboardService";
+import EmptyState from "@/components/ui/EmptyState";
 
 type RecentActivityFeedProps = {
   activities: DashboardActivity[];
@@ -203,22 +204,11 @@ export default function RecentActivityFeed({
         {isLoading ? (
           <LoadingState />
         ) : activities.length === 0 ? (
-          <div className="flex min-h-40 items-center justify-center rounded-xl border border-dashed border-[#ddd7cc] bg-[#faf8f4] px-5 text-center">
-            <div>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-slate-600">
-                <ActivityIcon name="eye" />
-              </div>
-
-              <p className="mt-3 font-semibold text-slate-700">
-                Hakuna recent activity bado
-              </p>
-
-              <p className="mt-1 max-w-sm text-sm text-slate-500">
-                Check-in, invitation views na RSVP
-                responses zitaonekana hapa.
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            icon={<ActivityIcon name="eye" />}
+            title="Hakuna recent activity bado"
+            description="Check-in, invitation views na RSVP responses zitaonekana hapa."
+          />
         ) : (
           <div>
             {activities.map(

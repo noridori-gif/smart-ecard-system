@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import EmptyState from "@/components/ui/EmptyState";
+import SharedButton from "@/components/ui/Button";
 
 type EventOption = { id: number; title: string };
 type Connector = { id: number; display_name: string; webhook_url_masked: string; is_active: boolean; allowed_event_types: string[]; last_success_at: string | null; last_failure_at: string | null; pendingDeliveries: number };
@@ -61,7 +63,11 @@ export default function MakeIntegrationPanel({ eventId, events }: { eventId: num
     {secret && <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4"><p className="text-sm font-bold">{t.secret}</p><code className="mt-2 block break-all text-xs">{secret}</code></div>}
     {!effectiveEventId && <div className="mt-4 rounded-xl border border-dashed p-8 text-center"><p className="text-sm text-slate-600">{t.chooseEvent}</p><button disabled className="mt-4 min-h-11 rounded-xl bg-slate-300 px-5 font-bold text-white">{t.add}</button></div>}
     {effectiveEventId && loading && !connectors.length && <p className="mt-4 p-6 text-center text-sm text-slate-500">…</p>}
-    {effectiveEventId && !loading && !connectors.length && !showForm && <div className="mt-4 rounded-xl border border-dashed p-8 text-center"><span className="inline-flex size-12 items-center justify-center rounded-full bg-emerald-100 text-xl text-emerald-700">↗</span><p className="mt-3 text-sm text-slate-600">{t.empty}</p><button onClick={() => setShowForm(true)} className="mt-4 min-h-11 rounded-xl bg-slate-950 px-5 font-bold text-white">{t.add}</button></div>}
+    {effectiveEventId && !loading && !connectors.length && !showForm && <div className="mt-4"><EmptyState
+      icon={<span className="text-xl" aria-hidden="true">↗</span>}
+      title={t.empty}
+      action={<SharedButton variant="dark" onClick={() => setShowForm(true)}>{t.add}</SharedButton>}
+    /></div>}
     {effectiveEventId && showForm && <div className="mt-4 rounded-xl border p-4"><h3 className="font-black">{t.add}</h3><label className="mt-3 block text-sm font-bold">{t.webhook}<input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://hook.make.com/…" className="mt-2 min-h-12 w-full rounded-xl border px-3 font-normal" /></label><fieldset className="mt-4"><legend className="text-sm font-bold">{t.allowed}</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{supportedEvents.map((value) => <label key={value} className="flex gap-2 text-sm"><input type="checkbox" checked={selected.includes(value)} onChange={() => setSelected((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} />{value}</label>)}</div></fieldset><div className="mt-5 flex gap-2"><button onClick={() => void create()} className="min-h-11 rounded-xl bg-slate-950 px-5 font-bold text-white">{t.save}</button><button onClick={() => setShowForm(false)} className="min-h-11 rounded-xl border px-5 font-bold">{t.cancel}</button></div></div>}
     {connectors.map((connector) => <ConnectorCard key={connector.id} connector={connector} t={t} action={action} />)}
     {effectiveEventId && connectors.length > 0 && <button onClick={() => setShowForm((value) => !value)} className="mt-4 min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-bold">{t.add}</button>}

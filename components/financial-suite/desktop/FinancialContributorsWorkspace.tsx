@@ -5,6 +5,8 @@ import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { formatAppDate, formatAppNumber, formatAppTzs } from "@/lib/i18n/formatters";
 import { FinancialToolbarButton, financialDesktop } from "./FinancialDesktopUI";
 import type { ReminderHistoryRow } from "@/services/financialAutomationService";
+import SharedEmptyState from "@/components/ui/EmptyState";
+import Button from "@/components/ui/Button";
 
 type WorkspaceProps = {
   eventTitle: string; pledges: FinancialPledge[]; visible: FinancialPledge[];
@@ -32,7 +34,12 @@ export function FinancialContributorsWorkspace(props: WorkspaceProps) {
       </div>
       <details className="group border-b border-[#ece7df] px-4 py-2"><summary className="cursor-pointer list-none text-xs font-semibold text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">{language === "sw" ? "Vitendo zaidi" : "More actions"}</summary><div className="mt-2 flex flex-wrap gap-2 pb-2"><FinancialToolbarButton icon="layers" tone="attention" onClick={props.onBulk}>{language === "sw" ? "Vitendo vya Wengi" : "Bulk Actions"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={()=>props.onExport(props.eventTitle,props.pledges)}>{language === "sw" ? "Pakua Wachangiaji" : "Export Contributors"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={props.onTemplate}>{language === "sw" ? "Muundo wa Excel" : "Excel Template"}</FinancialToolbarButton></div></details>
 
-      {!props.visible.length ? <EmptyState onCreate={props.onCreate} language={language}/> : <div className="overflow-visible">
+      {!props.visible.length ? <SharedEmptyState
+        icon={<svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6"/></svg>}
+        title={language==="sw"?"Bado hakuna wachangiaji.":"No contributors yet."}
+        description={language==="sw"?"Ongeza mchangiaji wako wa kwanza.":"Create your first contributor."}
+        action={<Button onClick={props.onCreate}>+ {language==="sw"?"Ongeza Mchangiaji":"Add Contributor"}</Button>}
+      /> : <div className="overflow-visible">
         <table className="w-full table-fixed border-separate border-spacing-0 text-left text-sm">
           <caption className="sr-only">{t("financial.contributors")}</caption>
           <thead className="sticky top-0 z-10 bg-[#faf8f4]/95 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 backdrop-blur">
@@ -74,7 +81,6 @@ function ActionMenu({pledge,busy,...actions}:MenuProps) { const {language,t}=use
 
 function CommunicationBadge({history}:{history:ReminderHistoryRow[]}) { const latest=[...history].sort((a,b)=>b.created_at.localeCompare(a.created_at))[0]; if(!latest)return null; const failed=latest.delivery_status==="failed"; const thanked=latest.reminder_type==="pledge_thank_you"; const today=new Date(latest.created_at).toDateString()===new Date().toDateString(); const label=failed?"Delivery Failed":thanked?"Thank You Sent":today?"Reminder Sent Today":"Reminder Sent"; return <span title={`${new Date(latest.created_at).toLocaleString()} · ${latest.channel} · ${latest.delivery_status}`} className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${failed?"bg-red-50 text-red-700":thanked?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-800"}`}>● {label}</span>; }
 
-function EmptyState({onCreate,language}:{onCreate:()=>void;language:"sw"|"en"}) { return <div className="grid min-h-80 place-items-center p-8 text-center"><div><div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-50 text-emerald-700"><svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6"/></svg></div><h2 className="mt-5 text-xl font-bold text-slate-950">{language==="sw"?"Bado hakuna wachangiaji.":"No contributors yet."}</h2><p className="mt-2 text-sm text-slate-500">{language==="sw"?"Ongeza mchangiaji wako wa kwanza.":"Create your first contributor."}</p><button type="button" onClick={onCreate} className="mt-5 min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white shadow-sm hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2">+ {language==="sw"?"Ongeza Mchangiaji":"Add Contributor"}</button></div></div>; }
 function Avatar({name}:{name:string}) { const initials=name.trim().split(/\s+/).slice(0,2).map(part=>part[0]?.toUpperCase()).join("")||"?"; return <span aria-hidden="true" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 text-xs font-black text-white shadow-sm">{initials}</span>; }
 function PageButton({children,...props}:React.ButtonHTMLAttributes<HTMLButtonElement>) { return <button type="button" {...props} className="min-h-10 rounded-lg border border-stone-200 bg-white px-3 font-semibold shadow-sm hover:bg-stone-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-40">{children}</button>; }
 function SearchIcon(){return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;}
