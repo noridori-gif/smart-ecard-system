@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 export type ButtonVariant =
   | "primary"
   | "secondary"
+  | "outline"
   | "dark"
   | "info"
   | "warning"
@@ -14,6 +15,8 @@ const variants: Record<ButtonVariant, string> = {
   primary: "bg-emerald-700 text-white hover:bg-emerald-800",
   secondary:
     "border border-[#ddd7cc] bg-white text-slate-700 hover:bg-[#faf8f4]",
+  outline:
+    "border border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50",
   dark: "bg-slate-900 text-white hover:bg-slate-800",
   info: "border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
   warning:

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Calendar, Clock, MapPin } from "lucide-react";
 import {
   archiveEvent,
   getEvents,
@@ -11,6 +12,7 @@ import {
 import { getCurrentUserProfile } from "@/services/profileService";
 import EventPermanentDeleteDialog from "@/components/events/EventPermanentDeleteDialog";
 import { buttonClassName } from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -105,103 +107,102 @@ export default function EventsPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
-        {isLoading && (
-          <p className="p-8 text-gray-500">
-            Loading events...
-          </p>
-        )}
+      {isLoading && (
+        <p className="p-8 text-gray-500">
+          Loading events...
+        </p>
+      )}
 
-        {!isLoading &&
-          !errorMessage &&
-          events.length === 0 && (
-            <p className="p-8 text-gray-500">
-              No events have been created yet.
-            </p>
-          )}
+      {!isLoading && !errorMessage && events.length === 0 && (
+        <EmptyState
+          title={archivedView ? "No archived events." : "No events have been created yet."}
+          description={archivedView ? undefined : "Create your first event to get started."}
+        />
+      )}
 
-        {!isLoading && events.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-left text-[15px]">
-              <thead className="border-b border-[#e8e2d9] bg-[#faf8f4] text-[13px] font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-6 py-4">Event</th>
-                  <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Date</th>
-                  <th className="px-6 py-4">Time</th>
-                  <th className="px-6 py-4">Venue</th>
-                  <th className="px-6 py-4">Actions</th>
-                </tr>
-              </thead>
+      {!isLoading && events.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {events.map((event) => {
+            const isWorking = workingEventId === event.id;
 
-              <tbody className="divide-y divide-[#eee9e1]">
-                {events.map((event) => {
-                  const isWorking = workingEventId === event.id;
+            return (
+              <article
+                key={event.id}
+                className="group rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_2px_10px_rgba(39,34,25,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(39,34,25,0.10)]"
+              >
+                <div>
+                  <h2 className="text-lg font-bold text-slate-950">{event.title}</h2>
+                  <span className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold capitalize text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                    {event.event_type}
+                  </span>
+                </div>
 
-                  return (
-                    <tr
-                      key={event.id}
-                      className="transition hover:bg-[#fcfbf8]"
+                <div className="mt-4 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2">
+                  <span className="flex items-center gap-1.5 tabular-nums">
+                    <Calendar className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    {event.event_date}
+                  </span>
+                  <span className="flex items-center gap-1.5 tabular-nums">
+                    <Clock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    {event.event_time}
+                  </span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    <span className="truncate">{event.venue}</span>
+                  </span>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0ece3] pt-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/events/${event.id}/contributions`}
+                      className={buttonClassName({ variant: "primary", size: "lg", className: "w-full sm:w-auto" })}
                     >
-                      <td className="min-w-64 px-6 py-4 font-semibold text-slate-950">
-                        {event.title}
-                      </td>
+                      Michango &amp; Ahadi
+                    </Link>
 
-                      <td className="whitespace-nowrap px-6 py-4 capitalize text-slate-600">
-                        {event.event_type}
-                      </td>
+                    <Link
+                      href={`/events/${event.id}/guests`}
+                      className={buttonClassName({ variant: "outline", size: "sm" })}
+                    >
+                      Guests
+                    </Link>
 
-                      <td className="whitespace-nowrap px-6 py-4 tabular-nums text-slate-600">
-                        {event.event_date}
-                      </td>
+                    <Link
+                      href={`/events/${event.id}/edit`}
+                      className={buttonClassName({ variant: "outline", size: "sm" })}
+                    >
+                      Edit
+                    </Link>
+                  </div>
 
-                      <td className="whitespace-nowrap px-6 py-4 tabular-nums text-slate-600">
-                        {event.event_time}
-                      </td>
-
-                      <td className="min-w-56 px-6 py-4 text-slate-600">
-                        {event.venue}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex min-w-max flex-wrap gap-2">
-                          <Link
-                            href={`/events/${event.id}/edit`}
-                            className={buttonClassName({ variant: "warning", size: "sm" })}
-                          >
-                            Edit
-                          </Link>
-
-                          <Link
-                            href={`/events/${event.id}/guests`}
-                            className={buttonClassName({ variant: "info", size: "sm" })}
-                          >
-                            Guests
-                          </Link>
-
-                          <Link
-                            href={`/events/${event.id}/contributions`}
-                            className={buttonClassName({ variant: "primary", size: "sm" })}
-                          >
-                            Michango &amp; Ahadi
-                          </Link>
-
-                          {(!archivedView || isAdmin) && <button type="button" disabled={isWorking} onClick={() => void handleArchive(event)}
-                            className={buttonClassName({ variant: "dark", size: "sm" })}>
-                            {isWorking ? "Working…" : archivedView ? "Restore" : "Archive Event"}
-                          </button>}
-                          {isAdmin && <button type="button" onClick={() => setPermanentDeleteEvent(event)}
-                            className={buttonClassName({ variant: "danger", size: "sm" })}>Delete Permanently</button>}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  <div className="flex items-center gap-4 sm:ml-4 sm:border-l sm:border-[#f0ece3] sm:pl-4">
+                    {(!archivedView || isAdmin) && (
+                      <button
+                        type="button"
+                        disabled={isWorking}
+                        onClick={() => void handleArchive(event)}
+                        className="text-xs font-semibold text-slate-400 underline-offset-2 transition hover:text-slate-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isWorking ? "Working…" : archivedView ? "Restore" : "Archive Event"}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setPermanentDeleteEvent(event)}
+                        className="text-xs font-semibold text-red-400 underline-offset-2 transition hover:text-red-600 hover:underline"
+                      >
+                        Delete Permanently
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
       {permanentDeleteEvent && <EventPermanentDeleteDialog event={permanentDeleteEvent} onClose={() => setPermanentDeleteEvent(null)} onDeleted={() => {
         setEvents((current) => current.filter((event) => event.id !== permanentDeleteEvent.id));
         setSuccessMessage(`Event "${permanentDeleteEvent.title}" was permanently deleted.`);
