@@ -4,6 +4,7 @@ export type FinanceReceipt = {
   receipt_number: string; event_name: string; contributor_name: string; contributor_phone: string;
   pledged_amount: string; payment_amount: string; total_paid: string; remaining_balance: string;
   payment_date: string; payment_method: string; payment_reference: string | null;
+  provider: string | null; received_by: string | null;
   recorded_by: string; payment_status: "valid" | "voided";
 };
 export function buildReceiptMessage(receipt: FinanceReceipt, verificationUrl: string, language: "sw"|"en") {

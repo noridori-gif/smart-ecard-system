@@ -12,7 +12,7 @@ import { processWorkflowByIdempotencyKey } from "@/services/financialWorkflowPro
 type Body = {
   token?: unknown; action?: unknown; pledgeId?: unknown;
   fullName?: unknown; phone?: unknown; email?: unknown; pledgedAmount?: unknown; notes?: unknown;
-  amount?: unknown; date?: unknown; method?: unknown; reference?: unknown; provider?: unknown;
+  amount?: unknown; date?: unknown; method?: unknown; reference?: unknown; provider?: unknown; receivedBy?: unknown;
   receiptNumber?: unknown;
   channel?: unknown; confirmed?: unknown; language?: unknown;
 };
@@ -149,14 +149,14 @@ export async function POST(request: Request) {
       if (error) throw error; return Response.json({ pledge: data }, { headers: noStoreHeaders });
     }
     if (action === "record_payment") {
-      const amount = text(body?.amount, 30); const methods = ["cash","mobile_money","bank","card","other"];
+      const amount = text(body?.amount, 30); const methods = ["cash","mobile_money","bank","card","cheque","other"];
       const method = text(body?.method, 30);
       if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0 || !methods.includes(method)) throw new Error("Invalid payment");
       const { data, error } = await client.rpc("organiser_record_payment", {
         supplied_token_hash, target_pledge_id: pledgeId, payment_amount: amount,
         paid_on: text(body?.date, 10) || new Date().toISOString().slice(0,10), method,
         reference: text(body?.reference, 200), payment_provider: text(body?.provider, 100),
-        payment_notes: text(body?.notes, 1000),
+        payment_notes: text(body?.notes, 1000), received_by_name: text(body?.receivedBy, 200),
       });
       if (error) throw error;
       let acknowledgement={status:"queued",message:"Payment saved. Acknowledgement queued for delivery."};

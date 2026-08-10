@@ -56,7 +56,7 @@ export async function getClosingReport(eventId:number):Promise<ClosingReport>{
   const [eventResult,pledgeResult,paymentResult,guestResult,invitationResult,targetResult]=await Promise.all([
     supabase.from("events").select("id,title,event_type,event_date,venue").eq("id",eventId).single(),
     supabase.from("event_pledge_financial_summary").select("*").eq("event_id",eventId),
-    supabase.from("pledge_payments").select("id,pledge_id,receipt_number,amount,currency_code,payment_date,payment_method,payment_reference,provider,notes,created_at,voided_at,void_reason,event_pledges!inner(event_id)").eq("event_pledges.event_id",eventId),
+    supabase.from("pledge_payments").select("id,pledge_id,receipt_number,amount,currency_code,payment_date,payment_method,payment_reference,provider,received_by,notes,created_at,voided_at,void_reason,event_pledges!inner(event_id)").eq("event_pledges.event_id",eventId),
     supabase.from("guests").select("id,checked_in_at").eq("event_id",eventId),
     supabase.from("invitations").select("id,viewed_at,rsvp_status").eq("event_id",eventId),
     supabase.from("event_finance_targets").select("budget_amount,contribution_deadline").eq("event_id",eventId).maybeSingle(),

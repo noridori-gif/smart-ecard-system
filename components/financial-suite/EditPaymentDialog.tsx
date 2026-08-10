@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import type { FinancialPledge, PaymentCorrectionInput, PledgePayment } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
+import { providerOptionsForMethod } from "@/lib/paymentProviderOptions";
 
 const methods = [
   ["cash", "Cash"], ["mobile_money", "Mobile money"], ["bank", "Bank"],
-  ["card", "Card"], ["other", "Other"],
+  ["card", "Card"], ["cheque", "Cheque"], ["other", "Other"],
 ] as const;
+const OTHER = "__other__";
 
 export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: {
   payment: PledgePayment;
@@ -21,9 +23,13 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
     method: payment.payment_method,
     reference: payment.payment_reference ?? "",
     provider: payment.provider ?? "",
+    receivedBy: payment.received_by ?? "",
     notes: payment.notes ?? "",
     reason: "",
   });
+  const [providerOther, setProviderOther] = useState(
+    Boolean(payment.provider) && !providerOptionsForMethod(payment.payment_method).includes(payment.provider ?? "")
+  );
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +45,8 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
     && /^\d{4}-\d{2}-\d{2}$/.test(form.date)
     && methods.some(([value]) => value === form.method)
     && form.reason.trim().length >= 3;
+  const providerOptions = providerOptionsForMethod(form.method);
+  const providerLabel = form.method === "bank" ? "Bank Name" : "Mobile Network";
 
   async function submit() {
     try {
@@ -77,9 +85,20 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
     <div className="grid gap-4 sm:grid-cols-2">
       <label className="text-sm font-semibold">Amount<input required inputMode="decimal" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
       <label className="text-sm font-semibold">Payment date<input required type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
-      <label className="text-sm font-semibold">Payment method<select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2">{methods.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label className="text-sm font-semibold">Payment method<select value={form.method} onChange={(e) => { setProviderOther(false); setForm({ ...form, method: e.target.value, provider: "" }); }} className="mt-1 w-full rounded-xl border px-3 py-2">{methods.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className="text-sm font-semibold">Payment reference<input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
-      <label className="text-sm font-semibold">Provider<input value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
+      {providerOptions.length > 0 && <label className="text-sm font-semibold">{providerLabel}
+        {!providerOther ? (
+          <select value={form.provider} onChange={(e) => { if (e.target.value === OTHER) { setProviderOther(true); setForm({ ...form, provider: "" }); } else setForm({ ...form, provider: e.target.value }); }} className="mt-1 w-full rounded-xl border px-3 py-2">
+            <option value="" disabled>Select…</option>
+            {providerOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            <option value={OTHER}>Other</option>
+          </select>
+        ) : (
+          <input value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} placeholder="Enter name" className="mt-1 w-full rounded-xl border px-3 py-2" />
+        )}
+      </label>}
+      <label className="text-sm font-semibold">Received by<input value={form.receivedBy} onChange={(e) => setForm({ ...form, receivedBy: e.target.value })} placeholder="Name of person who collected this payment" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
       <label className="text-sm font-semibold">Notes<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
     </div>
     <label className="block text-sm font-semibold">Correction reason <span className="text-red-600">*</span><textarea required minLength={3} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="mt-1 min-h-24 w-full rounded-xl border px-3 py-2" /></label>

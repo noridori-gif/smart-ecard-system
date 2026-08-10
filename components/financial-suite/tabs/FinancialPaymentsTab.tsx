@@ -205,7 +205,13 @@ export default function FinancialPaymentsTab({
                           </div>
                           <p className="mt-0.5 text-xs text-slate-500 lg:hidden">
                             {payment.receipt_number} · {payment.payment_date} · {payment.payment_method.replaceAll("_", " ")}
+                            {payment.provider ? ` (${payment.provider})` : ""}
                           </p>
+                          {payment.received_by && (
+                            <p className="mt-0.5 text-xs text-slate-400 lg:hidden">
+                              Collected by {payment.received_by}
+                            </p>
+                          )}
                         </td>
                         <td className="hidden whitespace-nowrap px-5 py-4 font-semibold tabular-nums lg:table-cell">
                           {formatTzs(payment.amount)}
@@ -218,6 +224,12 @@ export default function FinancialPaymentsTab({
                         </td>
                         <td className="hidden px-5 py-4 capitalize lg:table-cell">
                           {payment.payment_method.replaceAll("_", " ")}
+                          {payment.provider && (
+                            <span className="block text-xs font-normal normal-case text-slate-500">{payment.provider}</span>
+                          )}
+                          {payment.received_by && (
+                            <span className="block text-xs font-normal normal-case text-slate-400">Collected by {payment.received_by}</span>
+                          )}
                         </td>
                         <td className="px-3 py-3 sm:px-5 sm:py-4">
                           <span

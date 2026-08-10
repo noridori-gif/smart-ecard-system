@@ -44,7 +44,7 @@ export function parseOptionalAmount(value: NumericInput): number | null {
 }
 export type PledgePayment = {
   id: number; pledge_id: number; receipt_number: string; amount: string; currency_code?: string; payment_date: string;
-  payment_method: string; payment_reference: string | null; provider: string | null;
+  payment_method: string; payment_reference: string | null; provider: string | null; received_by: string | null;
   notes: string | null; created_at: string; voided_at: string | null; void_reason: string | null;
 };
 export type PledgeInput = {
@@ -89,7 +89,7 @@ function throwPledgePersistenceError(error: { message: string }):never {
 function validateExpectedCompletionDate(value:string|null|undefined){if(!value)return null;if(!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new Error("Enter a valid expected completion date.");const date=new Date(`${value}T00:00:00`),minimum=new Date();minimum.setHours(0,0,0,0);minimum.setDate(minimum.getDate()-31);if(Number.isNaN(date.getTime())||date<minimum)throw new Error("Expected completion date is too far in the past.");return value}
 export type PaymentCorrectionInput = {
   amount: string; date: string; method: string; reference: string;
-  provider: string; notes: string; reason: string;
+  provider: string; receivedBy: string; notes: string; reason: string;
 };
 
 export async function getFinancialSuite(eventId: number) {
@@ -148,7 +148,7 @@ export async function updatePledge(id: number, input: PledgeInput, paid: string)
 }
 
 export async function recordPayment(pledgeId: number, values: {
-  amount: string; date: string; method: string; reference?: string; provider?: string; notes?: string;
+  amount: string; date: string; method: string; reference?: string; provider?: string; receivedBy?: string; notes?: string;
 }) {
   const {data:session}=await supabase.auth.getSession();
   if(!session.session?.access_token)throw new Error("Your session has expired.");
@@ -208,6 +208,7 @@ export async function correctPayment(id: number, values: PaymentCorrectionInput)
     corrected_provider: values.provider,
     corrected_notes: values.notes,
     correction_reason: values.reason,
+    corrected_received_by: values.receivedBy,
   });
   if (error) throw new Error(error.message);
   return data as FinancialPledge;
