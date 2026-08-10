@@ -11,6 +11,7 @@ import RecordPaymentDialog from "./RecordPaymentDialog";
 import OrganiserAccessPanel from "./OrganiserAccessPanel";
 import PaymentHistoryDialog from "./PaymentHistoryDialog";
 import FinancialPaymentsTab from "./tabs/FinancialPaymentsTab";
+import FinancialExpensesTab from "./tabs/FinancialExpensesTab";
 import FinancialRemindersTab from "./tabs/FinancialRemindersTab";
 import FinancialReportsTab from "./tabs/FinancialReportsTab";
 import ContributorEligibilityDashboard from "./tabs/ContributorEligibilityDashboard";
@@ -325,6 +326,15 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
               setMode("void-payment");
             }}
           />
+        </TabSection>
+      )}
+
+      {activeTab === "expenses" && (
+        <TabSection
+          title="Expenses"
+          description="Track event spending, optional receipts, and compare against the expense budget."
+        >
+          <FinancialExpensesTab eventId={eventId} expenseBudget={data.summary.expense_budget_amount} />
         </TabSection>
       )}
 
