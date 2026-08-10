@@ -49,7 +49,10 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   }
   if (result.error) {
     const denied = /not authorized/i.test(result.error.message);
-    return reply({ error: denied ? "Not authorized." : "The event action could not be completed." }, denied ? 403 : 400);
+    console.error(`[event-lifecycle] eventId=${eventId} action=${body.action} error=${result.error.message}`);
+    if (denied) return reply({ error: "Not authorized." }, 403);
+    const adminOnlyAction = body.action === "delete" || body.action === "preview_delete";
+    return reply({ error: adminOnlyAction ? result.error.message : "The event action could not be completed." }, 400);
   }
   return reply(result.data);
 }

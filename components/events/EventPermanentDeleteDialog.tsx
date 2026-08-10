@@ -52,6 +52,8 @@ export default function EventPermanentDeleteDialog({ event, onClose, onDeleted }
           ["Wishes",preview.wishes],["Import history",preview.guestImportHistory],
           ["Finance targets",preview.financeTargets],["WhatsApp logs",preview.whatsappMessageLogs],
           ["Finance audit logs",preview.financeAuditLogs],["Automation settings",preview.financeAutomationSettings],
+          ["Workflow events",preview.workflowEvents],["Public pledge links",preview.publicPledgeLinks],
+          ["Public pledge reviews",preview.publicPledgeReviews],["Reminder policy settings",preview.pledgeReminderSettings],
         ].map(([label,value])=><div key={String(label)} className="rounded-lg border p-3"><span className="block text-xs text-slate-500">{label}</span><b>{value}</b></div>)}
       </div>}
       <div className="mt-6 space-y-4">

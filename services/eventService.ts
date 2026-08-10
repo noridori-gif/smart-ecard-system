@@ -819,7 +819,8 @@ export type EventDeletionPreview = {
   validPayments: number; voidedPayments: number; receipts: number; committeeLinks: number;
   reminderHistory: number; automationDeliveries: number; wishes: number; guestImportHistory: number;
   financeTargets: number; whatsappMessageLogs: number; financeAuditLogs: number;
-  financeAutomationSettings: number;
+  financeAutomationSettings: number; workflowEvents: number; publicPledgeLinks: number;
+  publicPledgeReviews: number; pledgeReminderSettings: number;
 };
 
 async function eventLifecycleRequest(id: number, body: Record<string, unknown>) {
