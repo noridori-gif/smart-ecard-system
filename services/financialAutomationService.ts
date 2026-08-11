@@ -128,6 +128,14 @@ export function buildAdminCommunicationAdapter(eventId:number):CommunicationAdap
   };
 }
 export async function getReminderHistory(eventId:number){const result=await notificationRequest(eventId,{action:"history"});return (result.reminders??[]) as ReminderHistoryRow[];}
+
+export type ApprovedWhatsAppTemplate={name:string;language:string;category:string};
+export async function getApprovedWhatsAppTemplates(){
+  const {data}=await supabase.auth.getSession();if(!data.session?.access_token)throw new Error("Your session has expired.");
+  const response=await fetch("/api/whatsapp/templates",{headers:{Authorization:`Bearer ${data.session.access_token}`}});
+  const payload=await safeJson(response);if(!response.ok)throw new Error(typeof payload.error==="string"?payload.error:"Approved WhatsApp templates could not be loaded.");
+  return {templates:(payload.templates??[]) as ApprovedWhatsAppTemplate[],error:typeof payload.error==="string"?payload.error:null};
+}
 export function previewDailySummary(eventId:number,date:string){return notificationRequest(eventId,{action:"daily_preview",date}) as Promise<AuthoritativeDailySummary>;}
 export function sendDailySummaryNow(eventId:number,date:string,channels:ReminderChannel[]){return notificationRequest(eventId,{action:"daily_send",date,channels,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
 

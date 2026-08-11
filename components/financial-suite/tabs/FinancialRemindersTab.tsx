@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CompletedThankYouPanel from "./CompletedThankYouPanel";
 import MeetingInvitationsPanel from "./MeetingInvitationsPanel";
 import MessagePreviewDialog from "../reminders/MessagePreviewDialog";
 import ReminderSectionNavigation, { isReminderSection, type ReminderSection } from "../reminders/ReminderSectionNavigation";
 import {
-  getAutomationSettings, getPledgeReminderPolicy, getPledgeReminderSchedules, getReminderEligibility, getReminderHistory,
+  getApprovedWhatsAppTemplates, getAutomationSettings, getPledgeReminderPolicy, getPledgeReminderSchedules, getReminderEligibility, getReminderHistory,
   previewDailySummary, previewPledgeThankYous, previewReminders, saveAutomationSettings, sendDailySummaryNow, sendReminders,
-  savePledgeReminderPolicy, type AutomationSettings, type PledgeReminderPolicy, type PledgeReminderSchedule, type ReminderChannel, type ReminderHistoryRow,
+  savePledgeReminderPolicy, type ApprovedWhatsAppTemplate, type AutomationSettings, type PledgeReminderPolicy, type PledgeReminderSchedule, type ReminderChannel, type ReminderHistoryRow,
   type AuthoritativeDailySummary, type ReminderPreview, type ReminderPreviewRow, type ThankYouPreview,
 } from "@/services/financialAutomationService";
 import type { FinancialPledge } from "@/services/financialSuiteService";
@@ -69,6 +69,8 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const [busy, setBusy] = useState(false);
   const [dailyPreview,setDailyPreview]=useState<AuthoritativeDailySummary|null>(null);
   const [dailyConfirmed,setDailyConfirmed]=useState(false);
+  const [waTemplates,setWaTemplates]=useState<{templates:ApprovedWhatsAppTemplate[];error:string|null}|null>(null);
+  const waTemplatesFetchedRef=useRef(false);
   const selectedChannels = useMemo<ReminderChannel[]>(() => deliveryMode === "both" ? ["whatsapp", "sms"] : [deliveryMode], [deliveryMode]);
   const dailyChannels = useMemo<ReminderChannel[]>(() => settings?.daily_summary_channel === "both" ? ["whatsapp", "sms"] : settings ? [settings.daily_summary_channel] : [], [settings]);
   const normalizedOwnerPhone=(()=>{try{return settings?.owner_summary_phone?normalizeTanzanianPhone(settings.owner_summary_phone):""}catch{return ""}})();
@@ -92,6 +94,15 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
     } finally { setLoading(false); }
   }, [eventId]);
   useEffect(() => { const timer = setTimeout(() => void load(), 0); return () => clearTimeout(timer); }, [load]);
+  useEffect(() => {
+    if (section !== "settings" || waTemplatesFetchedRef.current) return;
+    waTemplatesFetchedRef.current = true;
+    let cancelled = false;
+    void getApprovedWhatsAppTemplates()
+      .then((result) => { if (!cancelled) setWaTemplates(result); })
+      .catch((err) => { if (!cancelled) setWaTemplates({ templates: [], error: err instanceof Error ? err.message : "Approved WhatsApp templates could not be loaded." }); });
+    return () => { cancelled = true; };
+  }, [section]);
 
   const eligibility = settings ? getReminderEligibility(pledges, eventDate, settings, deadline) : [];
   const eligibleCount = eligibility.filter((item) => item.eligible).length;
@@ -195,66 +206,132 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
       <div className="mt-4 max-h-[560px] overflow-auto rounded-xl border border-stone-200"><table className="w-full min-w-[900px] text-left text-sm"><thead className="sticky top-0 z-10 bg-stone-100 text-xs uppercase tracking-wide text-slate-600"><tr>{["Contributor", "Channel", "Type", "Requested", "Sent", "Status", "Retries", "Error"].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{operationRows.map((item) => { const relation = Array.isArray(item.event_pledges) ? item.event_pledges[0] : item.event_pledges; return <tr key={item.id} className="border-t border-stone-200"><td className="p-3 font-semibold">{relation?.full_name ?? "Contributor"}</td><td className="p-3 capitalize">{item.channel}</td><td className="p-3">{typeLabels[item.reminder_type] ?? item.reminder_type.replaceAll("_", " ")}</td><td className="p-3">{new Date(item.created_at).toLocaleString()}</td><td className="p-3">{item.sent_at ? new Date(item.sent_at).toLocaleString() : "—"}</td><td className="p-3"><StatusBadge value={item.delivery_status} /></td><td className="p-3 tabular-nums">{item.retry_count}/3</td><td className="max-w-60 p-3">{item.error_message ? <details><summary className="max-w-48 cursor-pointer truncate text-red-700">{item.error_message}</summary><p className="mt-2 break-words text-xs text-red-700">{item.error_message}</p></details> : "—"}</td></tr>; })}</tbody></table>{!operationRows.length && <p className="py-10 text-center text-sm text-slate-500">No deliveries match these filters.</p>}</div>
     </section>}
 
-    {section === "settings" && <section className="rounded-2xl border border-[#e7e1d7] bg-white shadow-sm"><div className="p-4 sm:p-6"><h2 className="text-xl font-bold">Reminder Settings</h2><p className="mt-1 text-sm text-slate-600">Configure reminder delivery, owner summaries, and scheduling.</p>{settings && <div className="mt-6 space-y-6">
-      {policy&&<fieldset><legend className="font-bold">Pledge reminder policy</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.is_enabled} onChange={event=>setPolicy({...policy,is_enabled:event.target.checked})}/>Enable reminder automation</label><SettingSelect label="Reminder mode" value={policy.reminder_mode} onChange={value=>setPolicy({...policy,reminder_mode:value as PledgeReminderPolicy["reminder_mode"],no_date_behavior:value!=="automatic"&&policy.no_date_behavior==="automatic_after_days"?"manual_only":policy.no_date_behavior})} options={[["manual","Manual"],["automatic","Automatic"],["hybrid","Hybrid"]]}/><SettingInput label="Before due date (days)" type="number" value={policy.before_due_days} onChange={value=>setPolicy({...policy,before_due_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.on_due_date_enabled} onChange={event=>setPolicy({...policy,on_due_date_enabled:event.target.checked})}/>On due date</label><SettingInput label="After due date (days)" type="number" value={policy.after_due_days} onChange={value=>setPolicy({...policy,after_due_days:Number(value)})}/><SettingInput label="Repeat interval (minimum 3 days)" type="number" value={policy.repeat_after_due_days??""} onChange={value=>setPolicy({...policy,repeat_after_due_days:value?Number(value):null})}/><SettingInput label="Maximum reminders" type="number" value={policy.maximum_automatic_reminders} onChange={value=>setPolicy({...policy,maximum_automatic_reminders:Number(value)})}/><SettingSelect label="No completion date" value={policy.no_date_behavior} onChange={value=>setPolicy({...policy,no_date_behavior:value as PledgeReminderPolicy["no_date_behavior"]})} options={[["manual_only","Manual reminder"],["recommend_after_days","Recommend after delay"],...(policy.reminder_mode==="automatic"?[["automatic_after_days","Send automatically after delay"]]:[])]}/><SettingInput label="No-date delay (days)" type="number" value={policy.no_date_delay_days} onChange={value=>setPolicy({...policy,no_date_delay_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.stop_after_event} onChange={event=>setPolicy({...policy,stop_after_event:event.target.checked})}/>Stop after event date</label></div><div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><p className="font-bold">Example timeline · Expected date: 30 September 2026</p><p className="mt-2">{30-policy.before_due_days} Sep — Before due reminder · 30 Sep — Due-date reminder · {policy.after_due_days<=31?`${String(policy.after_due_days).padStart(2,"0")} Oct`:"Configured interval"} — Overdue reminder</p></div>{(policy.repeat_after_due_days??99)<3&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Repeat intervals shorter than 3 days are not allowed.</p>}</fieldset>}
-      <fieldset><legend className="font-bold">Reminder delivery</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.reminders_enabled} onChange={(event) => setSettings({...settings, reminders_enabled: event.target.checked})} />Reminders enabled</label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.allow_after_deadline} onChange={(event) => setSettings({...settings, allow_after_deadline: event.target.checked})} />Allow after deadline</label><SettingSelect label="Channel" value={settings.reminder_channel} onChange={(value) => setSettings({...settings, reminder_channel: value as AutomationSettings["reminder_channel"]})} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} /><SettingSelect label="Frequency" value={settings.reminder_frequency} onChange={(value) => setSettings({...settings, reminder_frequency: value as AutomationSettings["reminder_frequency"]})} options={[["manual","Manual only"],["weekly","Weekly"],["custom","Custom interval"]]} />{settings.reminder_frequency === "custom" && <SettingInput label="Interval days" type="number" value={settings.custom_interval_days ?? 7} onChange={(value) => setSettings({...settings, custom_interval_days: Number(value)})} />}<SettingInput label="Cooldown hours" type="number" value={settings.reminder_cooldown_hours} onChange={(value) => setSettings({...settings, reminder_cooldown_hours: Number(value)})} /></div></fieldset>
-      <fieldset>
-        <legend className="font-bold">Message Templates</legend>
-        <p className="mt-1 text-sm text-slate-600">Customize the SMS wording sent for reminders and thank-you messages. This only affects SMS — WhatsApp uses separate Meta-approved templates, registered below.</p>
-        <div className="mt-3 grid gap-4 lg:grid-cols-2">
-          <MessageTemplateEditor
-            label="Reminder SMS"
-            value={settings.custom_reminder_message ?? ""}
-            onChange={(value) => setSettings({...settings, custom_reminder_message: value || null})}
-            sampleValues={sampleMessageValues}
-            buildDefault={() => buildPledgeMessage("pledge_reminder", language === "en" ? "en" : "sw", sampleMessageValues)}
-          />
-          <MessageTemplateEditor
-            label="Thank You SMS"
-            value={settings.custom_thank_you_message ?? ""}
-            onChange={(value) => setSettings({...settings, custom_thank_you_message: value || null})}
-            sampleValues={sampleMessageValues}
-            buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
-          />
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend className="font-bold">WhatsApp Reminder Template</legend>
-        <p className="mt-1 text-sm text-slate-600">By default, reminders use the shared Meta-approved WhatsApp template. If you&apos;ve had your own template approved by Meta for this event (e.g. with your committee name written into the approved text), register its exact name here to use it instead. Leave blank to keep using the shared default.</p>
-        <div className="mt-3 grid gap-4 md:grid-cols-2">
-          <SettingInput label="Template name (Swahili)" value={settings.whatsapp_reminder_template_sw ?? ""} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_sw: value || null})} />
-          <SettingInput label="Template name (English)" value={settings.whatsapp_reminder_template_en ?? ""} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_en: value || null})} />
-          <SettingInput label="Template language code (Swahili)" value={settings.whatsapp_reminder_template_language_sw ?? "sw"} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_language_sw: value || null})} />
-          <SettingInput label="Template language code (English)" value={settings.whatsapp_reminder_template_language_en ?? "en_US"} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_language_en: value || null})} />
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend className="font-bold">Owner summary</legend>
-        <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.daily_summary_enabled} onChange={(event) => {setSettings({...settings,daily_summary_enabled:event.target.checked,daily_summary_time:event.target.checked?"06:00":settings.daily_summary_time});setDailyPreview(null);setDailyConfirmed(false)}} />Daily summary enabled</label>
-          <SettingInput label="Owner summary phone" value={settings.owner_summary_phone ?? ""} onChange={(value) => {setSettings({...settings,owner_summary_phone:value||null});setDailyPreview(null);setDailyConfirmed(false)}} />
-          <SettingSelect label="Daily summary channel" value={settings.daily_summary_channel} onChange={(value) => {setSettings({...settings,daily_summary_channel:value as AutomationSettings["daily_summary_channel"]});setDailyPreview(null);setDailyConfirmed(false)}} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} />
-          <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Automatic daily summary time</p><p className="mt-1 font-bold">09:00 Tanzania time (06:00 UTC)</p></div>
-        </div>
-        <p className="mt-3 text-sm text-slate-600">The current Vercel Hobby plan processes scheduled automation once per day. Use Make automation later if an exact custom delivery time is required.</p>
-        {settings.daily_summary_enabled&&settings.daily_summary_time.slice(0,5)!=="06:00"&&<p className="mt-2 text-sm font-semibold text-amber-800">The previously saved time will be normalized to 06:00 UTC when you save these settings.</p>}
-        <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:p-4">
-          <h3 className="font-bold">Daily Summary Test</h3>
-          <div className="mt-3 flex flex-wrap items-center gap-2"><button type="button" disabled={busy||!settings.daily_summary_enabled||!normalizedOwnerPhone} onClick={()=>void buildDailyPreview()} className="min-h-10 rounded-lg border border-stone-300 bg-white px-3 text-sm font-bold disabled:opacity-40">Preview Today&apos;s Summary</button>{dailyChannels.map(channel=><span key={channel} className={`rounded-full px-2.5 py-1 text-xs font-bold ${dailyPreview?.provider[channel].configured?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-800"}`}>{channel==="sms"?"SMS":"WhatsApp"}: {dailyPreview?dailyPreview.provider[channel].configured?"Ready":dailyPreview.provider[channel].message:"Preview required"}</span>)}</div>
-          {dailyPreview&&<><pre className="mt-3 whitespace-pre-wrap rounded-lg border border-stone-200 bg-white p-3 font-sans text-sm text-slate-700">{dailyPreview.message}</pre><label className="mt-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" checked={dailyConfirmed} onChange={event=>setDailyConfirmed(event.target.checked)} className="mt-1"/>I confirm sending this test summary to {normalizedOwnerPhone}.</label><button type="button" disabled={!dailyTestReady||busy} onClick={()=>void sendDailyTest()} className="mt-3 min-h-10 rounded-lg bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Send Test Summary Now</button></>}
-        </div>
-      </fieldset>
-      <fieldset><legend className="font-bold">Scheduling</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Next reminder</p><p className="mt-1">{settings.next_reminder_at ? new Date(settings.next_reminder_at).toLocaleString() : "Not scheduled"}</p></div><div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Readiness</p><p className="mt-1">{settings.reminders_enabled ? "Enabled; provider readiness is checked during preview." : "Enable reminders to schedule or send."}</p></div></div></fieldset>
-    </div>}</div><div className="sticky bottom-0 flex justify-end border-t border-stone-200 bg-white/95 p-4 backdrop-blur sm:px-6"><button type="button" disabled={busy || !settings} onClick={() => void save()} className="min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Save Settings</button></div></section>}
+    {section === "settings" && <div className="space-y-5">
+      <div><h2 className="text-xl font-bold">Reminder Settings</h2><p className="mt-1 text-sm text-slate-600">Configure reminder delivery, owner summaries, and scheduling.</p></div>
+      {settings && <>
+      <SettingsCard title="Automation Rules" description="When reminders fire, on which channel, and how often.">
+        {policy&&<fieldset><legend className="font-bold">Pledge reminder policy</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.is_enabled} onChange={event=>setPolicy({...policy,is_enabled:event.target.checked})}/>Enable reminder automation</label><SettingSelect label="Reminder mode" value={policy.reminder_mode} hint="Manual: you trigger every send. Automatic: sent on the schedule below. Hybrid: automatic sends, plus manual anytime." onChange={value=>setPolicy({...policy,reminder_mode:value as PledgeReminderPolicy["reminder_mode"],no_date_behavior:value!=="automatic"&&policy.no_date_behavior==="automatic_after_days"?"manual_only":policy.no_date_behavior})} options={[["manual","Manual"],["automatic","Automatic"],["hybrid","Hybrid"]]}/><SettingInput label="Before due date (days)" type="number" value={policy.before_due_days} onChange={value=>setPolicy({...policy,before_due_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.on_due_date_enabled} onChange={event=>setPolicy({...policy,on_due_date_enabled:event.target.checked})}/>On due date</label><SettingInput label="After due date (days)" type="number" value={policy.after_due_days} onChange={value=>setPolicy({...policy,after_due_days:Number(value)})}/><SettingInput label="Repeat interval (minimum 3 days)" type="number" value={policy.repeat_after_due_days??""} onChange={value=>setPolicy({...policy,repeat_after_due_days:value?Number(value):null})}/><SettingInput label="Maximum reminders" type="number" value={policy.maximum_automatic_reminders} onChange={value=>setPolicy({...policy,maximum_automatic_reminders:Number(value)})}/><SettingSelect label="No completion date" value={policy.no_date_behavior} hint="Applies when a contributor has no expected completion date: send manually only, recommend a reminder after a delay, or (Automatic mode) send one automatically." onChange={value=>setPolicy({...policy,no_date_behavior:value as PledgeReminderPolicy["no_date_behavior"]})} options={[["manual_only","Manual reminder"],["recommend_after_days","Recommend after delay"],...(policy.reminder_mode==="automatic"?[["automatic_after_days","Send automatically after delay"]]:[])]}/><SettingInput label="No-date delay (days)" type="number" value={policy.no_date_delay_days} onChange={value=>setPolicy({...policy,no_date_delay_days:Number(value)})}/><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={policy.stop_after_event} onChange={event=>setPolicy({...policy,stop_after_event:event.target.checked})}/>Stop after event date</label></div><div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><p className="font-bold">Example timeline · Expected date: 30 September 2026</p><p className="mt-2">{30-policy.before_due_days} Sep — Before due reminder · 30 Sep — Due-date reminder · {policy.after_due_days<=31?`${String(policy.after_due_days).padStart(2,"0")} Oct`:"Configured interval"} — Overdue reminder</p></div>{(policy.repeat_after_due_days??99)<3&&<p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Repeat intervals shorter than 3 days are not allowed.</p>}</fieldset>}
+        <fieldset><legend className="font-bold">Reminder delivery</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.reminders_enabled} onChange={(event) => setSettings({...settings, reminders_enabled: event.target.checked})} />Reminders enabled</label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.allow_after_deadline} onChange={(event) => setSettings({...settings, allow_after_deadline: event.target.checked})} />Allow after deadline</label><SettingSelect label="Channel" value={settings.reminder_channel} onChange={(value) => setSettings({...settings, reminder_channel: value as AutomationSettings["reminder_channel"]})} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} /><SettingSelect label="Frequency" value={settings.reminder_frequency} onChange={(value) => setSettings({...settings, reminder_frequency: value as AutomationSettings["reminder_frequency"]})} options={[["manual","Manual only"],["weekly","Weekly"],["custom","Custom interval"]]} />{settings.reminder_frequency === "custom" && <SettingInput label="Interval days" type="number" value={settings.custom_interval_days ?? 7} onChange={(value) => setSettings({...settings, custom_interval_days: Number(value)})} />}<SettingInput label="Cooldown hours" type="number" value={settings.reminder_cooldown_hours} hint="Minimum wait before the same contributor can get another reminder on the same channel." onChange={(value) => setSettings({...settings, reminder_cooldown_hours: Number(value)})} /></div>
+          <p className="mt-3 text-xs text-slate-500">&quot;Allow after deadline&quot; and &quot;Stop after event date&quot; above are independent — the deadline is the contribution cutoff you set, the event date is the day of the event itself.</p>
+        </fieldset>
+        <fieldset><legend className="font-bold">Scheduling</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Next reminder</p><p className="mt-1">{settings.next_reminder_at ? new Date(settings.next_reminder_at).toLocaleString() : "Not scheduled"}</p></div><div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Readiness</p><p className="mt-1">{settings.reminders_enabled ? "Enabled; provider readiness is checked during preview." : "Enable reminders to schedule or send."}</p></div></div></fieldset>
+      </SettingsCard>
+      <SettingsCard title="Message Templates" description="What gets sent, per channel.">
+        <fieldset>
+          <legend className="text-xs font-bold uppercase tracking-wide text-slate-500">SMS</legend>
+          <p className="mt-1 text-sm text-slate-600">Customize the SMS wording sent for reminders and thank-you messages.</p>
+          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+            <MessageTemplateEditor
+              label="Reminder SMS"
+              value={settings.custom_reminder_message ?? ""}
+              onChange={(value) => setSettings({...settings, custom_reminder_message: value || null})}
+              sampleValues={sampleMessageValues}
+              buildDefault={() => buildPledgeMessage("pledge_reminder", language === "en" ? "en" : "sw", sampleMessageValues)}
+            />
+            <MessageTemplateEditor
+              label="Thank You SMS"
+              value={settings.custom_thank_you_message ?? ""}
+              onChange={(value) => setSettings({...settings, custom_thank_you_message: value || null})}
+              sampleValues={sampleMessageValues}
+              buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
+            />
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend className="text-xs font-bold uppercase tracking-wide text-slate-500">WhatsApp</legend>
+          <p className="mt-1 text-sm text-slate-600">By default, reminders use the shared Meta-approved WhatsApp template. Pick your own approved template below (e.g. with your committee name written into the approved text) to use it instead — leave on &quot;Use the shared default&quot; otherwise.</p>
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            <WhatsAppTemplatePicker
+              label="Reminder template (Swahili)"
+              name={settings.whatsapp_reminder_template_sw}
+              languageCode={settings.whatsapp_reminder_template_language_sw}
+              defaultLanguageCode="sw"
+              languagePrefix="sw"
+              templatesState={waTemplates}
+              onChange={(name, languageCode) => setSettings({...settings, whatsapp_reminder_template_sw: name, whatsapp_reminder_template_language_sw: languageCode})}
+            />
+            <WhatsAppTemplatePicker
+              label="Reminder template (English)"
+              name={settings.whatsapp_reminder_template_en}
+              languageCode={settings.whatsapp_reminder_template_language_en}
+              defaultLanguageCode="en_US"
+              languagePrefix="en"
+              templatesState={waTemplates}
+              onChange={(name, languageCode) => setSettings({...settings, whatsapp_reminder_template_en: name, whatsapp_reminder_template_language_en: languageCode})}
+            />
+          </div>
+        </fieldset>
+      </SettingsCard>
+      <SettingsCard title="Owner Summary" description="Your own daily collection digest.">
+        <fieldset>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.daily_summary_enabled} onChange={(event) => {setSettings({...settings,daily_summary_enabled:event.target.checked,daily_summary_time:event.target.checked?"06:00":settings.daily_summary_time});setDailyPreview(null);setDailyConfirmed(false)}} />Daily summary enabled</label>
+            <SettingInput label="Owner summary phone" value={settings.owner_summary_phone ?? ""} onChange={(value) => {setSettings({...settings,owner_summary_phone:value||null});setDailyPreview(null);setDailyConfirmed(false)}} />
+            <SettingSelect label="Daily summary channel" value={settings.daily_summary_channel} onChange={(value) => {setSettings({...settings,daily_summary_channel:value as AutomationSettings["daily_summary_channel"]});setDailyPreview(null);setDailyConfirmed(false)}} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} />
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm"><p className="font-semibold">Automatic daily summary time</p><p className="mt-1 font-bold">09:00 Tanzania time (06:00 UTC)</p></div>
+          </div>
+          <p className="mt-3 text-sm text-slate-600">The current Vercel Hobby plan processes scheduled automation once per day. Use Make automation later if an exact custom delivery time is required.</p>
+          {settings.daily_summary_enabled&&settings.daily_summary_time.slice(0,5)!=="06:00"&&<p className="mt-2 text-sm font-semibold text-amber-800">The previously saved time will be normalized to 06:00 UTC when you save these settings.</p>}
+          <div className="mt-5 rounded-xl border border-stone-200 bg-stone-50 p-3 sm:p-4">
+            <h3 className="font-bold">Daily Summary Test</h3>
+            <div className="mt-3 flex flex-wrap items-center gap-2"><button type="button" disabled={busy||!settings.daily_summary_enabled||!normalizedOwnerPhone} onClick={()=>void buildDailyPreview()} className="min-h-10 rounded-lg border border-stone-300 bg-white px-3 text-sm font-bold disabled:opacity-40">Preview Today&apos;s Summary</button>{dailyChannels.map(channel=><span key={channel} className={`rounded-full px-2.5 py-1 text-xs font-bold ${dailyPreview?.provider[channel].configured?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-800"}`}>{channel==="sms"?"SMS":"WhatsApp"}: {dailyPreview?dailyPreview.provider[channel].configured?"Ready":dailyPreview.provider[channel].message:"Preview required"}</span>)}</div>
+            {dailyPreview&&<><pre className="mt-3 whitespace-pre-wrap rounded-lg border border-stone-200 bg-white p-3 font-sans text-sm text-slate-700">{dailyPreview.message}</pre><label className="mt-3 flex items-start gap-2 text-sm font-semibold"><input type="checkbox" checked={dailyConfirmed} onChange={event=>setDailyConfirmed(event.target.checked)} className="mt-1"/>I confirm sending this test summary to {normalizedOwnerPhone}.</label><button type="button" disabled={!dailyTestReady||busy} onClick={()=>void sendDailyTest()} className="mt-3 min-h-10 rounded-lg bg-emerald-700 px-4 text-sm font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Send Test Summary Now</button></>}
+          </div>
+        </fieldset>
+      </SettingsCard>
+      </>}
+      <div className="sticky bottom-0 flex justify-end rounded-2xl border border-[#e7e1d7] bg-white/95 p-4 shadow-sm backdrop-blur sm:px-6"><button type="button" disabled={busy || !settings} onClick={() => void save()} className="min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Save Settings</button></div>
+    </div>}
     <MessagePreviewDialog open={Boolean(selected)} title={selected ? `Preview for ${selected.contributor}` : "Reminder preview"} channel={selected?.channel === "sms" ? "SMS" : "WhatsApp"} message={selected?.message ?? ""} providerMessage={selected ? preview?.provider[selected.channel].message ?? "" : ""} providerReady={Boolean(selected && preview?.provider[selected.channel].configured)} confirmed={confirmed} busy={busy} canSend={Boolean(selected?.eligible && recipientCount)} confirmationLabel={`Confirm sending to ${recipientCount} contributors (${messageCount} messages${deliveryMode === "both" ? ": WhatsApp + SMS" : ""})`} sendLabel="Send Reminders" onConfirmedChange={setConfirmed} onClose={() => setSelected(null)} onSend={() => void send()} />
   </div>;
 }
 
-function SettingInput({ label, value, type = "text", onChange }: { label: string; value: string | number; type?: string; onChange: (value: string) => void }) {
-  return <label className="text-sm font-semibold">{label}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal" /></label>;
+function SettingsCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return <section className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
+    <h3 className="text-lg font-bold">{title}</h3>
+    {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
+    <div className="mt-4 space-y-6">{children}</div>
+  </section>;
 }
-function SettingSelect({ label, value, options, onChange }: { label: string; value: string; options: string[][]; onChange: (value: string) => void }) {
-  return <label className="text-sm font-semibold">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal">{options.map(([option, text]) => <option key={option} value={option}>{text}</option>)}</select></label>;
+function SettingInput({ label, value, type = "text", hint, onChange }: { label: string; value: string | number; type?: string; hint?: string; onChange: (value: string) => void }) {
+  return <label className="text-sm font-semibold">{label}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal" />{hint && <span className="mt-1 block text-xs font-normal text-slate-500">{hint}</span>}</label>;
+}
+function SettingSelect({ label, value, options, hint, onChange }: { label: string; value: string; options: string[][]; hint?: string; onChange: (value: string) => void }) {
+  return <label className="text-sm font-semibold">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal">{options.map(([option, text]) => <option key={option} value={option}>{text}</option>)}</select>{hint && <span className="mt-1 block text-xs font-normal text-slate-500">{hint}</span>}</label>;
+}
+function WhatsAppTemplatePicker({ label, name, languageCode, defaultLanguageCode, languagePrefix, templatesState, onChange }: {
+  label: string; name: string | null; languageCode: string | null; defaultLanguageCode: string; languagePrefix: string;
+  templatesState: { templates: ApprovedWhatsAppTemplate[]; error: string | null } | null;
+  onChange: (name: string | null, languageCode: string | null) => void;
+}) {
+  const [manual, setManual] = useState(false);
+  if (!templatesState) {
+    return <label className="text-sm font-semibold">{label}<select disabled className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 bg-stone-50 px-3 font-normal text-slate-400"><option>Loading approved templates…</option></select></label>;
+  }
+  const matching = templatesState.templates.filter((item) => item.language.toLowerCase().startsWith(languagePrefix));
+  const showManual = manual || Boolean(templatesState.error) || matching.length === 0;
+  if (!showManual) {
+    const selectValue = name && matching.some((item) => item.name === name) ? name : "";
+    return <label className="text-sm font-semibold">{label}
+      <select value={selectValue} onChange={(event) => {
+        if (event.target.value === "__manual__") { setManual(true); return; }
+        if (event.target.value === "") { onChange(null, null); return; }
+        const template = matching.find((item) => item.name === event.target.value);
+        onChange(template?.name ?? null, template?.language ?? null);
+      }} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal">
+        <option value="">Use the shared default</option>
+        {matching.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+        <option value="__manual__">Other — enter manually</option>
+      </select>
+    </label>;
+  }
+  return <div className="grid gap-2">
+    <SettingInput label={`${label} — template name`} value={name ?? ""} onChange={(value) => onChange(value || null, languageCode ?? defaultLanguageCode)} />
+    <SettingInput label={`${label} — language code`} value={languageCode ?? defaultLanguageCode} onChange={(value) => onChange(name, value || null)} />
+    <p className="text-xs text-slate-500">{templatesState.error
+      ? `Couldn't load your approved templates automatically (${templatesState.error}) — enter the exact template name manually.`
+      : "No approved templates found for this language — enter the exact template name manually."}</p>
+  </div>;
 }
 function MessageTemplateEditor({ label, value, onChange, sampleValues, buildDefault }: {
   label: string; value: string; onChange: (value: string) => void; sampleValues: PledgeMessageValues; buildDefault: () => string;
