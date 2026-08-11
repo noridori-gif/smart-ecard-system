@@ -200,7 +200,7 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
       <fieldset><legend className="font-bold">Reminder delivery</legend><div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.reminders_enabled} onChange={(event) => setSettings({...settings, reminders_enabled: event.target.checked})} />Reminders enabled</label><label className="flex min-h-11 items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={settings.allow_after_deadline} onChange={(event) => setSettings({...settings, allow_after_deadline: event.target.checked})} />Allow after deadline</label><SettingSelect label="Channel" value={settings.reminder_channel} onChange={(value) => setSettings({...settings, reminder_channel: value as AutomationSettings["reminder_channel"]})} options={[["sms","SMS"],["whatsapp","WhatsApp"],["both","Both"]]} /><SettingSelect label="Frequency" value={settings.reminder_frequency} onChange={(value) => setSettings({...settings, reminder_frequency: value as AutomationSettings["reminder_frequency"]})} options={[["manual","Manual only"],["weekly","Weekly"],["custom","Custom interval"]]} />{settings.reminder_frequency === "custom" && <SettingInput label="Interval days" type="number" value={settings.custom_interval_days ?? 7} onChange={(value) => setSettings({...settings, custom_interval_days: Number(value)})} />}<SettingInput label="Cooldown hours" type="number" value={settings.reminder_cooldown_hours} onChange={(value) => setSettings({...settings, reminder_cooldown_hours: Number(value)})} /></div></fieldset>
       <fieldset>
         <legend className="font-bold">Message Templates</legend>
-        <p className="mt-1 text-sm text-slate-600">Customize the SMS wording sent for reminders and thank-you messages. This only affects SMS — WhatsApp uses separate Meta-approved templates that can&apos;t be edited here.</p>
+        <p className="mt-1 text-sm text-slate-600">Customize the SMS wording sent for reminders and thank-you messages. This only affects SMS — WhatsApp uses separate Meta-approved templates, registered below.</p>
         <div className="mt-3 grid gap-4 lg:grid-cols-2">
           <MessageTemplateEditor
             label="Reminder SMS"
@@ -216,6 +216,16 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
             sampleValues={sampleMessageValues}
             buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
           />
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend className="font-bold">WhatsApp Reminder Template</legend>
+        <p className="mt-1 text-sm text-slate-600">By default, reminders use the shared Meta-approved WhatsApp template. If you&apos;ve had your own template approved by Meta for this event (e.g. with your committee name written into the approved text), register its exact name here to use it instead. Leave blank to keep using the shared default.</p>
+        <div className="mt-3 grid gap-4 md:grid-cols-2">
+          <SettingInput label="Template name (Swahili)" value={settings.whatsapp_reminder_template_sw ?? ""} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_sw: value || null})} />
+          <SettingInput label="Template name (English)" value={settings.whatsapp_reminder_template_en ?? ""} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_en: value || null})} />
+          <SettingInput label="Template language code (Swahili)" value={settings.whatsapp_reminder_template_language_sw ?? "sw"} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_language_sw: value || null})} />
+          <SettingInput label="Template language code (English)" value={settings.whatsapp_reminder_template_language_en ?? "en_US"} onChange={(value) => setSettings({...settings, whatsapp_reminder_template_language_en: value || null})} />
         </div>
       </fieldset>
       <fieldset>

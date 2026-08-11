@@ -1,6 +1,7 @@
 import {
   getFinancialWhatsAppTemplate,
   type FinancialWhatsAppTemplateKind,
+  type FinancialWhatsAppTemplateOverride,
 } from "@/lib/financialWhatsAppConfig";
 import { formatPassIdForDisplay } from "@/lib/passId";
 
@@ -425,12 +426,13 @@ export type FinancialWhatsAppTemplateInput = {
   templateKind: FinancialWhatsAppTemplateKind;
   parameters: string[];
   urlButtonSuffix?: string;
+  templateOverride?: FinancialWhatsAppTemplateOverride;
 };
 
 export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemplateInput) {
   const accessToken = getRequiredEnvironmentVariable("WHATSAPP_ACCESS_TOKEN");
   const phoneNumberId = getRequiredEnvironmentVariable("WHATSAPP_PHONE_NUMBER_ID");
-  const template = getFinancialWhatsAppTemplate(input.templateKind, input.language);
+  const template = getFinancialWhatsAppTemplate(input.templateKind, input.language, input.templateOverride);
   if (!template.templateName) {
     const languageLabel = input.language === "sw" ? "Swahili" : "English";
     throw new Error(`The approved ${languageLabel} WhatsApp ${input.templateKind.replaceAll("_", " ")} template is not configured.`);

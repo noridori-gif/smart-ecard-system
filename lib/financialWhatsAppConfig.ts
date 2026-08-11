@@ -18,10 +18,23 @@ function value(name: string) {
   return process.env[name]?.trim() || null;
 }
 
+export type FinancialWhatsAppTemplateOverride = {
+  templateName: string | null;
+  languageCode: string | null;
+};
+
 export function getFinancialWhatsAppTemplate(
   kind: FinancialWhatsAppTemplateKind,
-  language: FinancialMessageLanguage
+  language: FinancialMessageLanguage,
+  override?: FinancialWhatsAppTemplateOverride
 ): TemplateConfig {
+  if (kind === "reminder" && override?.templateName) {
+    return {
+      configured: true,
+      languageCode: override.languageCode || (language === "sw" ? "sw" : "en_US"),
+      templateName: override.templateName,
+    };
+  }
   const suffix = language === "sw" ? "SW" : "EN";
   if (kind === "pledge_acknowledgement") {
     const templateName = value(`WHATSAPP_PLEDGE_ACKNOWLEDGEMENT_TEMPLATE_${suffix}`);

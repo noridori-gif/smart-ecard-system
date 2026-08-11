@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService";
 import { buildCompactFinancialSmsMessage, buildPledgeMessage, formatTzs, renderCustomSmsTemplate } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
-import { getFinancialWhatsAppTemplate } from "@/lib/financialWhatsAppConfig";
+import { getFinancialWhatsAppTemplate, type FinancialWhatsAppTemplateOverride } from "@/lib/financialWhatsAppConfig";
 import { automaticMessagingEnabled } from "@/services/automationMasterServer";
 
 export type FinancialChannel = "sms" | "whatsapp";
@@ -20,7 +20,26 @@ type SettingRow = {
   next_reminder_at: string | null; reminder_cooldown_hours: number; owner_summary_phone: string | null;
   daily_summary_enabled: boolean; daily_summary_channel: "sms" | "whatsapp" | "both"; daily_summary_time: string;
   custom_reminder_message: string | null;
+  whatsapp_reminder_template_sw: string | null; whatsapp_reminder_template_en: string | null;
+  whatsapp_reminder_template_language_sw: string | null; whatsapp_reminder_template_language_en: string | null;
 };
+
+type WhatsAppReminderTemplateFields = Pick<SettingRow,
+  "whatsapp_reminder_template_sw" | "whatsapp_reminder_template_en" |
+  "whatsapp_reminder_template_language_sw" | "whatsapp_reminder_template_language_en">;
+function whatsappReminderOverride(setting: WhatsAppReminderTemplateFields, language: "sw" | "en"): FinancialWhatsAppTemplateOverride {
+  return language === "en"
+    ? { templateName: setting.whatsapp_reminder_template_en, languageCode: setting.whatsapp_reminder_template_language_en }
+    : { templateName: setting.whatsapp_reminder_template_sw, languageCode: setting.whatsapp_reminder_template_language_sw };
+}
+
+function daysRemainingLabel(eventDate: string, now: Date): string {
+  const [year, month, day] = eventDate.split("-").map(Number);
+  const eventDay = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const days = Math.max(0, Math.ceil((eventDay - today) / 86_400_000));
+  return `Siku ${days}`;
+}
 type PledgeRow = {
   id: number; event_id: number; full_name: string; normalized_phone: string | null;
   pledged_amount: string; total_paid: string; balance: string;
@@ -43,12 +62,12 @@ export type SendAggregate = { queued: number; sent: number; failed: number; skip
 function channels(value: "sms" | "whatsapp" | "both"): FinancialChannel[] {
   return value === "both" ? ["sms", "whatsapp"] : [value];
 }
-export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_acknowledgement" | "pledge_thank_you" | "meeting_invitation" = "reminder") {
+export function financialProviderStatus(channel: FinancialChannel, language: "sw" | "en", templateKind: "reminder" | "daily_summary" | "pledge_acknowledgement" | "pledge_thank_you" | "meeting_invitation" = "reminder", templateOverride?: FinancialWhatsAppTemplateOverride) {
   if (channel === "sms") {
     const configured = Boolean(process.env.BEEM_API_KEY && process.env.BEEM_SECRET_KEY && process.env.BEEM_SENDER_NAME);
     return { configured, message: configured ? "Configured" : "BEEM SMS configuration is incomplete." };
   }
-  const template = getFinancialWhatsAppTemplate(templateKind, language);
+  const template = getFinancialWhatsAppTemplate(templateKind, language, templateOverride);
   if(templateKind==="meeting_invitation"&&!template.configured)return {configured:false,message:language==="en"?"English template unavailable.":"Template not configured."};
   const configured = Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && template.configured);
   const label = templateKind === "reminder" ? "financial reminder" : templateKind === "pledge_acknowledgement" ? "pledge acknowledgement" : templateKind === "pledge_thank_you" ? "pledge thank-you" : templateKind === "meeting_invitation" ? "meeting invitation" : "daily summary";
@@ -95,6 +114,8 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
     stop_after_event_date: true, allow_after_event_date: false, next_reminder_at: null,
     reminder_cooldown_hours: 24, owner_summary_phone: null, daily_summary_enabled: false,
     daily_summary_channel: "sms", daily_summary_time: "18:00", custom_reminder_message: null,
+    whatsapp_reminder_template_sw: null, whatsapp_reminder_template_en: null,
+    whatsapp_reminder_template_language_sw: null, whatsapp_reminder_template_language_en: null,
   }) as SettingRow;
   let pledgeQuery = db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("event_id", input.eventId).in("calculated_status", ["pledged", "partial"]).gt("balance", 0);
   if (input.pledgeId) pledgeQuery = pledgeQuery.eq("id", input.pledgeId);
@@ -142,7 +163,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
     event: effectiveEvent, rows, eligible: rows.filter((row) => row.eligible).length,
     skipped: rows.filter((row) => !row.eligible).length, skippedReasons,
     estimatedMessages: rows.filter((row) => row.eligible).length,
-    provider: { sms: financialProviderStatus("sms", language), whatsapp: financialProviderStatus("whatsapp", language) },
+    provider: { sms: financialProviderStatus("sms", language), whatsapp: financialProviderStatus("whatsapp", language, "reminder", whatsappReminderOverride(effectiveSetting, language)) },
   };
 }
 
@@ -259,10 +280,22 @@ async function deliverReminder(db: SupabaseClient, reminder: {
       providerMessageId = result.providerMessageId;
     } else {
       if(reminder.reminder_type==="payment_received")throw new Error("WhatsApp payment acknowledgements are not configured.");
+      const language = event.language === "en" ? "en" : "sw";
+      const isPledgeReminder = reminder.reminder_type !== "pledge_acknowledgement" && reminder.reminder_type !== "pledge_thank_you";
+      let templateOverride: ReturnType<typeof whatsappReminderOverride> | undefined;
+      if (isPledgeReminder) {
+        const { data: setting } = await db.from("event_finance_automation_settings")
+          .select("whatsapp_reminder_template_sw,whatsapp_reminder_template_en,whatsapp_reminder_template_language_sw,whatsapp_reminder_template_language_en")
+          .eq("event_id", reminder.event_id).maybeSingle();
+        if (setting) templateOverride = whatsappReminderOverride(setting, language);
+      }
       const result = await sendFinancialWhatsAppTemplate({
-        phoneNumber: reminder.recipient_phone, language: event.language === "en" ? "en" : "sw",
+        phoneNumber: reminder.recipient_phone, language,
         templateKind: reminder.reminder_type === "pledge_acknowledgement" ? "pledge_acknowledgement" : reminder.reminder_type === "pledge_thank_you" ? "pledge_thank_you" : "reminder",
-        parameters: [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)],
+        parameters: isPledgeReminder
+          ? [pledge.full_name, daysRemainingLabel(event.event_date, new Date()), formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)]
+          : [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)],
+        templateOverride,
       });
       providerMessageId = result.messageId;
     }
