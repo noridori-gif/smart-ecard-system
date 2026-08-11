@@ -230,9 +230,10 @@ function failure(error: unknown): { type: BeemSmsErrorDetails["type"]; message: 
     .replace(/\s+/g," ").trim();
   if(/\b(?:request payload|request body|response payload|response body|provider response)\b/i.test(message))message="Provider request failed.";
   message=message.slice(0,500);
-  const configuration = /environment|configured|configuration|template/i.test(message);
-  const validation = /phone|invalid/i.test(message);
-  return { type: configuration ? "configuration" : validation ? "validation" : "provider", message: message.slice(0, 500), retry: !configuration && !validation };
+  const explicitType = typeof record?.providerType === "string" ? record.providerType as BeemSmsErrorDetails["type"] : null;
+  const configuration = explicitType ? explicitType === "configuration" : /environment|configured|configuration|template/i.test(message);
+  const validation = explicitType ? explicitType === "validation" : /phone|invalid/i.test(message);
+  return { type: explicitType ?? (configuration ? "configuration" : validation ? "validation" : "provider"), message: message.slice(0, 500), retry: !configuration && !validation };
 }
 
 async function deliverReminder(db: SupabaseClient, reminder: {
@@ -251,7 +252,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
     if (reminder.channel === "sms") {
       const result = await sendBeemSms({ phoneNumber: reminder.recipient_phone, message: reminder.message_body, maxAttempts: 1 });
       if (!result.success) {
-        const error = new Error(result.message);
+        const error = new Error(result.errorDetails?.message || result.message);
         Object.assign(error, { providerType: result.errorDetails?.type });
         throw error;
       }
@@ -554,7 +555,11 @@ export async function sendDailyFinancialSummary(db: SupabaseClient, input: {
       let providerMessageId: string | undefined;
       if (channel === "sms") {
         const smsResult = await sendBeemSms({ phoneNumber: setting.owner_summary_phone, message: built.message, maxAttempts: 1 });
-        if (!smsResult.success) throw new Error(smsResult.message);
+        if (!smsResult.success) {
+          const error = new Error(smsResult.errorDetails?.message || smsResult.message);
+          Object.assign(error, { providerType: smsResult.errorDetails?.type });
+          throw error;
+        }
         providerMessageId = smsResult.providerMessageId;
       } else {
         providerMessageId = (await sendFinancialWhatsAppTemplate({
