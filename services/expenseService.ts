@@ -66,3 +66,25 @@ export async function getExpenseReceiptUrl(path: string) {
   if (error || !data?.signedUrl) throw new Error("Receipt link could not be prepared.");
   return data.signedUrl;
 }
+
+export type EventExpenseCategoryBudget = { event_id: number; category: string; budgeted_amount: string };
+
+export async function getCategoryBudgets(eventId: number) {
+  const { data, error } = await supabase.from("event_expense_category_budgets").select("event_id,category,budgeted_amount").eq("event_id", eventId);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as EventExpenseCategoryBudget[];
+}
+
+export async function saveCategoryBudget(eventId: number, category: string, budgetedAmount: string) {
+  const trimmed = category.trim();
+  if (!trimmed) throw new Error("Category is required.");
+  if (!/^\d+(\.\d{1,2})?$/.test(budgetedAmount) || Number(budgetedAmount) <= 0) throw new Error("Enter a valid budget amount.");
+  const { error } = await supabase.from("event_expense_category_budgets")
+    .upsert({ event_id: eventId, category: trimmed, budgeted_amount: budgetedAmount }, { onConflict: "event_id,category" });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteCategoryBudget(eventId: number, category: string) {
+  const { error } = await supabase.from("event_expense_category_budgets").delete().eq("event_id", eventId).eq("category", category);
+  if (error) throw new Error(error.message);
+}

@@ -334,7 +334,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           title="Expenses"
           description="Track event spending, optional receipts, and compare against the expense budget."
         >
-          <FinancialExpensesTab eventId={eventId} expenseBudget={data.summary.expense_budget_amount} />
+          <FinancialExpensesTab eventId={eventId} />
         </TabSection>
       )}
 

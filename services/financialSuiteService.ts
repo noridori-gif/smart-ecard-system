@@ -22,9 +22,9 @@ export type FinanceSummary = {
   completed_count: number; cancelled_count: number; completion_percentage: string;
   total_contributors: number; budget_amount: string | number | null; contribution_deadline: string | null;
   budget_progress_percentage: string | null; remaining_to_budget: string | null;
-  days_remaining: number | null; deadline_status: string; expense_budget_amount: string | number | null;
+  days_remaining: number | null; deadline_status: string;
 };
-export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline"|"expense_budget_amount">;
+export type FinanceTarget = Pick<FinanceSummary,"budget_amount"|"contribution_deadline">;
 export type FinancialGuest = {
   id: number; full_name: string; phone: string | null; email: string | null;
   allowed_guests: number; event_pass_id: string | null; status: string; checked_in_at: string | null;
@@ -128,11 +128,7 @@ export async function saveFinanceTarget(eventId:number,target:FinanceTarget) {
   const budget=parsedBudget===null?null:normalizedBudget;
   if(budget!==null&&(!/^\d+(\.\d{1,2})?$/.test(budget)||parsedBudget===0))throw new Error("Budget must be greater than zero with at most two decimal places.");
   if(target.contribution_deadline&&!/^\d{4}-\d{2}-\d{2}$/.test(target.contribution_deadline))throw new Error("Enter a valid contribution deadline.");
-  const normalizedExpenseBudget=normalizeNumericInput(target.expense_budget_amount).replace(/,/g,"");
-  const parsedExpenseBudget=parseOptionalAmount(target.expense_budget_amount);
-  const expenseBudget=parsedExpenseBudget===null?null:normalizedExpenseBudget;
-  if(expenseBudget!==null&&(!/^\d+(\.\d{1,2})?$/.test(expenseBudget)||parsedExpenseBudget===0))throw new Error("Expense budget must be greater than zero with at most two decimal places.");
-  const {error}=await supabase.from("event_finance_targets").upsert({event_id:eventId,budget_amount:budget,contribution_deadline:target.contribution_deadline||null,expense_budget_amount:expenseBudget},{onConflict:"event_id"});
+  const {error}=await supabase.from("event_finance_targets").upsert({event_id:eventId,budget_amount:budget,contribution_deadline:target.contribution_deadline||null},{onConflict:"event_id"});
   if(error)throw new Error(error.message);
 }
 
