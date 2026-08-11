@@ -13,6 +13,13 @@ import {
 } from "next/navigation";
 
 import Button from "@/components/ui/Button";
+import QrVisual from "@/components/ui/QrVisual";
+
+const valueProps = [
+  { icon: "💌", label: "Personalized digital invitations" },
+  { icon: "📱", label: "Secure QR check-in at the door" },
+  { icon: "💳", label: "Contributions, expenses & reports" },
+];
 
 
 function getSafeRedirectPath() {
@@ -187,7 +194,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-100 px-4 py-10">
+    <main className="flex min-h-screen flex-col lg:flex-row">
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50 to-teal-100 px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-white/70 bg-white p-7 shadow-xl sm:p-10">
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-700 text-2xl font-bold text-white shadow-lg shadow-emerald-200">
@@ -282,6 +290,38 @@ export default function LoginPage() {
         <p className="mt-7 text-center text-xs text-slate-400">
           Secure event management system
         </p>
+      </div>
+      </div>
+
+      <div className="relative hidden overflow-hidden bg-gradient-to-br from-emerald-950 via-slate-950 to-teal-950 px-10 py-12 text-white lg:flex lg:w-[42%] lg:flex-col lg:justify-center xl:w-[38%]">
+        <div className="absolute -left-16 top-16 h-64 w-64 rounded-full bg-emerald-500/20 blur-3xl" aria-hidden="true" />
+        <div className="absolute -right-10 bottom-10 h-72 w-72 rounded-full bg-teal-500/20 blur-3xl" aria-hidden="true" />
+
+        <div className="absolute -right-14 top-1/2 h-56 w-56 -translate-y-1/2 rotate-12 opacity-10" aria-hidden="true">
+          <QrVisual />
+        </div>
+
+        <div className="relative">
+          <p className="text-2xl font-bold tracking-tight">Smart Event Pass</p>
+
+          <p className="mt-5 max-w-sm text-lg leading-8 text-slate-300">
+            Manage your event guests, contributions, and check-ins — all in
+            one place.
+          </p>
+
+          <ul className="mt-9 space-y-4">
+            {valueProps.map((item) => (
+              <li key={item.label} className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl backdrop-blur">
+                  {item.icon}
+                </span>
+                <span className="text-sm font-medium text-slate-200">
+                  {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </main>
   );

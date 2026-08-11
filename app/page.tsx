@@ -1,41 +1,100 @@
 import Link from "next/link";
 
-const features = [
+import QrVisual from "@/components/ui/QrVisual";
+
+type Feature = { title: string; description: string; icon: string; flagship?: boolean };
+type FeatureGroup = { title: string; features: Feature[] };
+
+const featureGroups: FeatureGroup[] = [
   {
-    title: "Beautiful Invitations",
-    description:
-      "Create elegant digital invitations with event photos, countdowns, RSVP and personal guest links.",
-    icon: "💌",
+    title: "Guest Experience",
+    features: [
+      {
+        title: "Beautiful Invitations",
+        description:
+          "Create elegant digital invitations with event photos, countdowns, RSVP and personal guest links.",
+        icon: "💌",
+        flagship: true,
+      },
+      {
+        title: "Smart QR Check-In",
+        description:
+          "Generate a unique QR pass for every guest and verify attendance quickly at the entrance.",
+        icon: "📱",
+      },
+      {
+        title: "Guest Management",
+        description:
+          "Add, edit, organize and track guests, categories, RSVP responses and check-in status.",
+        icon: "👥",
+      },
+      {
+        title: "WhatsApp Sharing",
+        description:
+          "Send each guest a personal invitation link directly through WhatsApp in just one click.",
+        icon: "💬",
+      },
+      {
+        title: "Live Attendance",
+        description:
+          "Monitor checked-in guests, pending arrivals and attendance progress from one dashboard.",
+        icon: "📊",
+      },
+    ],
   },
   {
-    title: "Smart QR Check-In",
-    description:
-      "Generate a unique QR pass for every guest and verify attendance quickly at the entrance.",
-    icon: "📱",
+    title: "Financial Management",
+    features: [
+      {
+        title: "Pledges & Contributions",
+        description:
+          "Track per-guest pledges and partial payments, and monitor collection progress and remaining balances in real time.",
+        icon: "💳",
+        flagship: true,
+      },
+      {
+        title: "Expense Tracking",
+        description:
+          "Record event expenses by category, compare actual spend against budgets, and see remaining budget at a glance.",
+        icon: "🧾",
+      },
+      {
+        title: "Financial Reports & Closing",
+        description:
+          "Generate closing reports with full transaction logs, and export payment and expense workbooks for reconciliation.",
+        icon: "📈",
+      },
+      {
+        title: "Automated Reminders & Receipts",
+        description:
+          "Send automated SMS and WhatsApp payment reminders and thank-you receipts to contributors.",
+        icon: "🔔",
+      },
+    ],
   },
   {
-    title: "Guest Management",
-    description:
-      "Add, edit, organize and track guests, categories, RSVP responses and check-in status.",
-    icon: "👥",
-  },
-  {
-    title: "WhatsApp Sharing",
-    description:
-      "Send each guest a personal invitation link directly through WhatsApp in just one click.",
-    icon: "💬",
-  },
-  {
-    title: "Live Attendance",
-    description:
-      "Monitor checked-in guests, pending arrivals and attendance progress from one dashboard.",
-    icon: "📊",
-  },
-  {
-    title: "Multiple Event Types",
-    description:
-      "Use the platform for weddings, send-offs, birthdays, graduations and corporate events.",
-    icon: "🎉",
+    title: "Event Operations",
+    features: [
+      {
+        title: "Automation Center",
+        description:
+          "Connect WhatsApp, SMS and Make.com to automate invitations, reminders and workflow triggers end-to-end.",
+        icon: "⚙️",
+        flagship: true,
+      },
+      {
+        title: "Committee Portal",
+        description:
+          "Give committee members their own scoped view to collaborate on contributions and expenses.",
+        icon: "🧑‍🤝‍🧑",
+      },
+      {
+        title: "Multiple Event Types",
+        description:
+          "Use the platform for weddings, send-offs, birthdays, graduations and corporate events.",
+        icon: "🎉",
+      },
+    ],
   },
 ];
 
@@ -45,18 +104,6 @@ const journeyStatuses = [
   { label: "Pass Generated", detail: "VIP access · 10:44", color: "bg-emerald-400", ring: "ring-emerald-400/25" },
   { label: "Check-in Verified", detail: "Gate A · Just now", color: "bg-emerald-500", ring: "ring-emerald-500/30" },
 ];
-
-function QrVisual() {
-  return (
-    <svg viewBox="0 0 116 116" className="h-full w-full" role="img" aria-label="Secure event pass QR code">
-      <rect width="116" height="116" rx="8" fill="white" />
-      <g fill="#071426">
-        <path d="M9 9h30v30H9zm6 6v18h18V15zm4 4h10v10H19zM77 9h30v30H77zm6 6v18h18V15zm4 4h10v10H87zM9 77h30v30H9zm6 6v18h18V83zm4 4h10v10H19z" />
-        <path d="M47 9h8v8h-8zm12 0h8v8h-8zM43 21h8v8h-8zm12 0h16v8H55zM47 33h8v8h-8zm12 0h8v8h-8zM43 47h8v8h-8zm12 0h8v8h-8zm12 0h12v8H67zm16 0h8v8h-8zm12 0h12v8H95zM9 47h8v8H9zm12 0h16v8H21zM9 59h12v8H9zm16 0h8v8h-8zm12 0h8v8h-8zm12 0h16v8H49zm20 0h8v8h-8zm12 0h8v8h-8zm12 0h12v8H93zM47 71h8v8h-8zm12 0h8v8h-8zm12 0h16v8H71zm20 0h16v8H91zM43 83h8v8h-8zm12 0h16v8H55zm20 0h8v8h-8zm12 0h8v8h-8zm12 0h8v8h-8zM47 95h8v8h-8zm12 0h8v8h-8zm12 0h8v8h-8zm12 0h12v8H83zm16 0h8v8h-8z" />
-      </g>
-    </svg>
-  );
-}
 
 function LiveGuestJourney() {
   return (
@@ -167,7 +214,7 @@ export default function Home() {
               href="/login"
               className="rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
             >
-              Admin Login
+              Login
             </Link>
           </nav>
 
@@ -255,21 +302,41 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="rounded-2xl border border-[#e7e1d7] bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className="text-4xl">{feature.icon}</div>
-
-                <h3 className="mt-5 text-xl font-bold text-slate-900">
-                  {feature.title}
+          <div className="mt-14 space-y-14">
+            {featureGroups.map((group) => (
+              <div key={group.title}>
+                <h3 className="text-sm font-bold uppercase tracking-[0.22em] text-emerald-700">
+                  {group.title}
                 </h3>
 
-                <p className="mt-3 leading-7 text-slate-600">
-                  {feature.description}
-                </p>
+                <div className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {group.features.map((feature) => (
+                    <div
+                      key={feature.title}
+                      className={`rounded-2xl border border-[#e7e1d7] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
+                        feature.flagship
+                          ? "bg-gradient-to-br from-emerald-50 to-white md:col-span-2 xl:col-span-2"
+                          : "bg-white"
+                      }`}
+                    >
+                      <div className={feature.flagship ? "text-5xl" : "text-4xl"}>
+                        {feature.icon}
+                      </div>
+
+                      <h4
+                        className={`mt-5 font-bold text-slate-900 ${
+                          feature.flagship ? "text-2xl" : "text-xl"
+                        }`}
+                      >
+                        {feature.title}
+                      </h4>
+
+                      <p className="mt-3 leading-7 text-slate-600">
+                        {feature.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
