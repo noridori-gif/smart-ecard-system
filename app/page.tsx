@@ -1,6 +1,74 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import QrVisual from "@/components/ui/QrVisual";
+import { canonicalAppUrl } from "@/lib/publicPledgeMetadata";
+
+const homeTitle = "Smart Event Pass — Mialiko ya Harusi & Matukio Tanzania";
+const homeDescription =
+  "Digital wedding & event invitations, RSVP, QR check-in and online pledge tracking for Tanzania. Mfumo wa mialiko ya harusi, RSVP na michango ya harusi mtandaoni.";
+
+export const metadata: Metadata = {
+  title: { absolute: homeTitle },
+  description: homeDescription,
+  alternates: { canonical: canonicalAppUrl() },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: homeTitle,
+    description: homeDescription,
+    url: canonicalAppUrl(),
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Smart Event Pass — Tanzania's digital event and wedding guest management platform",
+      },
+    ],
+  },
+  twitter: {
+    title: homeTitle,
+    description: homeDescription,
+    images: ["/opengraph-image"],
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${canonicalAppUrl()}/#organization`,
+      name: "Smart Event Pass",
+      url: canonicalAppUrl(),
+      description: homeDescription,
+      logo: {
+        "@type": "ImageObject",
+        url: `${canonicalAppUrl()}/logo.png`,
+        width: 1254,
+        height: 1254,
+      },
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Dar es Salaam",
+        addressRegion: "Ubungo",
+        addressCountry: "TZ",
+      },
+      areaServed: "TZ",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Smart Event Pass",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: canonicalAppUrl(),
+      description: homeDescription,
+      provider: { "@id": `${canonicalAppUrl()}/#organization` },
+      areaServed: "TZ",
+      inLanguage: ["en", "sw"],
+    },
+  ],
+};
 
 type Feature = { title: string; description: string; icon: string; flagship?: boolean };
 type FeatureGroup = { title: string; features: Feature[] };
@@ -194,6 +262,10 @@ function LiveGuestJourney() {
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-slate-950 to-teal-950" />
 
