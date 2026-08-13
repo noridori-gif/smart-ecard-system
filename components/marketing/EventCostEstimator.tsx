@@ -11,6 +11,11 @@ type EventTypeOption = {
   cateringPerGuest: number;
   entertainmentBase: number;
   decorPerGuest: number;
+  drinksPerGuest: number;
+  transportBase: number;
+  transportPerGuest: number;
+  mcBase: number;
+  photographyBase: number;
 };
 
 type VenueTierOption = {
@@ -22,10 +27,26 @@ type VenueTierOption = {
 };
 
 const EVENT_TYPES: EventTypeOption[] = [
-  { id: "wedding", en: "Wedding", sw: "Harusi", cateringPerGuest: 25000, entertainmentBase: 1800000, decorPerGuest: 10000 },
-  { id: "sendoff", en: "Send-off", sw: "Kupeleka Bibi", cateringPerGuest: 20000, entertainmentBase: 1000000, decorPerGuest: 7000 },
-  { id: "birthday", en: "Birthday", sw: "Siku ya Kuzaliwa", cateringPerGuest: 15000, entertainmentBase: 600000, decorPerGuest: 5000 },
-  { id: "kitchen_party", en: "Kitchen Party", sw: "Kitchen Party", cateringPerGuest: 18000, entertainmentBase: 900000, decorPerGuest: 8000 },
+  {
+    id: "wedding", en: "Wedding", sw: "Harusi",
+    cateringPerGuest: 25000, entertainmentBase: 1800000, decorPerGuest: 10000,
+    drinksPerGuest: 6000, transportBase: 400000, transportPerGuest: 1000, mcBase: 500000, photographyBase: 1200000,
+  },
+  {
+    id: "sendoff", en: "Send-off", sw: "Kupeleka Bibi",
+    cateringPerGuest: 20000, entertainmentBase: 1000000, decorPerGuest: 7000,
+    drinksPerGuest: 5000, transportBase: 300000, transportPerGuest: 800, mcBase: 350000, photographyBase: 800000,
+  },
+  {
+    id: "birthday", en: "Birthday", sw: "Siku ya Kuzaliwa",
+    cateringPerGuest: 15000, entertainmentBase: 600000, decorPerGuest: 5000,
+    drinksPerGuest: 4000, transportBase: 200000, transportPerGuest: 600, mcBase: 250000, photographyBase: 500000,
+  },
+  {
+    id: "kitchen_party", en: "Kitchen Party", sw: "Kitchen Party",
+    cateringPerGuest: 18000, entertainmentBase: 900000, decorPerGuest: 8000,
+    drinksPerGuest: 5000, transportBase: 250000, transportPerGuest: 700, mcBase: 300000, photographyBase: 600000,
+  },
 ];
 
 const VENUE_TIERS: VenueTierOption[] = [
@@ -47,15 +68,26 @@ function computeDefaults(eventType: EventTypeOption, venueTier: VenueTierOption,
     catering: roundToNearest(eventType.cateringPerGuest * guestCount, 10000),
     entertainment: roundToNearest(eventType.entertainmentBase + guestCount * 400, 10000),
     decorations: roundToNearest(eventType.decorPerGuest * guestCount, 10000),
+    // Drinks scale with guest count like catering. Transport scales only lightly
+    // (mostly fixed vehicle/logistics cost, not per-head). MC and photography are
+    // flat service packages that don't meaningfully change with guest count.
+    drinks: roundToNearest(eventType.drinksPerGuest * guestCount, 10000),
+    transport: roundToNearest(eventType.transportBase + eventType.transportPerGuest * guestCount, 10000),
+    mc: roundToNearest(eventType.mcBase, 10000),
+    photography: roundToNearest(eventType.photographyBase, 10000),
   };
 }
 
-type CategoryKey = "venue" | "catering" | "entertainment" | "decorations";
+type CategoryKey = "venue" | "catering" | "entertainment" | "decorations" | "drinks" | "transport" | "mc" | "photography";
 const CATEGORY_LABELS: { key: CategoryKey; en: string; sw: string }[] = [
   { key: "venue", en: "Venue", sw: "Ukumbi" },
   { key: "catering", en: "Catering", sw: "Chakula" },
   { key: "entertainment", en: "Entertainment", sw: "Burudani" },
   { key: "decorations", en: "Decorations", sw: "Mapambo" },
+  { key: "drinks", en: "Drinks", sw: "Vinywaji" },
+  { key: "transport", en: "Transport", sw: "Usafiri" },
+  { key: "mc", en: "Emcee (MC)", sw: "MC" },
+  { key: "photography", en: "Photography", sw: "Upigaji Picha" },
 ];
 
 function ToggleChip({ active, onClick, en, sw }: { active: boolean; onClick: () => void; en: string; sw: string }) {
@@ -88,7 +120,9 @@ export default function EventCostEstimator() {
     setValues(computeDefaults(eventType, venueTier, guestCount));
   }, [eventTypeId, venueTierId, guestCount]);
 
-  const total = values.venue + values.catering + values.entertainment + values.decorations;
+  const total =
+    values.venue + values.catering + values.entertainment + values.decorations +
+    values.drinks + values.transport + values.mc + values.photography;
 
   function updateCategory(key: CategoryKey, raw: string) {
     const parsed = Number(raw.replace(/[^0-9]/g, ""));
@@ -137,21 +171,19 @@ export default function EventCostEstimator() {
           Estimated Budget Breakdown · Muhtasari wa Bajeti
         </h3>
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {CATEGORY_LABELS.map(({ key, en, sw }) => (
-            <div key={key} className="flex items-center justify-between gap-4 rounded-xl border border-[#eee9e1] bg-[#faf8f4] px-4 py-3">
-              <div>
-                <p className="text-sm font-bold text-slate-800">{en}</p>
-                <p className="text-xs text-slate-500">{sw}</p>
-              </div>
-              <div className="flex items-center gap-2">
+            <div key={key} className="rounded-xl border border-[#eee9e1] bg-[#faf8f4] px-4 py-3">
+              <p className="text-sm font-bold text-slate-800">{en}</p>
+              <p className="text-xs text-slate-500">{sw}</p>
+              <div className="mt-2 flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-400">TSh</span>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={values[key].toLocaleString("en-US")}
                   onChange={(event) => updateCategory(key, event.target.value)}
-                  className="w-32 rounded-lg border border-[#e7e1d7] px-2 py-1.5 text-right text-sm font-bold text-slate-900 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 print:border-none"
+                  className="w-full min-w-0 rounded-lg border border-[#e7e1d7] px-2 py-1.5 text-right text-sm font-bold text-slate-900 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 print:border-none"
                   aria-label={`${en} cost`}
                 />
               </div>
