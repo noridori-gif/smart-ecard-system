@@ -36,6 +36,7 @@ import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsW
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
 import { getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
+import { getCurrentUserProfile } from "@/services/profileService";
 import { buildAdminCommunicationAdapter, getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
 import {
   cancelPledge, correctPayment, createPledge, exportPledges, getFinancialSuite, getPayments, recordPayment,
@@ -61,6 +62,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const [actionPledgeId,setActionPledgeId]=useState<number|null>(null);
   const [newReceipt,setNewReceipt]=useState<{receipt:FinanceReceipt;verificationUrl:string}|null>(null);
   const [permanentDeletePledge,setPermanentDeletePledge]=useState<FinancialPledge|null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [guestFilter, setGuestFilter] = useState("all");
   const [page, setPage] = useState(1); const pageSize = 10;
   const load = useCallback(async () => {
@@ -81,6 +83,9 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+  useEffect(() => {
+    void getCurrentUserProfile().then((profile) => setIsAdmin(profile?.role === "admin")).catch(() => {});
+  }, []);
   // event_pledge_financial_summary is now fetched oldest-first so each contributor's
   // rank is a stable chronological position; reverse it back to newest-first for display
   // so the on-screen order matches the previous default.
@@ -239,6 +244,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           eventTitle={data.event.title}
           pledges={pledgesNewestFirst}
           serialByPledgeId={pledgeRank}
+          isAdmin={isAdmin}
           visible={visible}
           query={query}
           status={status}
