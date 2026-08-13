@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import QrVisual from "@/components/ui/QrVisual";
+import EventCostEstimator from "@/components/marketing/EventCostEstimator";
 import { canonicalAppUrl } from "@/lib/publicPledgeMetadata";
 
 const homeTitle = "Smart Event Pass — Mialiko ya Harusi & Matukio Tanzania";
@@ -412,6 +413,32 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section
+        id="cost-estimator"
+        className="bg-slate-100 px-6 py-24 text-slate-900 sm:px-8 lg:px-12"
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">
+              Plan Your Budget · Panga Bajeti Yako
+            </p>
+
+            <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+              Estimate Your Event Costs
+            </h2>
+
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Pick an event type, guest count and venue tier to get a starting
+              budget — then adjust every category to match real prices in your
+              area. Chagua aina ya tukio, idadi ya wageni na aina ya ukumbi
+              kupata makadirio ya awali.
+            </p>
+          </div>
+
+          <EventCostEstimator />
         </div>
       </section>
 
