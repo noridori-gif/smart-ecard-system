@@ -166,13 +166,14 @@ export async function restorePledge(id: number) {
   if (error) throw new Error(error.message);
   return data as FinancialPledge;
 }
-export async function permanentlyDeletePledge(id: number, confirmation: string) {
+export async function permanentlyDeletePledge(id: number, confirmation: string, forceDeletePayments = false) {
   const { data, error } = await supabase.rpc("permanently_delete_event_pledge", {
     target_pledge_id: id,
     expected_confirmation: confirmation,
+    force_delete_payments: forceDeletePayments,
   });
   if (error) throw new Error(error.message);
-  return data as { deleted: boolean; pledge_id: number };
+  return data as { deleted: boolean; pledge_id: number; deletedPaymentCount: number; deletedPaymentTotal: number };
 }
 export type PledgeDeletionPreview = {
   pledgeId: number; fullName: string; isCancelled: boolean; hasProtectedFinancialHistory: boolean;
