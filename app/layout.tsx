@@ -48,6 +48,7 @@ export const metadata: Metadata = {
   creator: "Smart Event Pass",
   publisher: "Smart Event Pass",
   formatDetection: { email: false, address: false, telephone: false },
+  verification: { google: "zLt-HoUJA-8PIGx1GAhsBqbUDxwP6V8GJh8eqkKZhwY" },
   // Default-deny: most routes in this app are the authenticated dashboard or
   // carry a private per-guest/per-contributor token (invite/[token], r/[token],
   // support/[token], meeting-map/[token], contributions/manage/[token]) and must
