@@ -171,19 +171,19 @@ export default function EventCostEstimator() {
           Estimated Budget Breakdown · Muhtasari wa Bajeti
         </h3>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {CATEGORY_LABELS.map(({ key, en, sw }) => (
-            <div key={key} className="rounded-xl border border-[#eee9e1] bg-[#faf8f4] px-4 py-3">
-              <p className="text-sm font-bold text-slate-800">{en}</p>
-              <p className="text-xs text-slate-500">{sw}</p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">TSh</span>
+            <div key={key} className="rounded-lg border border-[#eee9e1] bg-[#faf8f4] px-3 py-2">
+              <p className="truncate text-xs font-bold text-slate-800">{en}</p>
+              <p className="truncate text-[11px] text-slate-500">{sw}</p>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-400">TSh</span>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={values[key].toLocaleString("en-US")}
                   onChange={(event) => updateCategory(key, event.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-[#e7e1d7] px-2 py-1.5 text-right text-sm font-bold text-slate-900 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 print:border-none"
+                  className="w-full min-w-0 rounded-md border border-[#e7e1d7] px-1.5 py-1 text-right text-xs font-bold text-slate-900 tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 print:border-none"
                   aria-label={`${en} cost`}
                 />
               </div>
@@ -191,7 +191,7 @@ export default function EventCostEstimator() {
           ))}
         </div>
 
-        <div className="mt-5 flex items-center justify-between rounded-xl bg-emerald-700 px-4 py-4 text-white">
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-700 px-4 py-4 text-white">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.12em]">Total Estimated Cost</p>
             <p className="text-xs text-emerald-100">Jumla ya Gharama Inayokadiriwa</p>
