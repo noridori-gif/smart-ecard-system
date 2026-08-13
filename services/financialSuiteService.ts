@@ -95,7 +95,7 @@ export type PaymentCorrectionInput = {
 export async function getFinancialSuite(eventId: number) {
   const [eventResult, pledgeResult, summaryResult, guestsResult] = await Promise.all([
     supabase.from("events").select("id,title,event_date,language,invitation_template").eq("id", eventId).single(),
-    supabase.from("event_pledge_financial_summary").select("*").eq("event_id", eventId).order("created_at", { ascending: false }),
+    supabase.from("event_pledge_financial_summary").select("*").eq("event_id", eventId).order("created_at", { ascending: true }),
     supabase.rpc("get_event_finance_summary", { target_event_id: eventId }).single(),
     supabase.from("guests").select("id,full_name,phone,email,allowed_guests,event_pass_id,status,checked_in_at,invitations(id,invitation_token,invitation_status,rsvp_status,viewed_at)").eq("event_id", eventId).order("full_name"),
   ]);

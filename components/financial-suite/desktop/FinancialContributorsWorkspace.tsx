@@ -9,7 +9,7 @@ import SharedEmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
 
 type WorkspaceProps = {
-  eventTitle: string; pledges: FinancialPledge[]; visible: FinancialPledge[];
+  eventTitle: string; pledges: FinancialPledge[]; visible: FinancialPledge[]; serialByPledgeId: Map<number, number>;
   query: string; status: string; guestFilter: string; page: number; pages: number; total: number;
   actionPledgeId: number | null;
   communicationHistory: ReminderHistoryRow[];
@@ -45,7 +45,7 @@ export function FinancialContributorsWorkspace(props: WorkspaceProps) {
           <thead className="sticky top-0 z-10 bg-[#faf8f4]/95 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500 backdrop-blur">
             <tr><th scope="col" className="hidden w-14 px-2 py-3 text-center sm:table-cell">#</th><th scope="col" className="w-[45%] px-3 py-3 sm:w-[43%] lg:w-[24%]">{t("eligibility.contributor")}</th><th scope="col" className="hidden w-[14%] px-3 py-3 xl:table-cell">{t("common.phone")}</th><th scope="col" className="hidden px-3 py-3 lg:table-cell lg:w-[24%]">{language === "sw" ? "Maendeleo ya Michango" : "Contribution Progress"}</th><th scope="col" className="hidden w-[12%] px-3 py-3 lg:table-cell">{t("overview.balance")}</th><th scope="col" className="hidden w-[12%] px-3 py-3 lg:table-cell">{language === "sw" ? "Aina ya Mgeni" : "Guest Type"}</th><th scope="col" className="w-[37%] px-3 py-3 sm:w-[22%]">{language === "sw" ? "Hali ya Malipo" : "Payment Status"}</th><th scope="col" className="hidden w-[13%] px-3 py-3 xl:table-cell">{language === "sw" ? "Malipo ya Mwisho" : "Last Payment"}</th><th scope="col" className="w-14 px-2 py-3 text-center">{t("common.actions")}</th></tr>
           </thead>
-          <tbody>{props.visible.map((pledge,index)=><ContributorRow key={pledge.id} pledge={pledge} serial={(props.page-1)*10+index+1} busy={props.actionPledgeId===pledge.id} {...props}/>)}</tbody>
+          <tbody>{props.visible.map((pledge,index)=><ContributorRow key={pledge.id} pledge={pledge} serial={props.serialByPledgeId.get(pledge.id) ?? (props.page-1)*10+index+1} busy={props.actionPledgeId===pledge.id} {...props}/>)}</tbody>
         </table>
       </div>}
       <footer className="flex flex-col gap-3 border-t border-[#ece7df] bg-[#fffdf9] p-4 text-sm sm:flex-row sm:items-center sm:justify-between"><span className="text-slate-600">{formatAppNumber(props.total,language)} {t("financial.contributors").toLowerCase()}</span><div className="flex items-center gap-2"><PageButton disabled={props.page===1} onClick={()=>props.onPage(props.page-1)}>{t("common.previous")}</PageButton><span className="rounded-lg bg-stone-100 px-3 py-2 font-semibold tabular-nums">{props.page} / {props.pages}</span><PageButton disabled={props.page===props.pages} onClick={()=>props.onPage(props.page+1)}>{t("common.next")}</PageButton></div></footer>

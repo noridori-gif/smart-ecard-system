@@ -81,11 +81,20 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
-  const filtered = useMemo(() => (data?.pledges ?? []).filter((p) =>
+  // event_pledge_financial_summary is now fetched oldest-first so each contributor's
+  // rank is a stable chronological position; reverse it back to newest-first for display
+  // so the on-screen order matches the previous default.
+  const pledgesNewestFirst = useMemo(() => (data ? [...data.pledges].reverse() : []), [data]);
+  const pledgeRank = useMemo(() => {
+    const map = new Map<number, number>();
+    (data?.pledges ?? []).forEach((p, i) => map.set(p.id, i + 1));
+    return map;
+  }, [data]);
+  const filtered = useMemo(() => pledgesNewestFirst.filter((p) =>
     (status === "all" || p.calculated_status === status) &&
     (guestFilter === "all" || (guestFilter === "none" ? !["single", "double", "pending_guest"].includes(p.guest_eligibility_status) : guestFilter === p.guest_eligibility_status)) &&
     (`${p.full_name} ${p.phone} ${p.normalized_phone}`.toLowerCase().includes(query.toLowerCase()))
-  ), [data, guestFilter, query, status]);
+  ), [pledgesNewestFirst, guestFilter, query, status]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize)); const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   async function savePledge(input: PledgeInput) {
     const acknowledgement=selected?null:await createPledge(input); if(selected)await updatePledge(selected.id,input,selected.total_paid);
@@ -228,7 +237,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       {activeTab === "contributors" && (
         <FinancialContributorsWorkspace
           eventTitle={data.event.title}
-          pledges={data.pledges}
+          pledges={pledgesNewestFirst}
+          serialByPledgeId={pledgeRank}
           visible={visible}
           query={query}
           status={status}
@@ -281,7 +291,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       {activeTab === "eligibility" && eligibilitySettings && (
         <ContributorEligibilityDashboard
           eventId={eventId}
-          pledges={data.pledges}
+          pledges={pledgesNewestFirst}
           guests={data.guests}
           settings={eligibilitySettings}
           onRefresh={load}
@@ -299,7 +309,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           eventTitle={data.event.title}
           language={data.event.language}
           template={data.event.invitation_template}
-          pledges={data.pledges}
+          pledges={pledgesNewestFirst}
           guests={data.guests}
           onRefresh={load}
         />
@@ -312,7 +322,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
         >
           <FinancialPaymentsTab
             eventId={eventId}
-            pledges={data.pledges}
+            pledges={pledgesNewestFirst}
             issueReceipt={issueReceipt}
             onViewReceipt={setNewReceipt}
             onEdit={(pledge, payment) => {
@@ -347,7 +357,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             eventId={eventId}
             eventDate={data.event.event_date}
             deadline={data.summary.contribution_deadline}
-            pledges={data.pledges}
+            pledges={pledgesNewestFirst}
           />
         </TabSection>
       )}
