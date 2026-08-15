@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   correctExpense, deleteCategoryBudget, getCategoryBudgets, getExpenseReceiptUrl, getExpenses, recordExpense,
-  saveCategoryBudget, voidExpense,
+  saveCategoryBudget, seedDefaultCategoryBudgets, voidExpense,
   type EventExpense, type EventExpenseCategoryBudget, type ExpenseCorrectionInput, type ExpenseInput,
 } from "@/services/expenseService";
+import { DEFAULT_EVENT_BUDGET_CATEGORIES } from "@/lib/eventBudgetCategories";
 import { formatAppTzs } from "@/lib/i18n/formatters";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import RecordExpenseDialog from "../RecordExpenseDialog";
@@ -99,6 +100,14 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
     } catch (err) { setBudgetError(err instanceof Error ? err.message : "Budget could not be saved."); }
     finally { setBudgetBusy(false); }
   }
+  async function useDefaultCategories() {
+    try {
+      setBudgetBusy(true); setBudgetError("");
+      await seedDefaultCategoryBudgets(eventId, DEFAULT_EVENT_BUDGET_CATEGORIES.map((item) => item[language]));
+      await load();
+    } catch (err) { setBudgetError(err instanceof Error ? err.message : "Default categories could not be added."); }
+    finally { setBudgetBusy(false); }
+  }
 
   return <div className="space-y-6">
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -152,8 +161,15 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
     </section>}
 
     <section className="sep-card p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">By Category</h2>
-        {!addingCategory && <button type="button" onClick={() => { setAddingCategory(true); setBudgetError(""); }} className="text-sm font-semibold text-emerald-700">+ Add category budget</button>}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Budget Planner</h2>
+          <p className="mt-1 text-xs text-slate-500">Set a spending budget per category, then track it against what you actually spend.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {!categoryBudgets.length && <button type="button" disabled={budgetBusy} onClick={() => void useDefaultCategories()} className="text-sm font-semibold text-emerald-700 disabled:opacity-50">+ Use default categories</button>}
+          {!addingCategory && <button type="button" onClick={() => { setAddingCategory(true); setBudgetError(""); }} className="text-sm font-semibold text-emerald-700">+ Add category budget</button>}
+        </div>
       </div>
       <div className="mt-4 space-y-2">
         {categoryBreakdown.length ? categoryBreakdown.map(({ category, spent, budget }) => {

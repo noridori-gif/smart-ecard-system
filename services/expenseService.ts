@@ -88,3 +88,13 @@ export async function deleteCategoryBudget(eventId: number, category: string) {
   const { error } = await supabase.from("event_expense_category_budgets").delete().eq("event_id", eventId).eq("category", category);
   if (error) throw new Error(error.message);
 }
+
+// Bulk-seeds unset ($0) placeholder rows for a starter category set. Only meant to be
+// called when an event has zero category budgets yet -- ignoreDuplicates means it never
+// overwrites a category the organizer already set, even if called more than once.
+export async function seedDefaultCategoryBudgets(eventId: number, categories: string[]) {
+  const rows = categories.map((category) => ({ event_id: eventId, category, budgeted_amount: "0" }));
+  const { error } = await supabase.from("event_expense_category_budgets")
+    .upsert(rows, { onConflict: "event_id,category", ignoreDuplicates: true });
+  if (error) throw new Error(error.message);
+}

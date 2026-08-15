@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatAppTzs } from "@/lib/i18n/formatters";
+import { DEFAULT_EVENT_BUDGET_CATEGORIES, type EventBudgetCategoryKey } from "@/lib/eventBudgetCategories";
 
 type EventTypeOption = {
   id: string;
@@ -78,17 +79,8 @@ function computeDefaults(eventType: EventTypeOption, venueTier: VenueTierOption,
   };
 }
 
-type CategoryKey = "venue" | "catering" | "entertainment" | "decorations" | "drinks" | "transport" | "mc" | "photography";
-const CATEGORY_LABELS: { key: CategoryKey; en: string; sw: string }[] = [
-  { key: "venue", en: "Venue", sw: "Ukumbi" },
-  { key: "catering", en: "Catering", sw: "Chakula" },
-  { key: "entertainment", en: "Entertainment", sw: "Burudani" },
-  { key: "decorations", en: "Decorations", sw: "Mapambo" },
-  { key: "drinks", en: "Drinks", sw: "Vinywaji" },
-  { key: "transport", en: "Transport", sw: "Usafiri" },
-  { key: "mc", en: "Emcee (MC)", sw: "MC" },
-  { key: "photography", en: "Photography", sw: "Upigaji Picha" },
-];
+type CategoryKey = EventBudgetCategoryKey;
+const CATEGORY_LABELS = DEFAULT_EVENT_BUDGET_CATEGORIES;
 
 function ToggleChip({ active, onClick, en, sw }: { active: boolean; onClick: () => void; en: string; sw: string }) {
   return (
