@@ -33,12 +33,45 @@ function whatsappReminderOverride(setting: WhatsAppReminderTemplateFields, langu
     : { templateName: setting.whatsapp_reminder_template_sw, languageCode: setting.whatsapp_reminder_template_language_sw };
 }
 
-function daysRemainingLabel(eventDate: string, now: Date): string {
-  const [year, month, day] = eventDate.split("-").map(Number);
-  const eventDay = Date.UTC(year, month - 1, day);
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const days = Math.max(0, Math.ceil((eventDay - today) / 86_400_000));
-  return `Siku ${days}`;
+// Single source of truth for the positional variables sent into an approved WhatsApp
+// financial template ({{1}}..{{5}}: contributor name, event title, total pledge, total
+// received, balance -- see docs/financial-automation.md). Used by BOTH the actual send
+// (deliverReminder) and the admin-facing preview (previewFinancialReminders,
+// previewPledgeThankYous). Keep call sites pointed at this function rather than inlining
+// a parameter array again -- that's exactly how Bug 1 (wrong value in slot 2) and Bug 2
+// (preview showing different content than what's actually sent) diverged last time.
+function buildWhatsAppTemplateParameters(
+  pledge: Pick<PledgeRow, "full_name" | "pledged_amount" | "total_paid" | "balance">,
+  event: Pick<EventRow, "title">
+): string[] {
+  return [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)];
+}
+
+// Meta's approved WhatsApp template body text lives only in Meta Business Manager, not in
+// this codebase -- env vars here only carry the template NAME + language code (see
+// lib/financialWhatsAppConfig.ts, docs/financial-automation.md), so the literal approved
+// wording can't be reconstructed for a preview. Instead this shows exactly which
+// parameters the template will receive, in order -- guaranteed accurate because it's built
+// from the same buildWhatsAppTemplateParameters() call used for the real send.
+function describeWhatsAppPreview(
+  templateKind: "reminder" | "pledge_thank_you",
+  language: "sw" | "en",
+  override: FinancialWhatsAppTemplateOverride | undefined,
+  parameters: string[]
+): string {
+  const template = getFinancialWhatsAppTemplate(templateKind, language, override);
+  const labels = language === "en"
+    ? ["Contributor", "Event", "Total pledged", "Total received", "Balance"]
+    : ["Mchangiaji", "Tukio", "Jumla ya ahadi", "Jumla iliyopokelewa", "Salio"];
+  const lines = parameters.map((param, index) => `${index + 1}. ${labels[index] ?? `Var ${index + 1}`}: ${param}`).join("\n");
+  if (!template.configured) {
+    return language === "en"
+      ? `WhatsApp template is not configured yet. Once approved, it will be sent with:\n${lines}`
+      : `Kiolezo cha WhatsApp bado hakijawekwa. Kikiidhinishwa, kitatumwa na thamani hizi:\n${lines}`;
+  }
+  return language === "en"
+    ? `WhatsApp will send the approved template "${template.templateName}" (${template.languageCode}) with:\n${lines}`
+    : `WhatsApp itatuma kiolezo kilichoidhinishwa "${template.templateName}" (${template.languageCode}) na thamani hizi:\n${lines}`;
 }
 type PledgeRow = {
   id: number; event_id: number; full_name: string; normalized_phone: string | null;
@@ -145,15 +178,21 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
         channel, eligible: !reason, skippedReason: reason, lastReminderAt,
         cooldownUntil: lastReminderAt ? new Date(new Date(lastReminderAt).getTime() + Number(effectiveSetting.reminder_cooldown_hours) * 3_600_000).toISOString() : null,
         idempotencyKey: key,
-        message: channel === "sms" && effectiveSetting.custom_reminder_message?.trim()
-          ? renderCustomSmsTemplate(effectiveSetting.custom_reminder_message, {
-              guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
-              totalPaid: pledge.total_paid, balance: pledge.balance,
-            })
-          : buildPledgeMessage("pledge_reminder", language, {
-              guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
-              totalPaid: pledge.total_paid, balance: pledge.balance,
-            }),
+        // WhatsApp preview must reflect what deliverReminder() actually sends -- built from
+        // the same buildWhatsAppTemplateParameters() used there, not the SMS
+        // custom_reminder_message or the generic buildPledgeMessage() fallback (that
+        // mismatch was Bug 2).
+        message: channel === "whatsapp"
+          ? describeWhatsAppPreview("reminder", language, whatsappReminderOverride(effectiveSetting, language), buildWhatsAppTemplateParameters(pledge, effectiveEvent))
+          : effectiveSetting.custom_reminder_message?.trim()
+            ? renderCustomSmsTemplate(effectiveSetting.custom_reminder_message, {
+                guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
+                totalPaid: pledge.total_paid, balance: pledge.balance,
+              })
+            : buildPledgeMessage("pledge_reminder", language, {
+                guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
+                totalPaid: pledge.total_paid, balance: pledge.balance,
+              }),
       });
     }
   }
@@ -231,9 +270,14 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
       let reason:ThankYouSkipReason|null=null;
       if(event.archived_at)reason="archived";else if(pledge.calculated_status==="cancelled")reason="cancelled";else if(Number(pledge.balance)!==0||Number(pledge.total_paid)<Number(pledge.pledged_amount))reason="not_completed";else if(!pledge.normalized_phone)reason="missing_phone";else if(!/^255[67]\d{8}$/.test(pledge.normalized_phone))reason="invalid_phone";else if(successful)reason="already_thanked";
       const thankYouValues={guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance};
-      const message=channel==="sms"&&customThankYouMessage?.trim()
-        ?renderCustomSmsTemplate(customThankYouMessage,thankYouValues)
-        :buildPledgeMessage("pledge_thank_you",language,thankYouValues);
+      // Keep in sync with deliverReminder()'s WhatsApp branch via
+      // buildWhatsAppTemplateParameters() -- see the comment on that function. This was the
+      // same Bug 2 preview/actual-send mismatch as the reminder preview above.
+      const message=channel==="whatsapp"
+        ?describeWhatsAppPreview("pledge_thank_you",language,undefined,buildWhatsAppTemplateParameters(pledge,event as EventRow))
+        :channel==="sms"&&customThankYouMessage?.trim()
+          ?renderCustomSmsTemplate(customThankYouMessage,thankYouValues)
+          :buildPledgeMessage("pledge_thank_you",language,thankYouValues);
       rows.push({pledgeId:pledge.id,contributor:pledge.full_name,phone:pledge.normalized_phone,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance,channel,message,eligible:!reason,skippedReason:reason,deliveryStatus:existing?.delivery_status??null,completionFingerprint:fingerprint,idempotencyKey:key,latestFailure:existing&&!successful?safeThankYouFailure(existing):null});
     }
   }
@@ -289,12 +333,14 @@ async function deliverReminder(db: SupabaseClient, reminder: {
           .eq("event_id", reminder.event_id).maybeSingle();
         if (setting) templateOverride = whatsappReminderOverride(setting, language);
       }
+      // Parameter order/values must match previewFinancialReminders()/previewPledgeThankYous()
+      // via buildWhatsAppTemplateParameters() -- inlining a separate array here again is
+      // exactly how the "Siku N" (day count) leaked into slot 2 instead of the event title
+      // (Bug 1) while the preview showed something else entirely (Bug 2).
       const result = await sendFinancialWhatsAppTemplate({
         phoneNumber: reminder.recipient_phone, language,
         templateKind: reminder.reminder_type === "pledge_acknowledgement" ? "pledge_acknowledgement" : reminder.reminder_type === "pledge_thank_you" ? "pledge_thank_you" : "reminder",
-        parameters: isPledgeReminder
-          ? [pledge.full_name, daysRemainingLabel(event.event_date, new Date()), formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)]
-          : [pledge.full_name, event.title, formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)],
+        parameters: buildWhatsAppTemplateParameters(pledge, event),
         templateOverride,
       });
       providerMessageId = result.messageId;
