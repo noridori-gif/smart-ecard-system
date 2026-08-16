@@ -18,17 +18,36 @@ async function reminderId(db:SupabaseClient,key:string){const {data}=await db.fr
 export async function processClaimedFinancialWorkflow(db:SupabaseClient,event:FinancialWorkflowEvent,origin:string):Promise<ImmediateProcessingResult>{
  if(!(await automaticMessagingEnabled(db,event.event_id))){await holdWorkflowEvent(db,event.id);return {status:"held",message:"Financial record saved. Automatic messaging is paused.",workflowEventId:event.id}}
  let deliveryId:number|undefined;
+ const paymentDeliveryIds:number[]=[];
  try{
   await queueMakeDeliveries(db,event);
   if(event.event_type==="payment.recorded"){
    const paymentId=Number(event.payload?.payment_id),pledgeId=Number(event.payload?.pledge_id),paymentAmount=Number(event.payload?.payment_amount),totalPaid=Number(event.payload?.total_paid),balance=Number(event.payload?.balance);
    const [{data:pledge},{data:eventRow},{data:settings},{data:payment}]=await Promise.all([db.from("event_pledge_financial_summary").select("id,full_name,normalized_phone,pledged_amount").eq("id",pledgeId).eq("event_id",event.event_id).maybeSingle(),db.from("events").select("id,title,language").eq("id",event.event_id).maybeSingle(),db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,custom_payment_received_message,custom_thank_you_message").eq("event_id",event.event_id).maybeSingle(),db.from("pledge_payments").select("id,pledge_id,amount,voided_at").eq("id",paymentId).eq("pledge_id",pledgeId).maybeSingle()]);
-   const smsEnabled=settings?.reminder_channel==="sms"||settings?.reminder_channel==="both",validPhone=pledge?.normalized_phone&&/^255[67]\d{8}$/.test(pledge.normalized_phone),provider=financialProviderStatus("sms",eventRow?.language==="en"?"en":"sw");
-   if(settings?.pledge_acknowledgement_mode==="automatic"&&smsEnabled&&validPhone&&!provider.configured)throw new Error(provider.message);
-   if(settings?.pledge_acknowledgement_mode==="automatic"&&smsEnabled&&validPhone&&provider.configured&&eventRow&&payment&&!payment.voided_at&&paymentAmount>0&&Number(payment.amount)===paymentAmount&&Number.isFinite(totalPaid)&&Number.isFinite(balance)){
-    const completed=event.payload?.calculated_status==="completed"&&balance<=0,type=completed?"pledge_thank_you":"payment_received",values={guestName:pledge.full_name,eventTitle:eventRow.title,pledgedAmount:pledge.pledged_amount,totalPaid:String(totalPaid),balance:String(balance),paymentAmount:String(paymentAmount)},sms=resolveFinancialSmsMessage(type,values,completed?settings.custom_thank_you_message:settings.custom_payment_received_message),key=`payment-acknowledgement:${payment.id}:${type}:sms`;
-    const inserted=await db.from("pledge_reminders").upsert({pledge_id:pledge.id,event_id:event.event_id,reminder_type:type,channel:"sms",recipient_phone:pledge.normalized_phone,message_body:sms.message,delivery_status:"queued",idempotency_key:key,originating_payment_id:payment.id,originating_source:event.source,requested_by:null},{onConflict:"idempotency_key",ignoreDuplicates:true}).select("id").maybeSingle();if(inserted.error)throw inserted.error;deliveryId=inserted.data?.id??await reminderId(db,key);
-    if(inserted.data)await db.from("finance_audit_logs").insert({event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,actor_type:"system",action:"reminder_requested",metadata:{event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,message_type:type,selected_channel:"sms",actor_source:event.source,delivery_id:inserted.data.id,sms_encoding:sms.encoding,sms_units:sms.units,sms_segments:sms.segments,multi_segment:sms.segments>1,sms_warning:sms.warning}});
+   const language=eventRow?.language==="en"?"en":"sw",smsEnabled=settings?.reminder_channel==="sms"||settings?.reminder_channel==="both",whatsappEnabled=settings?.reminder_channel==="whatsapp"||settings?.reminder_channel==="both",validPhone=pledge?.normalized_phone&&/^255[67]\d{8}$/.test(pledge.normalized_phone),smsProvider=financialProviderStatus("sms",language);
+   if(settings?.pledge_acknowledgement_mode==="automatic"&&smsEnabled&&validPhone&&!smsProvider.configured)throw new Error(smsProvider.message);
+   const paymentEligible=settings?.pledge_acknowledgement_mode==="automatic"&&validPhone&&eventRow&&payment&&!payment.voided_at&&paymentAmount>0&&Number(payment.amount)===paymentAmount&&Number.isFinite(totalPaid)&&Number.isFinite(balance);
+   if(paymentEligible){
+    const completed=event.payload?.calculated_status==="completed"&&balance<=0,type=completed?"pledge_thank_you":"payment_received",values={guestName:pledge.full_name,eventTitle:eventRow.title,pledgedAmount:pledge.pledged_amount,totalPaid:String(totalPaid),balance:String(balance),paymentAmount:String(paymentAmount)};
+    if(smsEnabled&&smsProvider.configured){
+     const sms=resolveFinancialSmsMessage(type,values,completed?settings.custom_thank_you_message:settings.custom_payment_received_message),key=`payment-acknowledgement:${payment.id}:${type}:sms`;
+     const inserted=await db.from("pledge_reminders").upsert({pledge_id:pledge.id,event_id:event.event_id,reminder_type:type,channel:"sms",recipient_phone:pledge.normalized_phone,message_body:sms.message,delivery_status:"queued",idempotency_key:key,originating_payment_id:payment.id,originating_source:event.source,requested_by:null},{onConflict:"idempotency_key",ignoreDuplicates:true}).select("id").maybeSingle();if(inserted.error)throw inserted.error;
+     const id=inserted.data?.id??await reminderId(db,key);if(id)paymentDeliveryIds.push(id);
+     if(inserted.data)await db.from("finance_audit_logs").insert({event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,actor_type:"system",action:"reminder_requested",metadata:{event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,message_type:type,selected_channel:"sms",actor_source:event.source,delivery_id:inserted.data.id,sms_encoding:sms.encoding,sms_units:sms.units,sms_segments:sms.segments,multi_segment:sms.segments>1,sms_warning:sms.warning}});
+    }
+    // WhatsApp only exists for the completion case today -- no approved Meta template for
+    // a mid-pledge "partial payment received" message. If the thank-you template isn't
+    // configured we skip queuing WhatsApp rather than throw, so a WhatsApp misconfiguration
+    // never blocks or delays the SMS side above.
+    if(completed&&whatsappEnabled){
+     const whatsappProvider=financialProviderStatus("whatsapp",language,"pledge_thank_you");
+     if(whatsappProvider.configured){
+      const whatsappMessage=buildPledgeMessage(type,language,values),key=`payment-acknowledgement:${payment.id}:${type}:whatsapp`;
+      const inserted=await db.from("pledge_reminders").upsert({pledge_id:pledge.id,event_id:event.event_id,reminder_type:type,channel:"whatsapp",recipient_phone:pledge.normalized_phone,message_body:whatsappMessage,delivery_status:"queued",idempotency_key:key,originating_payment_id:payment.id,originating_source:event.source,requested_by:null},{onConflict:"idempotency_key",ignoreDuplicates:true}).select("id").maybeSingle();if(inserted.error)throw inserted.error;
+      const id=inserted.data?.id??await reminderId(db,key);if(id)paymentDeliveryIds.push(id);
+      if(inserted.data)await db.from("finance_audit_logs").insert({event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,actor_type:"system",action:"reminder_requested",metadata:{event_id:event.event_id,pledge_id:pledge.id,payment_id:payment.id,message_type:type,selected_channel:"whatsapp",actor_source:event.source,delivery_id:inserted.data.id}});
+     }
+    }
    }
   }else if(event.event_type==="message.acknowledgement.requested"){
    const pledgeId=Number(event.payload?.pledge_id),[{data:pledge},{data:eventRow},{data:settings}]=await Promise.all([db.from("event_pledge_financial_summary").select("id,full_name,normalized_phone,pledged_amount,total_paid,balance,expected_completion_date").eq("id",pledgeId).eq("event_id",event.event_id).maybeSingle(),db.from("events").select("id,title,language").eq("id",event.event_id).maybeSingle(),db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,custom_pledge_acknowledgement_message").eq("event_id",event.event_id).maybeSingle()]);
@@ -38,11 +57,13 @@ export async function processClaimedFinancialWorkflow(db:SupabaseClient,event:Fi
   }else throw new Error("Immediate processing does not support this workflow type.");
   const finished=await db.rpc("finish_workflow_event",{target_id:event.id,succeeded:true,error_text:null});if(finished.error)throw finished.error;
  }catch(cause){const error=safeWorkflowError(cause);await db.rpc("finish_workflow_event",{target_id:event.id,succeeded:false,error_text:error});return {status:"failed",message:"Financial record saved. Acknowledgement queued for retry.",workflowEventId:event.id}}
- const delivery=event.event_type==="payment.recorded"?await processAutomaticPaymentAcknowledgements(db,event.event_id,deliveryId):await processQueuedPledgeAcknowledgements(db,event.event_id,deliveryId);
+ const isPayment=event.event_type==="payment.recorded";
+ const delivery=isPayment?await processAutomaticPaymentAcknowledgements(db,event.event_id,paymentDeliveryIds.length?paymentDeliveryIds:undefined):await processQueuedPledgeAcknowledgements(db,event.event_id,deliveryId);
  await processMakeDeliveries(db,origin,event.id).catch(()=>({accepted:0,failed:1}));
- if(delivery.sent>0)return {status:"sent",message:event.event_type==="payment.recorded"?"Payment saved. Acknowledgement sent.":"Pledge saved. Acknowledgement sent.",workflowEventId:event.id};
+ const hasDelivery=isPayment?paymentDeliveryIds.length>0:Boolean(deliveryId);
+ if(delivery.sent>0)return {status:"sent",message:isPayment?"Payment saved. Acknowledgement sent.":"Pledge saved. Acknowledgement sent.",workflowEventId:event.id};
  if(delivery.failed>0)return {status:"failed",message:"Financial record saved. Acknowledgement queued for retry.",workflowEventId:event.id};
- return {status:deliveryId?"queued":"skipped",message:deliveryId?"Financial record saved. Acknowledgement queued for delivery.":"Financial record saved.",workflowEventId:event.id};
+ return {status:hasDelivery?"queued":"skipped",message:hasDelivery?"Financial record saved. Acknowledgement queued for delivery.":"Financial record saved.",workflowEventId:event.id};
 }
 
 export async function processWorkflowByIdempotencyKey(db:SupabaseClient,key:string,origin:string):Promise<ImmediateProcessingResult>{
