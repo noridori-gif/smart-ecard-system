@@ -15,6 +15,7 @@ export type PledgeMessageValues = {
   balance: string;
   paymentAmount?: string;
   completionDate?: string | null;
+  eventDate?: string | null;
 };
 
 export function formatTzs(value: string | number) {
@@ -22,7 +23,19 @@ export function formatTzs(value: string | number) {
   return `TZS ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
-export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance", "payment"] as const;
+// Whole days between "now" and an event's date (YYYY-MM-DD), clamped to 0 once the event
+// has passed -- a negative countdown reads strangely in a guest-facing message. UTC day
+// boundaries avoid drift from the server's local timezone.
+function daysRemaining(eventDate: string | null | undefined, now: Date = new Date()): number {
+  if (!eventDate) return 0;
+  const [year, month, day] = eventDate.split("-").map(Number);
+  if (!year || !month || !day) return 0;
+  const eventDay = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.max(0, Math.ceil((eventDay - today) / 86_400_000));
+}
+
+export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance", "payment", "days_left"] as const;
 export type CustomSmsTemplatePlaceholder = (typeof CUSTOM_SMS_TEMPLATE_PLACEHOLDERS)[number];
 
 export function renderCustomSmsTemplate(template: string, values: PledgeMessageValues) {
@@ -33,8 +46,9 @@ export function renderCustomSmsTemplate(template: string, values: PledgeMessageV
     paid: formatTzs(values.totalPaid),
     balance: formatTzs(values.balance),
     payment: formatTzs(values.paymentAmount ?? "0"),
+    days_left: String(daysRemaining(values.eventDate)),
   };
-  return template.replace(/\{(name|event|pledged|paid|balance|payment)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
+  return template.replace(/\{(name|event|pledged|paid|balance|payment|days_left)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
 }
 
 export function normalizeTanzanianPhone(phone: string) {

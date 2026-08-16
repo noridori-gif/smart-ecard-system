@@ -90,8 +90,8 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const dailyChannels = useMemo<ReminderChannel[]>(() => settings?.daily_summary_channel === "both" ? ["whatsapp", "sms"] : settings ? [settings.daily_summary_channel] : [], [settings]);
   const normalizedOwnerPhone=(()=>{try{return settings?.owner_summary_phone?normalizeTanzanianPhone(settings.owner_summary_phone):""}catch{return ""}})();
   const sampleMessageValues = useMemo<PledgeMessageValues>(() => pledges[0]
-    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance, paymentAmount: "15000" }
-    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000", paymentAmount: "15000" }, [pledges]);
+    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance, paymentAmount: "15000", eventDate }
+    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000", paymentAmount: "15000", eventDate }, [pledges, eventDate]);
 
   const load = useCallback(async () => {
     try {

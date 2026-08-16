@@ -203,7 +203,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
           : effectiveSetting.custom_reminder_message?.trim()
             ? renderCustomSmsTemplate(effectiveSetting.custom_reminder_message, {
                 guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
-                totalPaid: pledge.total_paid, balance: pledge.balance,
+                totalPaid: pledge.total_paid, balance: pledge.balance, eventDate: event.event_date,
               })
             : buildPledgeMessage("pledge_reminder", language, {
                 guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
