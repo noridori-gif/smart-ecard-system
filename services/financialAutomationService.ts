@@ -11,6 +11,7 @@ export type AutomationSettings = {
   daily_summary_enabled:boolean; daily_summary_channel:"sms"|"whatsapp"|"both"; daily_summary_time:string;
   allow_after_deadline:boolean;
   custom_reminder_message:string|null; custom_thank_you_message:string|null;
+  custom_pledge_acknowledgement_message:string|null; custom_payment_received_message:string|null;
   whatsapp_reminder_template_sw:string|null; whatsapp_reminder_template_en:string|null;
   whatsapp_reminder_template_language_sw:string|null; whatsapp_reminder_template_language_en:string|null;
 };
@@ -35,7 +36,7 @@ export type ClosingReport={
   financial:{activePledges:number;totalContributors:number;totalPledged:number;totalCollected:number;outstanding:number;percentage:number;completed:number;partial:number;pending:number;cancelled:number;validTransactions:number;voidedTransactions:number;target:FinanceTargetReport};
   pledges:FinancialPledge[];payments:ClosingReportPayment[];trend:TrendPoint[];paymentMethods:{method:string;amount:number}[];
 };
-const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false,custom_reminder_message:null,custom_thank_you_message:null,whatsapp_reminder_template_sw:null,whatsapp_reminder_template_en:null,whatsapp_reminder_template_language_sw:"sw",whatsapp_reminder_template_language_en:"en_US"});
+const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false,custom_reminder_message:null,custom_thank_you_message:null,custom_pledge_acknowledgement_message:null,custom_payment_received_message:null,whatsapp_reminder_template_sw:null,whatsapp_reminder_template_en:null,whatsapp_reminder_template_language_sw:"sw",whatsapp_reminder_template_language_en:"en_US"});
 const policyDefaults=(eventId:number):PledgeReminderPolicy=>({event_id:eventId,reminder_mode:"manual",date_based_enabled:true,before_due_days:3,on_due_date_enabled:true,after_due_days:3,repeat_after_due_days:null,maximum_automatic_reminders:3,no_date_behavior:"manual_only",no_date_delay_days:14,stop_after_event:true,is_enabled:false});
 
 export async function getAutomationSettings(eventId:number){

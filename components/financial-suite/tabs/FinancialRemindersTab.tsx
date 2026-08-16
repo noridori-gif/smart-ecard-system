@@ -14,7 +14,7 @@ import {
 } from "@/services/financialAutomationService";
 import type { FinancialPledge } from "@/services/financialSuiteService";
 import {
-  formatTzs, normalizeTanzanianPhone, analyzeSms, buildPledgeMessage, renderCustomSmsTemplate,
+  formatTzs, normalizeTanzanianPhone, analyzeSms, buildPledgeMessage, buildCompactFinancialSmsMessage, renderCustomSmsTemplate,
   CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, type PledgeMessageValues,
 } from "@/services/pledgeMessageService";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
@@ -90,8 +90,8 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const dailyChannels = useMemo<ReminderChannel[]>(() => settings?.daily_summary_channel === "both" ? ["whatsapp", "sms"] : settings ? [settings.daily_summary_channel] : [], [settings]);
   const normalizedOwnerPhone=(()=>{try{return settings?.owner_summary_phone?normalizeTanzanianPhone(settings.owner_summary_phone):""}catch{return ""}})();
   const sampleMessageValues = useMemo<PledgeMessageValues>(() => pledges[0]
-    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance }
-    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000" }, [pledges]);
+    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance, paymentAmount: "15000" }
+    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000", paymentAmount: "15000" }, [pledges]);
 
   const load = useCallback(async () => {
     try {
@@ -287,6 +287,20 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
               onChange={(value) => setSettings({...settings, custom_thank_you_message: value || null})}
               sampleValues={sampleMessageValues}
               buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
+            />
+            <MessageTemplateEditor
+              label="New Pledge Confirmation SMS"
+              value={settings.custom_pledge_acknowledgement_message ?? ""}
+              onChange={(value) => setSettings({...settings, custom_pledge_acknowledgement_message: value || null})}
+              sampleValues={sampleMessageValues}
+              buildDefault={() => buildCompactFinancialSmsMessage("pledge_acknowledgement", sampleMessageValues).message}
+            />
+            <MessageTemplateEditor
+              label="Payment Received SMS"
+              value={settings.custom_payment_received_message ?? ""}
+              onChange={(value) => setSettings({...settings, custom_payment_received_message: value || null})}
+              sampleValues={sampleMessageValues}
+              buildDefault={() => buildCompactFinancialSmsMessage("payment_received", sampleMessageValues).message}
             />
           </div>
         </fieldset>

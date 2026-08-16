@@ -22,7 +22,7 @@ export function formatTzs(value: string | number) {
   return `TZS ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 }
 
-export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance"] as const;
+export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance", "payment"] as const;
 export type CustomSmsTemplatePlaceholder = (typeof CUSTOM_SMS_TEMPLATE_PLACEHOLDERS)[number];
 
 export function renderCustomSmsTemplate(template: string, values: PledgeMessageValues) {
@@ -32,8 +32,9 @@ export function renderCustomSmsTemplate(template: string, values: PledgeMessageV
     pledged: formatTzs(values.pledgedAmount),
     paid: formatTzs(values.totalPaid),
     balance: formatTzs(values.balance),
+    payment: formatTzs(values.paymentAmount ?? "0"),
   };
-  return template.replace(/\{(name|event|pledged|paid|balance)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
+  return template.replace(/\{(name|event|pledged|paid|balance|payment)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
 }
 
 export function normalizeTanzanianPhone(phone: string) {
@@ -57,19 +58,46 @@ export function analyzeSms(message:string):SmsAnalysis{
   const encoding=gsm?"GSM-7":"UCS-2",units=gsm?gsmUnits:Array.from(message).reduce((total,character)=>total+(character.codePointAt(0)!>0xffff?2:1),0),singleLimit=gsm?160:70,multipartLimit=gsm?153:67;
   return {encoding,units,segments:units<=singleLimit?1:Math.ceil(units/multipartLimit),singleLimit,multipartLimit};
 }
-function shortDisplayName(value:string){return value.trim().split(/\s+/)[0]?.slice(0,24)||"Mchangiaji"}
+const NAME_TITLES=new Set(["dr","mr","mrs","ms","miss","prof","rev","hon","sheikh","imam","pastor"]);
+function shortDisplayName(value:string){
+  const displayName=value.trim().replace(/\s+/g," ");
+  if(!displayName)return "Mchangiaji";
+  const words=displayName.split(" "),firstName=words.find(word=>!NAME_TITLES.has(word.replace(/\.$/,"").toLowerCase()));
+  return (firstName??displayName).slice(0,24);
+}
+function shortEventTitle(value:string){
+  const clean=value.trim().replace(/\s+/g," "),words=clean.split(" ");
+  return words.length>3&&NAME_TITLES.has(words[0].replace(/\.$/,"").toLowerCase())?`${words[0]} ${words[1]} ${words.at(-1)}`:clean;
+}
 function shortenLabel(value:string,max:number){const clean=value.trim().replace(/\s+/g," ");return clean.length<=max?clean:`${clean.slice(0,Math.max(1,max-3)).trimEnd()}...`}
 export function buildCompactFinancialSmsMessage(type:"pledge_acknowledgement"|"payment_received"|"pledge_thank_you",values:PledgeMessageValues){
-  const name=shortDisplayName(values.guestName),pledged=formatTzs(values.pledgedAmount),paid=formatTzs(values.totalPaid),balance=formatTzs(values.balance),payment=formatTzs(values.paymentAmount??"0");
+  const name=shortDisplayName(values.guestName),pledged=formatTzs(values.pledgedAmount),balance=formatTzs(values.balance),payment=formatTzs(values.paymentAmount??"0"),eventTitle=shortEventTitle(values.eventTitle);
   const compose=(event:string)=>type==="pledge_acknowledgement"
-    ?`Habari ${name},\nAhadi yako ya ${pledged} kwa ${event} imepokelewa. Salio ${balance}. Asante.`
+    ?`Hello ${name}.\nAhadi yako ya ${pledged} imepokelewa kwa ajili ya harusi ya ${event}.\nMungu akubariki. Asante.`
     :type==="payment_received"
-      ?`Habari ${name},\nTumepokea ${payment} kwa ahadi ya ${event}. Jumla ${paid}, salio ${balance}. Asante.`
-      :`Habari ${name},\nTumepokea ${payment}. Ahadi yako ya ${pledged} kwa ${event} imekamilika. Asante sana.`;
-  let event=shortenLabel(values.eventTitle,48),message=compose(event);
-  for(let max=44;analyzeSms(message).segments>1&&max>=12;max-=4){event=shortenLabel(values.eventTitle,max);message=compose(event)}
+      ?`Habari ${name},\nTumepokea ${payment} ya ahadi ya harusi ya ${event}.\nSalio: ${balance}\nMungu akubariki, Asante.`
+      :`Habari ${name},\nTumepokea ${payment} ya ahadi ya harusi ya ${event}.\nAsante kwa kukamilisha ahadi yako. Mungu akubariki.`;
+  let event=shortenLabel(eventTitle,48),message=compose(event);
+  for(let max=44;analyzeSms(message).segments>1&&max>=12;max-=4){event=shortenLabel(eventTitle,max);message=compose(event)}
   const analysis=analyzeSms(message);
   return {message,...analysis,warning:analysis.segments>1?"This message exceeds one SMS segment.":null};
+}
+
+// Shared by the automatic pledge/payment acknowledgement send paths: use the organiser's
+// custom SMS wording when set, otherwise fall back to the compact default -- keeps the
+// same {message, encoding, units, segments, warning} shape either way so call sites don't
+// need to branch on which source produced it.
+export function resolveFinancialSmsMessage(
+  type: "pledge_acknowledgement" | "payment_received" | "pledge_thank_you",
+  values: PledgeMessageValues,
+  customTemplate?: string | null
+) {
+  if (customTemplate?.trim()) {
+    const message = renderCustomSmsTemplate(customTemplate, values);
+    const analysis = analyzeSms(message);
+    return { message, ...analysis, warning: analysis.segments > 1 ? "This message exceeds one SMS segment." : null };
+  }
+  return buildCompactFinancialSmsMessage(type, values);
 }
 
 export function buildPledgeMessage(

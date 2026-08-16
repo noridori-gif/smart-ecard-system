@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService";
-import { buildCompactFinancialSmsMessage, buildPledgeMessage, formatTzs, renderCustomSmsTemplate } from "@/services/pledgeMessageService";
+import { buildPledgeMessage, formatTzs, renderCustomSmsTemplate, resolveFinancialSmsMessage } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
 import { getFinancialWhatsAppTemplate, type FinancialWhatsAppTemplateOverride } from "@/lib/financialWhatsAppConfig";
 import { automaticMessagingEnabled } from "@/services/automationMasterServer";
@@ -401,7 +401,7 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
     const [eventResult,pledgeResult,settingResult]=await Promise.all([
       db.from("events").select("id,title,event_date,language,archived_at").eq("id",reminder.event_id).maybeSingle(),
       db.from("event_pledge_financial_summary").select("id,event_id,full_name,normalized_phone,pledged_amount,total_paid,balance,calculated_status").eq("id",reminder.pledge_id).eq("event_id",reminder.event_id).maybeSingle(),
-      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,automatic_messaging_enabled").eq("event_id",reminder.event_id).maybeSingle(),
+      db.from("event_finance_automation_settings").select("pledge_acknowledgement_mode,reminder_channel,automatic_messaging_enabled,custom_pledge_acknowledgement_message,custom_thank_you_message").eq("event_id",reminder.event_id).maybeSingle(),
     ]);
     if(eventResult.error||pledgeResult.error||settingResult.error){
       await db.from("pledge_reminders").update({delivery_status:"queued"}).eq("id",reminder.id).eq("delivery_status","processing");
@@ -421,7 +421,7 @@ export async function processQueuedPledgeAcknowledgements(db:SupabaseClient,even
     const completed=pledge.calculated_status==="completed"&&Number(pledge.balance)<=0;
     const reminderType=completed?"pledge_thank_you":"pledge_acknowledgement";
     const values={guestName:pledge.full_name,eventTitle:event.title,pledgedAmount:pledge.pledged_amount,totalPaid:pledge.total_paid,balance:pledge.balance};
-    const message=channel==="sms"?buildCompactFinancialSmsMessage(reminderType,values).message:buildPledgeMessage(reminderType,event.language==="en"?"en":"sw",values);
+    const message=channel==="sms"?resolveFinancialSmsMessage(reminderType,values,reminderType==="pledge_thank_you"?setting.custom_thank_you_message:setting.custom_pledge_acknowledgement_message).message:buildPledgeMessage(reminderType,event.language==="en"?"en":"sw",values);
     const provider=financialProviderStatus(channel,event.language==="en"?"en":"sw",reminderType==="pledge_thank_you"?"pledge_thank_you":"pledge_acknowledgement");
     if(!provider.configured){await db.from("pledge_reminders").update({delivery_status:"held",error_message:"provider_not_ready",next_retry_at:null}).eq("id",reminder.id);aggregate.skipped+=1;continue}
     const repaired=await db.from("pledge_reminders").update({reminder_type:reminderType,message_body:message,recipient_phone:pledge.normalized_phone}).eq("id",reminder.id).eq("delivery_status","processing").select("id").maybeSingle();
