@@ -428,9 +428,9 @@ export default function Home() {
       <section className="bg-white px-6 py-16 text-slate-900 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-6xl">
           <p className="text-center text-base font-semibold text-slate-700 sm:text-lg">
-            Trusted by event organizers across Dar es Salaam
+            Trusted by event organizers across Tanzania
             <span className="mx-2 text-slate-300">·</span>
-            Inaaminika na waandaaji wa matukio Dar es Salaam
+            Inaaminika na waandaaji wa matukio Tanzania
           </p>
 
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
