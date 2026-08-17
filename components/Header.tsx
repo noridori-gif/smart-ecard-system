@@ -44,6 +44,7 @@ const routeTitles = [
   { matches: (path: string) => /^\/check-in(?:\/|$)/.test(path), title: "Check-In" },
   { matches: (path: string) => /^\/reports(?:\/|$)/.test(path), title: "Reports" },
   { matches: (path: string) => /^\/import-history(?:\/|$)/.test(path), title: "Import History" },
+  { matches: (path: string) => /^\/support-tickets(?:\/|$)/.test(path), title: "Support" },
   { matches: (path: string) => /^\/change-password(?:\/|$)/.test(path), title: "Change Password" },
   { matches: (path: string) => /^\/settings(?:\/|$)/.test(path), title: "Settings" },
   { matches: (path: string) => /^\/users(?:\/|$)/.test(path), title: "User Management" },
