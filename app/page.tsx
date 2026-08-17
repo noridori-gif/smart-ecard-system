@@ -167,6 +167,15 @@ const featureGroups: FeatureGroup[] = [
   },
 ];
 
+type TrustSignal = { icon: string; en: string; sw: string };
+
+const trustSignals: TrustSignal[] = [
+  { icon: "🔒", en: "Secure payment tracking", sw: "Ufuatiliaji salama wa malipo" },
+  { icon: "📱", en: "Mobile Money & Bank support", sw: "Inasaidia M-Pesa, Airtel Money, na benki" },
+  { icon: "🇹🇿", en: "Built for Tanzanian events", sw: "Imetengenezwa kwa ajili ya matukio ya Tanzania" },
+  { icon: "✅", en: "WhatsApp & SMS notifications", sw: "Arifa za WhatsApp na SMS" },
+];
+
 const journeyStatuses = [
   { label: "Invitation Delivered", detail: "WhatsApp · 10:41", color: "bg-teal-400", ring: "ring-teal-400/25" },
   { label: "RSVP Confirmed", detail: "2 guests · 10:44", color: "bg-emerald-300", ring: "ring-emerald-300/25" },
@@ -410,6 +419,31 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-6 py-16 text-slate-900 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-6xl">
+          <p className="text-center text-base font-semibold text-slate-700 sm:text-lg">
+            Trusted by event organizers across Dar es Salaam
+            <span className="mx-2 text-slate-300">·</span>
+            Inaaminika na waandaaji wa matukio Dar es Salaam
+          </p>
+
+          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {trustSignals.map((signal) => (
+              <div
+                key={signal.en}
+                className="flex flex-col items-center gap-2 rounded-2xl border border-[#e7e1d7] bg-slate-50 px-4 py-6 text-center"
+              >
+                <span className="text-3xl" aria-hidden="true">
+                  {signal.icon}
+                </span>
+                <p className="text-sm font-bold text-slate-900">{signal.en}</p>
+                <p className="text-xs text-slate-500">{signal.sw}</p>
               </div>
             ))}
           </div>
