@@ -52,6 +52,7 @@ export default function SupportTicketDetailPage() {
   const [ticket, setTicket] = useState<SupportTicket | null>(null);
   const [messages, setMessages] = useState<SupportTicketMessage[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -85,12 +86,23 @@ export default function SupportTicketDetailPage() {
       setTicket(loadedTicket);
       setMessages(loadedMessages);
       setIsAdmin(profile?.role === "admin");
+      setCurrentUserId(profile?.id ?? "");
     } catch (error) {
       console.error("Support ticket loading error:", error);
       setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function refreshMessages() {
+    if (!ticket) {
+      return;
+    }
+
+    const loadedMessages = await listTicketMessages(ticket.id);
+
+    setMessages(loadedMessages);
   }
 
   async function handleReply(event: FormEvent<HTMLFormElement>) {
@@ -104,13 +116,13 @@ export default function SupportTicketDetailPage() {
       setIsReplying(true);
       setReplyError("");
 
-      const newMessage = await postTicketMessage({
+      await postTicketMessage({
         ticketId: ticket.id,
         organizerId: ticket.organizer_id,
         body: replyBody.trim(),
       });
 
-      setMessages((current) => [...current, newMessage]);
+      await refreshMessages();
       setReplyBody("");
     } catch (error) {
       console.error("Support ticket reply error:", error);
@@ -134,7 +146,9 @@ export default function SupportTicketDetailPage() {
       setIsStatusSaving(true);
       setStatusError("");
 
-      const updated = await updateTicketStatus(ticket.id, nextStatus);
+      await updateTicketStatus(ticket.id, nextStatus);
+
+      const updated = await getTicket(ticket.id);
 
       setTicket(updated);
     } catch (error) {
@@ -201,8 +215,15 @@ export default function SupportTicketDetailPage() {
             </h1>
 
             <p className="mt-1 text-xs text-slate-500">
-              Opened {formatDateTime(ticket.created_at)}
+              {ticket.organizer_name} &middot; Opened{" "}
+              {formatDateTime(ticket.created_at)}
             </p>
+
+            {ticket.event_title && (
+              <span className="mt-2 inline-flex w-fit items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                {ticket.event_title}
+              </span>
+            )}
           </div>
 
           {isAdmin ? (
@@ -250,9 +271,9 @@ export default function SupportTicketDetailPage() {
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                {ticketMessage.sender_type === "admin"
-                  ? "Admin"
-                  : "You"}
+                {ticketMessage.sender_id === currentUserId
+                  ? "You"
+                  : ticketMessage.sender_name}
               </span>
 
               <span className="text-xs text-slate-400">

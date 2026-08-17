@@ -7,7 +7,9 @@ import Link from "next/link";
 import {
   createTicket,
   getStatusLabel,
+  listMyEvents,
   listTickets,
+  type OrganizerEventOption,
   type SupportTicket,
   type TicketStatus,
 } from "@/services/ticketService";
@@ -42,6 +44,8 @@ export default function SupportTicketsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [myEvents, setMyEvents] = useState<OrganizerEventOption[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -70,6 +74,19 @@ export default function SupportTicketsPage() {
     }
   }
 
+  async function openForm() {
+    setIsFormOpen(true);
+    setFormError("");
+
+    try {
+      const events = await listMyEvents();
+
+      setMyEvents(events);
+    } catch (error) {
+      console.error("My events loading error:", error);
+    }
+  }
+
   async function handleCreateTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -84,10 +101,12 @@ export default function SupportTicketsPage() {
       await createTicket({
         subject: subject.trim(),
         message: message.trim(),
+        eventId: selectedEventId ? Number(selectedEventId) : null,
       });
 
       setSubject("");
       setMessage("");
+      setSelectedEventId("");
       setIsFormOpen(false);
 
       await loadTickets();
@@ -119,8 +138,12 @@ export default function SupportTicketsPage() {
         <button
           type="button"
           onClick={() => {
-            setIsFormOpen((open) => !open);
-            setFormError("");
+            if (isFormOpen) {
+              setIsFormOpen(false);
+              return;
+            }
+
+            openForm();
           }}
           className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800"
         >
@@ -157,6 +180,30 @@ export default function SupportTicketsPage() {
               placeholder="Fupisha tatizo lako..."
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
             />
+          </div>
+
+          <div>
+            <label
+              htmlFor="ticket-event"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Related Event
+            </label>
+
+            <select
+              id="ticket-event"
+              value={selectedEventId}
+              onChange={(event) => setSelectedEventId(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+            >
+              <option value="">General / Hakuna event maalum</option>
+
+              {myEvents.map((eventOption) => (
+                <option key={eventOption.id} value={eventOption.id}>
+                  {eventOption.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -228,8 +275,15 @@ export default function SupportTicketsPage() {
                 </p>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Updated {formatDateTime(ticket.updated_at)}
+                  {ticket.organizer_name} &middot; Updated{" "}
+                  {formatDateTime(ticket.updated_at)}
                 </p>
+
+                {ticket.event_title && (
+                  <span className="mt-2 inline-flex w-fit items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                    {ticket.event_title}
+                  </span>
+                )}
               </div>
 
               <span

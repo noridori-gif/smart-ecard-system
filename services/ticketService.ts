@@ -6,8 +6,11 @@ export type TicketSenderType = "organizer" | "admin";
 export type SupportTicket = {
   id: number;
   organizer_id: string;
+  organizer_name: string;
   subject: string;
   status: TicketStatus;
+  event_id: number | null;
+  event_title: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -16,16 +19,16 @@ export type SupportTicketMessage = {
   id: number;
   ticket_id: number;
   sender_id: string;
+  sender_name: string;
   sender_type: TicketSenderType;
   body: string;
   created_at: string;
 };
 
-const TICKET_COLUMNS =
-  "id, organizer_id, subject, status, created_at, updated_at";
-
-const MESSAGE_COLUMNS =
-  "id, ticket_id, sender_id, sender_type, body, created_at";
+export type OrganizerEventOption = {
+  id: number;
+  title: string;
+};
 
 function getSupabaseClient() {
   return createClient();
@@ -46,10 +49,7 @@ export function getStatusLabel(status: TicketStatus) {
 export async function listTickets(): Promise<SupportTicket[]> {
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase
-    .from("support_tickets")
-    .select(TICKET_COLUMNS)
-    .order("updated_at", { ascending: false });
+  const { data, error } = await supabase.rpc("list_support_tickets");
 
   if (error) {
     throw new Error(error.message);
@@ -63,17 +63,21 @@ export async function getTicket(
 ): Promise<SupportTicket> {
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase
-    .from("support_tickets")
-    .select(TICKET_COLUMNS)
-    .eq("id", ticketId)
-    .single();
+  const { data, error } = await supabase.rpc("get_support_ticket", {
+    target_ticket_id: ticketId,
+  });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data as SupportTicket;
+  const ticket = ((data ?? []) as SupportTicket[])[0];
+
+  if (!ticket) {
+    throw new Error("Ticket haipatikani.");
+  }
+
+  return ticket;
 }
 
 export async function listTicketMessages(
@@ -81,11 +85,10 @@ export async function listTicketMessages(
 ): Promise<SupportTicketMessage[]> {
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase
-    .from("support_ticket_messages")
-    .select(MESSAGE_COLUMNS)
-    .eq("ticket_id", ticketId)
-    .order("created_at", { ascending: true });
+  const { data, error } = await supabase.rpc(
+    "list_support_ticket_messages",
+    { target_ticket_id: ticketId }
+  );
 
   if (error) {
     throw new Error(error.message);
@@ -94,10 +97,38 @@ export async function listTicketMessages(
   return (data ?? []) as SupportTicketMessage[];
 }
 
+export async function listMyEvents(): Promise<
+  OrganizerEventOption[]
+> {
+  const supabase = getSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, title")
+    .eq("organizer_id", user.id)
+    .is("archived_at", null)
+    .order("event_date", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as OrganizerEventOption[];
+}
+
 export async function createTicket(input: {
   subject: string;
   message: string;
-}): Promise<SupportTicket> {
+  eventId?: number | null;
+}): Promise<{ id: number }> {
   const supabase = getSupabaseClient();
 
   const {
@@ -117,11 +148,12 @@ export async function createTicket(input: {
     body: JSON.stringify({
       subject: input.subject,
       message: input.message,
+      event_id: input.eventId ?? null,
     }),
   });
 
   const result = (await response.json()) as {
-    ticket?: SupportTicket;
+    ticket?: { id: number };
     error?: string;
   };
 
@@ -138,7 +170,7 @@ export async function postTicketMessage(input: {
   ticketId: number;
   organizerId: string;
   body: string;
-}): Promise<SupportTicketMessage> {
+}): Promise<void> {
   const supabase = getSupabaseClient();
 
   const {
@@ -152,43 +184,35 @@ export async function postTicketMessage(input: {
   const senderType: TicketSenderType =
     user.id === input.organizerId ? "organizer" : "admin";
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("support_ticket_messages")
     .insert({
       ticket_id: input.ticketId,
       sender_id: user.id,
       sender_type: senderType,
       body: input.body.trim(),
-    })
-    .select(MESSAGE_COLUMNS)
-    .single();
+    });
 
   if (error) {
     throw new Error(error.message);
   }
-
-  return data as SupportTicketMessage;
 }
 
 export async function updateTicketStatus(
   ticketId: number,
   status: TicketStatus
-): Promise<SupportTicket> {
+): Promise<void> {
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("support_tickets")
     .update({
       status,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", ticketId)
-    .select(TICKET_COLUMNS)
-    .single();
+    .eq("id", ticketId);
 
   if (error) {
     throw new Error(error.message);
   }
-
-  return data as SupportTicket;
 }

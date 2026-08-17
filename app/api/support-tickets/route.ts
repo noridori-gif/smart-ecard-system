@@ -87,10 +87,12 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => null)) as {
       subject?: unknown;
       message?: unknown;
+      event_id?: unknown;
     } | null;
 
     const subject = typeof body?.subject === "string" ? body.subject.trim() : "";
     const message = typeof body?.message === "string" ? body.message.trim() : "";
+    const rawEventId = body?.event_id;
 
     if (!subject || subject.length > 200) {
       return reply({ error: "Subject is required (max 200 characters)." }, 400);
@@ -100,10 +102,33 @@ export async function POST(request: Request) {
       return reply({ error: "Message is required." }, 400);
     }
 
+    let eventId: number | null = null;
+
+    if (rawEventId !== null && rawEventId !== undefined && rawEventId !== "") {
+      const parsedEventId = Number(rawEventId);
+
+      if (!Number.isInteger(parsedEventId) || parsedEventId <= 0) {
+        return reply({ error: "Invalid event." }, 400);
+      }
+
+      const { data: ownedEvent } = await authClient
+        .from("events")
+        .select("id")
+        .eq("id", parsedEventId)
+        .eq("organizer_id", auth.user.id)
+        .maybeSingle();
+
+      if (!ownedEvent) {
+        return reply({ error: "Invalid event." }, 400);
+      }
+
+      eventId = parsedEventId;
+    }
+
     const { data: ticket, error: ticketError } = await authClient
       .from("support_tickets")
-      .insert({ organizer_id: auth.user.id, subject })
-      .select("id, organizer_id, subject, status, created_at, updated_at")
+      .insert({ organizer_id: auth.user.id, subject, event_id: eventId })
+      .select("id, organizer_id, subject, status, event_id, created_at, updated_at")
       .single();
 
     if (ticketError || !ticket) {
