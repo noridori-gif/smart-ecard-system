@@ -16,6 +16,10 @@ export type PledgeMessageValues = {
   paymentAmount?: string;
   completionDate?: string | null;
   eventDate?: string | null;
+  meetingLocation?: string;
+  meetingTime?: string;
+  meetingDate?: string;
+  meetingTitle?: string;
 };
 
 export function formatTzs(value: string | number) {
@@ -35,7 +39,7 @@ function daysRemaining(eventDate: string | null | undefined, now: Date = new Dat
   return Math.max(0, Math.ceil((eventDay - today) / 86_400_000));
 }
 
-export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance", "payment", "days_left"] as const;
+export const CUSTOM_SMS_TEMPLATE_PLACEHOLDERS = ["name", "event", "pledged", "paid", "balance", "payment", "days_left", "location", "meeting_time", "meeting_date", "meeting_title"] as const;
 export type CustomSmsTemplatePlaceholder = (typeof CUSTOM_SMS_TEMPLATE_PLACEHOLDERS)[number];
 
 export function renderCustomSmsTemplate(template: string, values: PledgeMessageValues) {
@@ -47,8 +51,12 @@ export function renderCustomSmsTemplate(template: string, values: PledgeMessageV
     balance: formatTzs(values.balance),
     payment: formatTzs(values.paymentAmount ?? "0"),
     days_left: String(daysRemaining(values.eventDate)),
+    location: values.meetingLocation ?? "",
+    meeting_time: values.meetingTime ?? "",
+    meeting_date: values.meetingDate ?? "",
+    meeting_title: values.meetingTitle ?? "",
   };
-  return template.replace(/\{(name|event|pledged|paid|balance|payment|days_left)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
+  return template.replace(/\{(name|event|pledged|paid|balance|payment|days_left|location|meeting_time|meeting_date|meeting_title)\}/g, (_match, key: CustomSmsTemplatePlaceholder) => tokens[key]);
 }
 
 export function normalizeTanzanianPhone(phone: string) {

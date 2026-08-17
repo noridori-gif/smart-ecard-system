@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import CompletedThankYouPanel from "./CompletedThankYouPanel";
 import MeetingInvitationsPanel from "./MeetingInvitationsPanel";
+import { buildMeetingInvitationSms, type MeetingRow } from "@/services/meetingMessageBuilders";
 import MessagePreviewDialog from "../reminders/MessagePreviewDialog";
 import ReminderSectionNavigation, { isReminderSection, type ReminderSection } from "../reminders/ReminderSectionNavigation";
 import {
@@ -90,8 +91,13 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const dailyChannels = useMemo<ReminderChannel[]>(() => settings?.daily_summary_channel === "both" ? ["whatsapp", "sms"] : settings ? [settings.daily_summary_channel] : [], [settings]);
   const normalizedOwnerPhone=(()=>{try{return settings?.owner_summary_phone?normalizeTanzanianPhone(settings.owner_summary_phone):""}catch{return ""}})();
   const sampleMessageValues = useMemo<PledgeMessageValues>(() => pledges[0]
-    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance, paymentAmount: "15000", eventDate }
-    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000", paymentAmount: "15000", eventDate }, [pledges, eventDate]);
+    ? { guestName: pledges[0].full_name, eventTitle: "Your Event", pledgedAmount: pledges[0].pledged_amount, totalPaid: pledges[0].total_paid, balance: pledges[0].balance, paymentAmount: "15000", eventDate, meetingLocation: "Tabata", meetingTime: "16:00", meetingDate: "20/09/2026", meetingTitle: "Kikao cha Maandalizi" }
+    : { guestName: "Jane Doe", eventTitle: "Your Event", pledgedAmount: "100000", totalPaid: "40000", balance: "60000", paymentAmount: "15000", eventDate, meetingLocation: "Tabata", meetingTime: "16:00", meetingDate: "20/09/2026", meetingTitle: "Kikao cha Maandalizi" }, [pledges, eventDate]);
+  const sampleMeetingRow = useMemo<MeetingRow>(() => ({
+    id: 0, event_id: 0, title: sampleMessageValues.meetingTitle ?? "Kikao cha Maandalizi",
+    meeting_date: "2026-09-20", meeting_time: "16:00", venue: sampleMessageValues.meetingLocation ?? "Tabata",
+    map_url: null, note: null, status: "active", created_at: "", updated_at: "",
+  }), [sampleMessageValues]);
 
   const load = useCallback(async () => {
     try {
@@ -272,7 +278,7 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
       <SettingsCard icon="templates" title="Message Templates" description="What gets sent, per channel.">
         <fieldset className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4 sm:p-5">
           <legend className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true" />SMS</legend>
-          <p className="sep-secondary mt-1">Customize the SMS wording sent for reminders and thank-you messages.</p>
+          <p className="sep-secondary mt-1">Customize the SMS wording sent for reminders, thank-you messages, pledge/payment confirmations, and meeting invitations.</p>
           <div className="mt-3 grid gap-4 lg:grid-cols-2">
             <MessageTemplateEditor
               label="Reminder SMS"
@@ -301,6 +307,13 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
               onChange={(value) => setSettings({...settings, custom_payment_received_message: value || null})}
               sampleValues={sampleMessageValues}
               buildDefault={() => buildCompactFinancialSmsMessage("payment_received", sampleMessageValues).message}
+            />
+            <MessageTemplateEditor
+              label="Meeting Invitation SMS"
+              value={settings.custom_meeting_invitation_message ?? ""}
+              onChange={(value) => setSettings({...settings, custom_meeting_invitation_message: value || null})}
+              sampleValues={sampleMessageValues}
+              buildDefault={() => buildMeetingInvitationSms({ name: sampleMessageValues.guestName, meeting: sampleMeetingRow, eventTitle: sampleMessageValues.eventTitle, eventDate: sampleMessageValues.eventDate ?? "" })}
             />
           </div>
         </fieldset>
