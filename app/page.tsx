@@ -171,7 +171,6 @@ type TrustSignal = { icon: string; en: string; sw: string };
 
 const trustSignals: TrustSignal[] = [
   { icon: "🔒", en: "Secure payment tracking", sw: "Ufuatiliaji salama wa malipo" },
-  { icon: "📱", en: "Mobile Money & Bank support", sw: "Inasaidia M-Pesa, Airtel Money, na benki" },
   { icon: "🇹🇿", en: "Built for Tanzanian events", sw: "Imetengenezwa kwa ajili ya matukio ya Tanzania" },
   { icon: "✅", en: "WhatsApp & SMS notifications", sw: "Arifa za WhatsApp na SMS" },
 ];
@@ -433,7 +432,7 @@ export default function Home() {
             Inaaminika na waandaaji wa matukio Tanzania
           </p>
 
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
             {trustSignals.map((signal) => (
               <div
                 key={signal.en}
