@@ -30,7 +30,7 @@ export function formatTzs(value: string | number) {
 // Whole days between "now" and an event's date (YYYY-MM-DD), clamped to 0 once the event
 // has passed -- a negative countdown reads strangely in a guest-facing message. UTC day
 // boundaries avoid drift from the server's local timezone.
-function daysRemaining(eventDate: string | null | undefined, now: Date = new Date()): number {
+export function daysRemaining(eventDate: string | null | undefined, now: Date = new Date()): number {
   if (!eventDate) return 0;
   const [year, month, day] = eventDate.split("-").map(Number);
   if (!year || !month || !day) return 0;

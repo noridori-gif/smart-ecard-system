@@ -3,9 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms } from "@/services/beemSmsService";
 import { financialProviderStatus, type FinancialChannel, type SendAggregate } from "@/services/financialNotificationEngine";
 import {
-  analyzeSms, buildMeetingInvitationMessage, compactCountdown, meetingDateLabel, resolveMeetingInvitationSms,
+  analyzeSms, buildMeetingInvitationMessage, meetingDateLabelEn, resolveMeetingInvitationSms,
   type MeetingRow,
 } from "@/services/meetingMessageBuilders";
+import { daysRemaining } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
 
 export type { MeetingRow } from "@/services/meetingMessageBuilders";
@@ -77,7 +78,7 @@ export async function sendMeetingInvitations(db:SupabaseClient,input:{eventId:nu
     try{
       let providerMessageId:string|undefined;
       if(row.channel==="sms"){const sent=await sendBeemSms({phoneNumber:row.phone!,message:row.message});if(!sent.success)throw new Error(sent.message);providerMessageId=sent.providerMessageId}
-      else providerMessageId=(await sendFinancialWhatsAppTemplate({phoneNumber:row.phone!,language:preview.event.language,templateKind:"meeting_invitation",parameters:[row.contributor,preview.meeting.title,preview.event.title,meetingDateLabel(preview.meeting.meeting_date),preview.meeting.meeting_time.slice(0,5),preview.meeting.venue,preview.meeting.note?.trim()||"Tafadhali fika kwa wakati",compactCountdown(preview.event.event_date)],urlButtonSuffix:preview.meeting.public_map_token!})).messageId;
+      else providerMessageId=(await sendFinancialWhatsAppTemplate({phoneNumber:row.phone!,language:preview.event.language,templateKind:"meeting_invitation",parameters:[row.contributor,preview.event.title,preview.meeting.venue,meetingDateLabelEn(preview.meeting.meeting_date),preview.meeting.meeting_time.slice(0,5),String(daysRemaining(preview.event.event_date))],urlButtonSuffix:preview.meeting.public_map_token!})).messageId;
       const saved=await db.from("meeting_invitation_deliveries").update({delivery_status:"sent",provider_message_id:providerMessageId??null,sent_at:new Date().toISOString(),error_code:null,error_message:null}).eq("id",log.id);
       if(saved.error){result.failed+=1;result.errors.push(`${row.contributor}'s ${label} invitation was accepted but could not be recorded.`);continue}result.sent+=1;
     }catch(cause){const message=safeError(cause);const saved=await db.from("meeting_invitation_deliveries").update({delivery_status:"failed",error_message:message,error_code:"provider_failure",failed_at:new Date().toISOString()}).eq("id",log.id);result.failed+=1;result.errors.push(message);if(saved.error)result.errors.push(`${row.contributor}'s ${label} failure could not be recorded.`)}

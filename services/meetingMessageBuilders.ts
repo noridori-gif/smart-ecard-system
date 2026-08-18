@@ -32,6 +32,9 @@ export function mainEventCountdown(eventDate:string,now=new Date()){
   return `Zimebaki siku ${difference} kufikia siku ya tukio.`;
 }
 export function meetingDateLabel(date:string){return new Intl.DateTimeFormat("sw-TZ",{day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Dar_es_Salaam"}).format(new Date(`${date}T12:00:00Z`))}
+// English-month variant for the approved WhatsApp meeting invitation template's {{4}} date
+// placeholder specifically -- meetingDateLabel above stays Swahili for the SMS/preview text.
+export function meetingDateLabelEn(date:string){return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Dar_es_Salaam"}).format(new Date(`${date}T12:00:00Z`))}
 const GSM_BASIC=new Set(Array.from("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"));
 const GSM_EXTENSION=new Set(Array.from("^{}\\[~]|€"));
 export type SmsAnalysis={encoding:"GSM-7"|"UCS-2";units:number;segments:number;singleLimit:number;multipartLimit:number};
