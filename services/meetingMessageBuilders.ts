@@ -66,7 +66,7 @@ export function buildMeetingInvitationSms(input:{name:string;meeting:MeetingRow;
 export function resolveMeetingInvitationSms(input:{name:string;meeting:MeetingRow;eventTitle:string;eventDate:string;customTemplate?:string|null;now?:Date}){
   if(input.customTemplate?.trim()){
     const values:PledgeMessageValues={
-      guestName:input.name,eventTitle:input.eventTitle,pledgedAmount:"0",totalPaid:"0",balance:"0",
+      guestName:input.name,eventTitle:input.eventTitle,pledgedAmount:"0",totalPaid:"0",balance:"0",eventDate:input.eventDate,
       meetingLocation:normalizeRequiredText(input.meeting.venue,"Mahali haijatajwa"),
       meetingTime:input.meeting.meeting_time.slice(0,5),
       meetingDate:compactDate(input.meeting.meeting_date),
