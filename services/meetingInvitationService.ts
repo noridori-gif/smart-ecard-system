@@ -42,7 +42,7 @@ export async function previewMeetingInvitations(db:SupabaseClient,input:{eventId
   const ids=pledges.map(item=>item.id);
   const {data:history,error:historyError}=ids.length?await db.from("meeting_invitation_deliveries").select("id,pledge_id,channel,delivery_status,retry_count,error_message,idempotency_key").eq("meeting_id",input.meetingId).in("pledge_id",ids):{data:[],error:null};
   if(historyError)throw new Error("Meeting delivery history could not be loaded.");
-  const language=event.language==="en"?"en":"sw",meetingRow=meeting as MeetingRow,mapUrl=publicMapUrl(meetingRow.public_map_token),whatsappStatus=financialProviderStatus("whatsapp",language,"meeting_invitation"),provider={sms:financialProviderStatus("sms",language,"meeting_invitation"),whatsapp:!whatsappStatus.configured||mapUrl?whatsappStatus:{configured:false,message:"Meeting map token is not available. Apply the meeting map migration before sending WhatsApp invitations."}};
+  const language=event.language==="en"?"en":"sw",meetingRow=meeting as MeetingRow,mapUrl=publicMapUrl(meetingRow.public_map_token),provider={sms:financialProviderStatus("sms",language,"meeting_invitation"),whatsapp:financialProviderStatus("whatsapp",language,"meeting_invitation")};
   const rows:MeetingInvitationRow[]=[];
   for(const pledge of pledges)for(const channel of input.requestedChannels){
     const key=`meeting-invitation:v1:${meeting.id}:${pledge.id}:${channel}`,existing=(history as Delivery[]).find(item=>item.idempotency_key===key);
@@ -78,7 +78,7 @@ export async function sendMeetingInvitations(db:SupabaseClient,input:{eventId:nu
     try{
       let providerMessageId:string|undefined;
       if(row.channel==="sms"){const sent=await sendBeemSms({phoneNumber:row.phone!,message:row.message});if(!sent.success)throw new Error(sent.message);providerMessageId=sent.providerMessageId}
-      else providerMessageId=(await sendFinancialWhatsAppTemplate({phoneNumber:row.phone!,language:preview.event.language,templateKind:"meeting_invitation",parameters:[row.contributor,preview.event.title,preview.meeting.venue,meetingDateLabelEn(preview.meeting.meeting_date),preview.meeting.meeting_time.slice(0,5),String(daysRemaining(preview.event.event_date))],urlButtonSuffix:preview.meeting.public_map_token!})).messageId;
+      else providerMessageId=(await sendFinancialWhatsAppTemplate({phoneNumber:row.phone!,language:preview.event.language,templateKind:"meeting_invitation",parameters:[row.contributor,preview.event.title,preview.meeting.venue,meetingDateLabelEn(preview.meeting.meeting_date),preview.meeting.meeting_time.slice(0,5),String(daysRemaining(preview.event.event_date))]})).messageId;
       const saved=await db.from("meeting_invitation_deliveries").update({delivery_status:"sent",provider_message_id:providerMessageId??null,sent_at:new Date().toISOString(),error_code:null,error_message:null}).eq("id",log.id);
       if(saved.error){result.failed+=1;result.errors.push(`${row.contributor}'s ${label} invitation was accepted but could not be recorded.`);continue}result.sent+=1;
     }catch(cause){const message=safeError(cause);const saved=await db.from("meeting_invitation_deliveries").update({delivery_status:"failed",error_message:message,error_code:"provider_failure",failed_at:new Date().toISOString()}).eq("id",log.id);result.failed+=1;result.errors.push(message);if(saved.error)result.errors.push(`${row.contributor}'s ${label} failure could not be recorded.`)}

@@ -437,7 +437,7 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
     const languageLabel = input.language === "sw" ? "Swahili" : "English";
     throw new Error(`The approved ${languageLabel} WhatsApp ${input.templateKind.replaceAll("_", " ")} template is not configured.`);
   }
-  if(input.templateKind==="meeting_invitation"&&(input.parameters.length!==8||!input.urlButtonSuffix||!/^[a-f0-9]{36}$/i.test(input.urlButtonSuffix))){
+  if(input.templateKind==="meeting_invitation"&&input.parameters.length!==6){
     throw new Error("The meeting invitation template payload is incomplete.");
   }
   const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
