@@ -65,21 +65,24 @@ export default function ReminderSectionNavigation({
           );
         })}
       </div>
-      <div className="flex min-w-max flex-wrap gap-1">
-        {secondarySections.map((section) => (
-          <button
-            key={section.value}
-            type="button"
-            onClick={() => onChange(section.value)}
-            className={`min-h-11 rounded-xl px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${
-              active === section.value
-                ? "text-emerald-700 underline underline-offset-4"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {section.label}
-          </button>
-        ))}
+      <div className="flex min-w-max gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm">
+        {secondarySections.map((section) => {
+          const isActive = active === section.value;
+          return (
+            <button
+              key={section.value}
+              type="button"
+              onClick={() => onChange(section.value)}
+              className={`min-h-11 rounded-xl px-3 text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 motion-reduce:transition-none ${
+                isActive
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"
+              }`}
+            >
+              {section.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

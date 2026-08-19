@@ -28,6 +28,7 @@ const typeLabels: Record<string, string> = {
   pledge_thank_you: "Thank You",
   daily_summary: "Daily Summary",
   receipt_message: "Receipt Message",
+  meeting_invitation: "Meeting Invitation",
 };
 
 type SettingsIconName = "automation" | "templates" | "summary";
@@ -127,11 +128,12 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
 
   const eligibility = settings ? getReminderEligibility(pledges, eventDate, settings, deadline) : [];
   const eligibleCount = eligibility.filter((item) => item.eligible).length;
+  const reminderOnlyHistory = useMemo(() => history.filter((item) => item.reminder_type !== "meeting_invitation"), [history]);
   const latestByChannel = useMemo(() => {
     const map = new Map<string, ReminderHistoryRow>();
-    history.forEach((item) => { const key=deliveryKey(item.pledge_id,item.channel);if (!map.has(key)) map.set(key, item); });
+    reminderOnlyHistory.forEach((item) => { const key=deliveryKey(item.pledge_id,item.channel);if (!map.has(key)) map.set(key, item); });
     return map;
-  }, [history]);
+  }, [reminderOnlyHistory]);
   const outstandingPreviewRows = useMemo(() => (preview?.rows ?? []).filter((row) => {
     const pledge = pledges.find((item) => item.id === row.pledgeId);
     return Boolean(pledge) && ["pledged", "partial"].includes(pledge!.calculated_status) && Number(pledge!.balance) > 0;
@@ -186,8 +188,8 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
   const sendStats = [
     ["Eligible reminders", eligibleCount],
     ["Eligible thank-you", thankYou?.eligible ?? "—"],
-    [t("reminders.sent"), history.filter((item) => item.delivery_status === "sent").length],
-    [t("reminders.failed"), history.filter((item) => item.delivery_status === "failed").length],
+    [t("reminders.sent"), reminderOnlyHistory.filter((item) => item.delivery_status === "sent").length],
+    [t("reminders.failed"), reminderOnlyHistory.filter((item) => item.delivery_status === "failed").length],
     [t("reminders.ready"), settings?.next_reminder_at ? formatAppDate(settings.next_reminder_at, language, { dateStyle: "medium", timeStyle: "short" }) : t("common.notSet")],
   ];
 
@@ -224,7 +226,7 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
     {section === "activity" && <section className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6"><h2 className="text-xl font-bold">Activity</h2><p className="mt-1 text-sm text-slate-600">Monitor reminder and thank-you delivery and retry state without exposing provider payloads.</p>
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">{statuses.map((value) => <div key={value} className="rounded-xl border border-stone-200 bg-stone-50 p-3"><p className="text-xs capitalize text-slate-500">{value}</p><p className="mt-1 text-xl font-bold tabular-nums">{history.filter((item) => item.delivery_status === value).length}</p></div>)}<div className="rounded-xl border border-stone-200 bg-stone-50 p-3"><p className="text-xs text-slate-500">Retries pending</p><p className="mt-1 text-xl font-bold tabular-nums">{history.filter((item) => item.delivery_status === "failed" && item.next_retry_at && item.retry_count < 3).length}</p></div></div>
       <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4"><label className="text-sm font-semibold">Search contributor<input value={operationQuery} onChange={(event) => setOperationQuery(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal" /></label><label className="text-sm font-semibold">Message type<select value={operationType} onChange={(event) => setOperationType(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"><option value="all">All</option>{Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="text-sm font-semibold">Channel<select value={operationChannel} onChange={(event) => setOperationChannel(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"><option value="all">All</option><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select></label><label className="text-sm font-semibold">Status<select value={operationStatus} onChange={(event) => setOperationStatus(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"><option value="all">All</option>{statuses.map((value) => <option key={value} value={value} className="capitalize">{value}</option>)}</select></label></div>
-      <div className="mt-4 max-h-[560px] overflow-auto rounded-xl border border-stone-200"><table className="w-full min-w-[900px] text-left text-sm"><thead className="sticky top-0 z-10 bg-stone-100 text-xs uppercase tracking-wide text-slate-600"><tr>{["Contributor", "Channel", "Type", "Requested", "Sent", "Status", "Retries", "Error"].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{operationRows.map((item) => { const relation = Array.isArray(item.event_pledges) ? item.event_pledges[0] : item.event_pledges; return <tr key={item.id} className="border-t border-stone-200"><td className="p-3 font-semibold">{relation?.full_name ?? "Contributor"}</td><td className="p-3 capitalize">{item.channel}</td><td className="p-3">{typeLabels[item.reminder_type] ?? item.reminder_type.replaceAll("_", " ")}</td><td className="p-3">{new Date(item.created_at).toLocaleString()}</td><td className="p-3">{item.sent_at ? new Date(item.sent_at).toLocaleString() : "—"}</td><td className="p-3"><StatusBadge value={item.delivery_status} /></td><td className="p-3 tabular-nums">{item.retry_count}/3</td><td className="max-w-60 p-3">{item.error_message ? <details><summary className="max-w-48 cursor-pointer truncate text-red-700">{item.error_message}</summary><p className="mt-2 break-words text-xs text-red-700">{item.error_message}</p></details> : "—"}</td></tr>; })}</tbody></table>{!operationRows.length && <p className="py-10 text-center text-sm text-slate-500">No deliveries match these filters.</p>}</div>
+      <div className="mt-4 max-h-[560px] overflow-auto rounded-xl border border-stone-200"><table className="w-full min-w-[900px] text-left text-sm"><thead className="sticky top-0 z-10 bg-stone-100 text-xs uppercase tracking-wide text-slate-600"><tr>{["Contributor", "Channel", "Type", "Requested", "Sent", "Status", "Retries", "Error"].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead><tbody>{operationRows.map((item) => { const relation = Array.isArray(item.event_pledges) ? item.event_pledges[0] : item.event_pledges; return <tr key={`${item.reminder_type}-${item.id}`} className="border-t border-stone-200"><td className="p-3 font-semibold">{relation?.full_name ?? "Contributor"}</td><td className="p-3 capitalize">{item.channel}</td><td className="p-3">{typeLabels[item.reminder_type] ?? item.reminder_type.replaceAll("_", " ")}</td><td className="p-3">{new Date(item.created_at).toLocaleString()}</td><td className="p-3">{item.sent_at ? new Date(item.sent_at).toLocaleString() : "—"}</td><td className="p-3"><StatusBadge value={item.delivery_status} /></td><td className="p-3 tabular-nums">{item.reminder_type === "meeting_invitation" ? item.retry_count : `${item.retry_count}/3`}</td><td className="max-w-60 p-3">{item.error_message ? <details><summary className="max-w-48 cursor-pointer truncate text-red-700">{item.error_message}</summary><p className="mt-2 break-words text-xs text-red-700">{item.error_message}</p></details> : "—"}</td></tr>; })}</tbody></table>{!operationRows.length && <p className="py-10 text-center text-sm text-slate-500">No deliveries match these filters.</p>}</div>
     </section>}
 
     {section === "settings" && <div className="space-y-5">
