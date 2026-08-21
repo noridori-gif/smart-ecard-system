@@ -9,6 +9,9 @@ const RING_STROKE = 18;
 const RING_CENTER = RING_SIZE / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
+const BRIGHT_EMERALD = "#34d399";
+const MUTED_EMERALD = "#065f46";
+
 const s = StyleSheet.create({
   page: { fontFamily: "Helvetica", backgroundColor: "#07111f" },
   bg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
@@ -25,9 +28,19 @@ const s = StyleSheet.create({
   ringPercentage: { fontSize: 44, fontWeight: 700, color: "#ffffff" },
   ringCaption: { fontSize: 10, color: "#94a3b8", marginTop: 4, letterSpacing: 2 },
   statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 36, width: "100%" },
-  statTile: { width: "48%", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderRadius: 14, padding: 16, marginBottom: 14 },
+  statTile: { width: "48%", backgroundColor: "rgba(16,185,129,0.09)", borderWidth: 1, borderColor: "#1b6d55", borderRadius: 14, padding: 16, marginBottom: 14 },
   statLabel: { fontSize: 9, color: "#94a3b8", letterSpacing: 1 },
   statValue: { fontSize: 19, fontWeight: 700, color: "#ffffff", marginTop: 7 },
+  barSection: { width: "100%", marginTop: 6 },
+  barHeaderRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 12 },
+  barHeaderLabel: { fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: 1.5 },
+  barHeaderAmount: { fontSize: 13, fontWeight: 700, color: "#ffffff" },
+  barTrack: { width: "100%", height: 44, borderRadius: 12, backgroundColor: MUTED_EMERALD, flexDirection: "row" },
+  barFill: { height: "100%", backgroundColor: BRIGHT_EMERALD, borderTopLeftRadius: 12, borderBottomLeftRadius: 12, marginRight: 2 },
+  barLegendRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12, width: "100%" },
+  barLegendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  barDot: { width: 8, height: 8, borderRadius: 4 },
+  barLegendText: { fontSize: 10, fontWeight: 700, color: "#e2e8f0" },
   footer: { position: "absolute", bottom: 30, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#64748b" },
 });
 
@@ -51,6 +64,10 @@ export type OverviewSummaryPDFProps = {
 export default function OverviewSummaryPDF({ eventTitle, eventDate, financial }: OverviewSummaryPDFProps) {
   const clampedPercentage = Math.min(100, Math.max(0, financial.percentage));
   const progressLength = RING_CIRCUMFERENCE * (clampedPercentage / 100);
+  const collectedPct =
+    financial.totalPledged > 0
+      ? Math.min(100, Math.max(0, (financial.totalCollected / financial.totalPledged) * 100))
+      : 0;
   const stats: Array<[string, string | number]> = [
     ["Contributors", financial.totalContributors],
     ["Total Pledged", formatTzs(financial.totalPledged)],
@@ -81,16 +98,10 @@ export default function OverviewSummaryPDF({ eventTitle, eventDate, financial }:
 
           <View style={s.ringWrap}>
             <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} style={s.ringSvg}>
-              <Defs>
-                <LinearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0" stopColor="#047857" />
-                  <Stop offset="1" stopColor="#065f46" />
-                </LinearGradient>
-              </Defs>
               <Circle cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS} stroke="#ffffff" strokeOpacity={0.15} strokeWidth={RING_STROKE} fill="none" />
               <Circle
                 cx={RING_CENTER} cy={RING_CENTER} r={RING_RADIUS}
-                stroke="url(#ringGradient)" strokeWidth={RING_STROKE} strokeLinecap="round" fill="none"
+                stroke={BRIGHT_EMERALD} strokeWidth={RING_STROKE} strokeLinecap="round" fill="none"
                 strokeDasharray={`${progressLength} ${RING_CIRCUMFERENCE}`}
                 transform={`rotate(-90 ${RING_CENTER} ${RING_CENTER})`}
               />
@@ -108,6 +119,26 @@ export default function OverviewSummaryPDF({ eventTitle, eventDate, financial }:
                 <Text style={s.statValue}>{value}</Text>
               </View>
             ))}
+          </View>
+
+          <View style={s.barSection}>
+            <View style={s.barHeaderRow}>
+              <Text style={s.barHeaderLabel}>PLEDGED VS COLLECTED</Text>
+              <Text style={s.barHeaderAmount}>{formatTzs(financial.totalPledged)}</Text>
+            </View>
+            <View style={s.barTrack}>
+              <View style={[s.barFill, { width: `${collectedPct}%` }]} />
+            </View>
+            <View style={s.barLegendRow}>
+              <View style={s.barLegendItem}>
+                <View style={[s.barDot, { backgroundColor: BRIGHT_EMERALD }]} />
+                <Text style={s.barLegendText}>Collected: {formatTzs(financial.totalCollected)}</Text>
+              </View>
+              <View style={s.barLegendItem}>
+                <View style={[s.barDot, { backgroundColor: MUTED_EMERALD }]} />
+                <Text style={s.barLegendText}>Remaining: {formatTzs(financial.outstanding)}</Text>
+              </View>
+            </View>
           </View>
         </View>
         <Text style={s.footer}>Generated by Smart Event Pass · {new Date().toLocaleString()}</Text>
