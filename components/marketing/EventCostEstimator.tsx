@@ -183,7 +183,7 @@ export default function EventCostEstimator() {
           ))}
         </div>
 
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-700 px-4 py-4 text-white">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-emerald-700 px-4 py-4 text-white">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.12em]">Total Estimated Cost</p>
             <p className="text-xs text-emerald-100">Jumla ya Gharama Inayokadiriwa</p>

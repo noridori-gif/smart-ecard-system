@@ -283,7 +283,7 @@ export default function Home() {
         <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-8 sm:px-8 lg:px-12">
-          <nav className="flex items-center justify-between">
+          <nav className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <Link
               href="/"
               className="text-xl font-bold tracking-tight sm:text-2xl"
@@ -291,12 +291,21 @@ export default function Home() {
               Smart Event Pass
             </Link>
 
-            <Link
-              href="/login"
-              className="rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              Login
-            </Link>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-700/25 transition hover:bg-emerald-600 sm:px-5 sm:py-2.5 sm:text-sm"
+              >
+                Get Started
+              </Link>
+
+              <Link
+                href="/login"
+                className="rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20 sm:px-5 sm:py-2.5 sm:text-sm"
+              >
+                Login
+              </Link>
+            </div>
           </nav>
 
           <div className="grid items-center gap-10 pb-8 pt-14 md:grid-cols-[minmax(0,.9fr)_minmax(350px,1.1fr)] md:gap-8 md:pt-20 lg:grid-cols-2 lg:gap-14 lg:pt-28">
