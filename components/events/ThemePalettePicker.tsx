@@ -162,13 +162,13 @@ export default function ThemePalettePicker({
   return (
     <div>
       <div className="mb-4">
-        <h3 className="font-bold text-slate-900">
+        <h3 className="sep-card-title">
           {language === "sw"
             ? "Palette ya Rangi na Background ya Kadi"
             : "Card Background & Colour Palette"}
         </h3>
 
-        <p className="mt-1 text-sm leading-6 text-slate-500">
+        <p className="sep-secondary mt-1 leading-6">
           {language === "sw"
             ? "Chagua palette ili kuweka background ya kadi, rangi za msisitizo, na dress code kwa pamoja."
             : "Choose a palette to set your card's background colour, accent colours, and dress code together."}
@@ -218,7 +218,7 @@ export default function ThemePalettePicker({
                 className={`rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSelected
                     ? "border-emerald-600 bg-emerald-50 shadow-md"
-                    : "border-stone-200 bg-white hover:border-emerald-300 hover:shadow-sm"
+                    : "border-[#e7e1d7] bg-white hover:border-emerald-300 hover:shadow-sm"
                 }`}
               >
                 <div
@@ -261,7 +261,7 @@ export default function ThemePalettePicker({
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-[10px] ${
                       isSelected
                         ? "border-emerald-600 bg-emerald-600 text-white"
-                        : "border-stone-300 bg-white"
+                        : "border-[#e7e1d7] bg-white"
                     }`}
                   >
                     {isSelected
