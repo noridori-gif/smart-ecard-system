@@ -57,7 +57,7 @@ function getStatusStyles(
       return "bg-emerald-100 text-emerald-700";
 
     case "sent":
-      return "bg-cyan-100 text-cyan-700";
+      return "bg-blue-100 text-blue-700";
 
     case "failed":
       return "bg-red-100 text-red-700";
@@ -316,7 +316,7 @@ export default function WhatsAppLogsPage() {
         <StatCard
           label="Sent"
           value={stats.sent}
-          className="bg-cyan-50 text-cyan-700"
+          className="bg-blue-50 text-blue-700"
         />
 
         <StatCard

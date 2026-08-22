@@ -25,8 +25,8 @@ const activityStyles: Record<
   check_in: {
     icon: "check",
     iconClassName:
-      "bg-violet-100 text-violet-700",
-    lineClassName: "bg-violet-200",
+      "bg-emerald-100 text-emerald-800",
+    lineClassName: "bg-emerald-200",
     label: "Check-In",
   },
 

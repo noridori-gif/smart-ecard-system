@@ -35,7 +35,7 @@ function formatDateTime(dateValue: string) {
 
 function statusBadgeClass(status: TicketStatus) {
   if (status === "in_progress") {
-    return "bg-sky-100 text-sky-700";
+    return "bg-blue-100 text-blue-800";
   }
 
   if (status === "resolved") {

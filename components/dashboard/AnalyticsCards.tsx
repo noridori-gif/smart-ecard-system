@@ -45,7 +45,7 @@ export default function AnalyticsCards({
       <Card
         title="Viewed"
         value={stats.viewed}
-        color="text-amber-600"
+        color="text-blue-700"
       />
 
       <Card

@@ -852,7 +852,7 @@ export default function ReportsPage() {
                 Attendance
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-violet-600">
+              <p className="mt-2 text-3xl font-bold text-emerald-700">
                 {summary.attendancePercentage}%
               </p>
             </div>

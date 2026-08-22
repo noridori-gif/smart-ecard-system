@@ -56,6 +56,20 @@ export function getAuthenticatedHeaderTitle(pathname: string) {
   return routeTitles.find((route) => route.matches(pathname))?.title ?? "Smart Event Pass";
 }
 
+// These pages already render their own .sep-page-title heading, so the
+// Header's route-derived title would otherwise duplicate it directly above.
+const routesWithOwnPageTitle = [
+  /^\/settings(?:\/|$)/,
+  /^\/users(?:\/|$)/,
+  /^\/change-password(?:\/|$)/,
+  /^\/whatsapp-logs(?:\/|$)/,
+  /^\/whatsapp-card-preview(?:\/|$)/,
+] as const;
+
+function pageRendersOwnTitle(pathname: string) {
+  return routesWithOwnPageTitle.some((pattern) => pattern.test(pathname));
+}
+
 function createHeaderUser(
   fullName: string | null,
   email: string,
@@ -88,6 +102,7 @@ export default function Header({
   const pageTitle = /^\/events\/[^/]+\/contributions(?:\/|$)/.test(pathname)
     ? t("financial.title")
     : getAuthenticatedHeaderTitle(pathname);
+  const showPageTitle = !pageRendersOwnTitle(pathname);
 
   const supabase = useMemo(
     () => createClient(),
@@ -230,9 +245,11 @@ export default function Header({
           </button>
 
           <div className="min-w-0">
-            <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
-              {pageTitle}
-            </h2>
+            {showPageTitle && (
+              <h2 className="truncate text-xl font-bold text-slate-900 sm:text-2xl">
+                {pageTitle}
+              </h2>
+            )}
 
             <p className="mt-1 hidden text-sm text-slate-500 sm:block">
               {t("header.welcome")}
@@ -243,7 +260,7 @@ export default function Header({
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-700 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-800 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
             aria-label={t("header.notifications")}
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>

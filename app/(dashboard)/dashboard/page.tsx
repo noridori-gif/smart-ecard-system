@@ -413,7 +413,7 @@ export default function DashboardPage() {
               title="View Rate"
               value={stats.viewRate}
               description={`${stats.viewed} invitations zimefunguliwa`}
-              barClassName="bg-blue-600"
+              barClassName="bg-blue-700"
             />
 
             <ProgressCard
