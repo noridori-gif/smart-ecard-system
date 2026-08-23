@@ -372,6 +372,9 @@ export default function CustomSmsOutreachPanel({
           failedCount={failedRows.length}
           segmentsPerMessage={segmentsPerMessage}
           totalSegmentsUsed={segmentsPerMessage * sentRows.length}
+          sentRows={sentRows
+            .map((delivery) => ({ name: delivery.full_name, phone: delivery.recipient_phone, sentAt: delivery.sent_at }))
+            .sort((a, b) => a.name.localeCompare(b.name))}
           failedRows={failedRows.map((delivery) => ({ name: delivery.full_name, phone: delivery.recipient_phone, reason: delivery.error_message ?? "Unknown error" }))}
         />
       ).toBlob();

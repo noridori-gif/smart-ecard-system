@@ -41,6 +41,8 @@ const s = StyleSheet.create({
   cellName: { width: "30%" },
   cellPhone: { width: "22%" },
   cellReason: { width: "48%" },
+  cellSentAt: { width: "48%" },
+  emptyRow: { fontSize: 9, color: "#94a3b8" },
   moreRow: { fontSize: 9, color: "#94a3b8", marginTop: 6 },
   footer: { position: "absolute", bottom: 30, left: 0, right: 0, textAlign: "center", fontSize: 9, color: "#64748b" },
 });
@@ -53,6 +55,7 @@ function formatDateSent(value: string | null) {
 const FAILED_ROWS_LIMIT = 40;
 
 export type CustomSmsOutreachReportFailedRow = { name: string; phone: string; reason: string };
+export type CustomSmsOutreachReportSentRow = { name: string; phone: string; sentAt: string | null };
 
 export type CustomSmsOutreachReportPDFProps = {
   eventTitle: string;
@@ -63,6 +66,7 @@ export type CustomSmsOutreachReportPDFProps = {
   failedCount: number;
   segmentsPerMessage: number;
   totalSegmentsUsed: number;
+  sentRows: CustomSmsOutreachReportSentRow[];
   failedRows: CustomSmsOutreachReportFailedRow[];
 };
 
@@ -75,6 +79,7 @@ export default function CustomSmsOutreachReportPDF({
   failedCount,
   segmentsPerMessage,
   totalSegmentsUsed,
+  sentRows,
   failedRows,
 }: CustomSmsOutreachReportPDFProps) {
   const stats: Array<[string, string | number]> = [
@@ -108,7 +113,27 @@ export default function CustomSmsOutreachReportPDF({
             ))}
           </View>
 
-          <Text style={s.sectionHeading}>FAILED SENDS -- NEED MANUAL FOLLOW-UP</Text>
+          <Text style={s.sectionHeading}>SENT SUCCESSFULLY ({sentRows.length})</Text>
+          {sentRows.length === 0 ? (
+            <Text style={s.emptyRow}>No recipients have been sent this message yet.</Text>
+          ) : (
+            <View>
+              <View style={s.tableHeaderRow}>
+                <Text style={[s.tableHeaderCell, s.cellName]}>NAME</Text>
+                <Text style={[s.tableHeaderCell, s.cellPhone]}>PHONE</Text>
+                <Text style={[s.tableHeaderCell, s.cellSentAt]}>DATE/TIME SENT</Text>
+              </View>
+              {sentRows.map((row, index) => (
+                <View key={`${row.phone}-${index}`} style={s.tableRow} wrap={false}>
+                  <Text style={[s.tableCell, s.cellName]}>{row.name}</Text>
+                  <Text style={[s.tableCell, s.cellPhone]}>{row.phone}</Text>
+                  <Text style={[s.tableCell, s.cellSentAt]}>{formatDateSent(row.sentAt)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <Text style={s.sectionHeading}>FAILED SENDS ({failedRows.length}) -- NEED MANUAL FOLLOW-UP</Text>
           {failedRows.length === 0 ? (
             <View style={s.allSentBanner}>
               <Text style={s.allSentText}>All messages sent successfully</Text>
