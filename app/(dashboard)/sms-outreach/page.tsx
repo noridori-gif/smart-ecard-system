@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import GuestImportPanel, { type GuestImportEventOption } from "@/components/guest-import/GuestImportPanel";
 import CustomSmsOutreachPanel from "@/components/admin-sms/CustomSmsOutreachPanel";
 import { supabase } from "@/lib/supabase";
 
 type EventOption = { id: number; title: string; event_date: string };
-type GuestOption = { id: number; full_name: string; phone: string | null };
 
 export default function SmsOutreachPage() {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
-  const [guests, setGuests] = useState<GuestOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -23,16 +20,6 @@ export default function SmsOutreachPage() {
       .order("event_date", { ascending: false });
     if (loadError) throw new Error(loadError.message);
     return (data ?? []) as EventOption[];
-  }, []);
-
-  const loadGuests = useCallback(async (eventId: number) => {
-    const { data, error: loadError } = await supabase
-      .from("guests")
-      .select("id, full_name, phone")
-      .eq("event_id", eventId)
-      .order("full_name", { ascending: true });
-    if (loadError) throw new Error(loadError.message);
-    return (data ?? []) as GuestOption[];
   }, []);
 
   useEffect(() => {
@@ -54,23 +41,7 @@ export default function SmsOutreachPage() {
     return () => clearTimeout(timer);
   }, [loadEvents]);
 
-  const refreshGuests = useCallback(async () => {
-    if (!selectedEventId) return;
-    try {
-      setError("");
-      setGuests(await loadGuests(selectedEventId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Guests could not be loaded.");
-    }
-  }, [selectedEventId, loadGuests]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => void refreshGuests(), 0);
-    return () => clearTimeout(timer);
-  }, [refreshGuests]);
-
   const selectedEvent = useMemo(() => events.find((event) => event.id === selectedEventId) ?? null, [events, selectedEventId]);
-  const importEventOptions: GuestImportEventOption[] = useMemo(() => events.map((event) => ({ id: event.id, title: event.title })), [events]);
 
   if (loading) {
     return (
@@ -87,7 +58,7 @@ export default function SmsOutreachPage() {
     <div className="space-y-6">
       <div>
         <h1 className="sep-page-title">SMS Outreach</h1>
-        <p className="mt-1 text-sm text-slate-600">Import guests, write a custom SMS, preview it per recipient, then send with explicit confirmation.</p>
+        <p className="mt-1 text-sm text-slate-600">Write a custom SMS, upload recipients for this campaign, preview it per person, then send with explicit confirmation.</p>
       </div>
 
       {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</p>}
@@ -110,12 +81,7 @@ export default function SmsOutreachPage() {
         </label>
       </div>
 
-      {selectedEvent && (
-        <>
-          <GuestImportPanel key={selectedEvent.id} events={importEventOptions} defaultEventId={selectedEvent.id} onImportCompleted={refreshGuests} />
-          <CustomSmsOutreachPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} eventDate={selectedEvent.event_date} guests={guests} />
-        </>
-      )}
+      {selectedEvent && <CustomSmsOutreachPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} eventDate={selectedEvent.event_date} />}
 
       {!selectedEvent && !events.length && (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">

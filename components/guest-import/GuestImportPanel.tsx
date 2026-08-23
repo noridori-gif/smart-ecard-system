@@ -27,7 +27,6 @@ export type GuestImportEventOption = {
 type GuestImportPanelProps = {
   events: GuestImportEventOption[];
   onImportCompleted?: () => void | Promise<void>;
-  defaultEventId?: number;
 };
 
 const PREVIEW_ROWS_LIMIT = 10;
@@ -57,13 +56,12 @@ function isSupportedExcelFile(file: File) {
 export default function GuestImportPanel({
   events,
   onImportCompleted,
-  defaultEventId,
 }: GuestImportPanelProps) {
   const fileInputRef =
     useRef<HTMLInputElement | null>(null);
 
   const [selectedEventId, setSelectedEventId] =
-    useState(defaultEventId ? String(defaultEventId) : "");
+    useState("");
 
   const [selectedFile, setSelectedFile] =
     useState<File | null>(null);

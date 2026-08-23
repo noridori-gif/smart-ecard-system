@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { RecipientImportRow } from "@/services/customSmsRecipientImportService";
 
 export type CustomSmsCampaign = {
   id: number;
@@ -9,12 +10,14 @@ export type CustomSmsCampaign = {
   updated_at: string;
 };
 
-export type CustomSmsSkipReason = "missing_phone" | "invalid_phone" | "provider_unavailable" | "already_sent" | "in_progress";
+export type CustomSmsRecipientListRow = { id: number; full_name: string; phone: string; normalized_phone: string };
+
+export type CustomSmsSkipReason = "provider_unavailable" | "already_sent" | "in_progress";
 
 export type CustomSmsRecipientRow = {
-  guestId: number;
+  recipientId: number;
   name: string;
-  phone: string | null;
+  phone: string;
   message: string;
   smsSegments: number;
   smsEncoding: "GSM-7" | "UCS-2";
@@ -36,11 +39,13 @@ export type CustomSmsPreview = {
 
 export type CustomSmsSendResult = { queued: number; sent: number; failed: number; skipped: number; errors: string[] };
 
+export type RecipientUploadResult = { inserted: number; duplicates: number; invalid: number; recipients: CustomSmsRecipientListRow[] };
+
 export type CustomSmsDeliveryRow = {
   id: number;
   campaign_id: number;
-  guest_id: number;
-  guest_name: string;
+  recipient_id: number | null;
+  full_name: string;
   recipient_phone: string;
   delivery_status: string;
   error_message: string | null;
@@ -75,14 +80,22 @@ export async function listDeliveries(eventId: number) {
   return (await callApi<{ deliveries: CustomSmsDeliveryRow[] }>({ action: "listDeliveries", eventId })).deliveries;
 }
 
+export async function listRecipients(campaignId: number) {
+  return (await callApi<{ recipients: CustomSmsRecipientListRow[] }>({ action: "listRecipients", campaignId })).recipients;
+}
+
 export async function saveCampaign(input: { eventId: number; name: string; messageTemplate: string; campaignId?: number }) {
   return (await callApi<{ campaign: CustomSmsCampaign }>({ action: "saveCampaign", ...input })).campaign;
 }
 
-export async function previewCampaign(input: { campaignId: number; guestIds: number[] }) {
+export async function uploadRecipients(input: { campaignId: number; rows: RecipientImportRow[] }) {
+  return callApi<RecipientUploadResult>({ action: "uploadRecipients", ...input });
+}
+
+export async function previewCampaign(input: { campaignId: number; recipientIds: number[] }) {
   return callApi<CustomSmsPreview>({ action: "preview", ...input });
 }
 
-export async function sendCampaign(input: { campaignId: number; guestIds: number[] }) {
+export async function sendCampaign(input: { campaignId: number; recipientIds: number[] }) {
   return callApi<CustomSmsSendResult>({ action: "send", ...input, confirmed: true });
 }

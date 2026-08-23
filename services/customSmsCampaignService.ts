@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms } from "@/services/beemSmsService";
 import { analyzeSms, renderCustomSmsTemplate, type PledgeMessageValues, type SmsAnalysis } from "@/services/pledgeMessageService";
+import { normalizeRecipientPhone, validateRecipientRows, type RecipientImportRow } from "@/services/customSmsRecipientImportService";
 
 export type CustomSmsCampaign = {
   id: number;
@@ -12,16 +13,16 @@ export type CustomSmsCampaign = {
   updated_at: string;
 };
 
-type GuestRow = { id: number; full_name: string; phone: string | null };
+type RecipientRow = { id: number; full_name: string; phone: string; normalized_phone: string };
 type EventRow = { id: number; title: string; event_date: string; archived_at: string | null };
-type DeliveryHistoryRow = { guest_id: number; delivery_status: string; error_message: string | null };
+type DeliveryHistoryRow = { recipient_id: number | null; delivery_status: string; error_message: string | null };
 
-export type CustomSmsSkipReason = "missing_phone" | "invalid_phone" | "provider_unavailable" | "already_sent" | "in_progress";
+export type CustomSmsSkipReason = "provider_unavailable" | "already_sent" | "in_progress";
 
 export type CustomSmsRecipientRow = {
-  guestId: number;
+  recipientId: number;
   name: string;
-  phone: string | null;
+  phone: string;
   message: string;
   smsSegments: number;
   smsEncoding: SmsAnalysis["encoding"];
@@ -53,16 +54,6 @@ function smsProviderStatus() {
   return { configured, message: configured ? "BEEM SMS is configured and ready." : "BEEM SMS is not configured yet." };
 }
 
-function normalizePhoneForCheck(phone: string | null) {
-  if (!phone) return null;
-  let value = phone.trim().replace(/\D/g, "");
-  if (!value) return null;
-  if (value.startsWith("2550")) value = `255${value.slice(4)}`;
-  else if (value.startsWith("0")) value = `255${value.slice(1)}`;
-  else if (/^[67]\d{8}$/.test(value)) value = `255${value}`;
-  return /^255[67]\d{8}$/.test(value) ? value : null;
-}
-
 function safeError(value: unknown) {
   return (value instanceof Error ? value.message : "SMS delivery failed.").slice(0, 500);
 }
@@ -87,11 +78,67 @@ export async function listCampaigns(db: SupabaseClient, eventId: number): Promis
   return (data ?? []) as CustomSmsCampaign[];
 }
 
+export type CustomSmsRecipientListRow = { id: number; full_name: string; phone: string; normalized_phone: string };
+
+export async function listRecipients(db: SupabaseClient, campaignId: number): Promise<CustomSmsRecipientListRow[]> {
+  const { data, error } = await db
+    .from("sms_campaign_recipients")
+    .select("id,full_name,phone,normalized_phone")
+    .eq("campaign_id", campaignId)
+    .order("full_name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as CustomSmsRecipientListRow[];
+}
+
+export type RecipientUploadResult = { inserted: number; duplicates: number; invalid: number; recipients: CustomSmsRecipientListRow[] };
+
+// Recipients never touch public.guests -- they only ever exist in
+// sms_campaign_recipients, scoped to this one campaign. Guests are created
+// exclusively by the existing contributor-guest sync path once someone
+// actually pledges (see sync_contributor_guest), never as a side effect of
+// outreach. Re-validates server-side with the exact same logic the client
+// preview used -- never trust the client's validation pass alone.
+export async function uploadRecipients(
+  db: SupabaseClient,
+  input: { campaignId: number; rows: RecipientImportRow[] }
+): Promise<RecipientUploadResult> {
+  const validation = validateRecipientRows(input.rows);
+
+  const { data: existingRows, error: existingError } = await db
+    .from("sms_campaign_recipients")
+    .select("normalized_phone")
+    .eq("campaign_id", input.campaignId);
+  if (existingError) throw new Error(existingError.message);
+  const existingPhones = new Set(((existingRows ?? []) as { normalized_phone: string }[]).map((row) => row.normalized_phone));
+
+  const seenInThisUpload = new Set<string>();
+  const toInsert: { campaign_id: number; full_name: string; phone: string; normalized_phone: string }[] = [];
+  let duplicates = 0;
+
+  for (const row of validation.validRows) {
+    // validateRecipientRows already confirmed this normalizes cleanly.
+    const normalizedPhone = normalizeRecipientPhone(row.phone)!;
+    if (existingPhones.has(normalizedPhone) || seenInThisUpload.has(normalizedPhone)) {
+      duplicates += 1;
+      continue;
+    }
+    seenInThisUpload.add(normalizedPhone);
+    toInsert.push({ campaign_id: input.campaignId, full_name: row.fullName, phone: row.phone, normalized_phone: normalizedPhone });
+  }
+
+  if (toInsert.length) {
+    const { error: insertError } = await db.from("sms_campaign_recipients").insert(toInsert);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  return { inserted: toInsert.length, duplicates, invalid: validation.invalidRows.length, recipients: await listRecipients(db, input.campaignId) };
+}
+
 export type CustomSmsDeliveryRow = {
   id: number;
   campaign_id: number;
-  guest_id: number;
-  guest_name: string;
+  recipient_id: number | null;
+  full_name: string;
   recipient_phone: string;
   delivery_status: string;
   error_message: string | null;
@@ -103,20 +150,17 @@ export type CustomSmsDeliveryRow = {
 export async function listDeliveries(db: SupabaseClient, eventId: number): Promise<CustomSmsDeliveryRow[]> {
   const { data, error } = await db
     .from("sms_campaign_deliveries")
-    .select("id,campaign_id,guest_id,recipient_phone,delivery_status,error_message,provider_message_id,sent_at,created_at,guests(full_name)")
+    .select("id,campaign_id,recipient_id,full_name,recipient_phone,delivery_status,error_message,provider_message_id,sent_at,created_at")
     .eq("event_id", eventId)
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as Array<Omit<CustomSmsDeliveryRow, "guest_name"> & { guests: { full_name: string } | { full_name: string }[] | null }>).map((row) => {
-    const guest = Array.isArray(row.guests) ? row.guests[0] : row.guests;
-    return { ...row, guest_name: guest?.full_name ?? "Unknown guest" };
-  });
+  return (data ?? []) as CustomSmsDeliveryRow[];
 }
 
 export async function previewCustomSmsCampaign(
   db: SupabaseClient,
-  input: { campaignId: number; guestIds: number[] }
+  input: { campaignId: number; recipientIds: number[] }
 ): Promise<CustomSmsPreview> {
   const { data: campaign, error: campaignError } = await db.from("sms_campaigns").select("*").eq("id", input.campaignId).single();
   if (campaignError || !campaign) throw new Error("Campaign could not be loaded.");
@@ -131,27 +175,26 @@ export async function previewCustomSmsCampaign(
   const eventRow = event as EventRow;
   if (eventRow.archived_at) throw new Error("This event is archived.");
 
-  const guestIds = [...new Set(input.guestIds)];
-  const { data: guests, error: guestsError } = guestIds.length
-    ? await db.from("guests").select("id,full_name,phone").eq("event_id", campaignRow.event_id).in("id", guestIds)
-    : { data: [] as GuestRow[], error: null };
-  if (guestsError) throw new Error("Recipients could not be loaded.");
+  const recipientIds = [...new Set(input.recipientIds)];
+  const { data: recipients, error: recipientsError } = recipientIds.length
+    ? await db.from("sms_campaign_recipients").select("id,full_name,phone,normalized_phone").eq("campaign_id", campaignRow.id).in("id", recipientIds)
+    : { data: [] as RecipientRow[], error: null };
+  if (recipientsError) throw new Error("Recipients could not be loaded.");
 
-  const { data: history, error: historyError } = guestIds.length
-    ? await db.from("sms_campaign_deliveries").select("guest_id,delivery_status,error_message").eq("campaign_id", campaignRow.id).in("guest_id", guestIds)
+  const { data: history, error: historyError } = recipientIds.length
+    ? await db.from("sms_campaign_deliveries").select("recipient_id,delivery_status,error_message").eq("campaign_id", campaignRow.id).in("recipient_id", recipientIds)
     : { data: [] as DeliveryHistoryRow[], error: null };
   if (historyError) throw new Error("Delivery history could not be loaded.");
 
   const provider = smsProviderStatus();
-  const historyByGuest = new Map<number, DeliveryHistoryRow>();
-  for (const item of (history ?? []) as DeliveryHistoryRow[]) historyByGuest.set(item.guest_id, item);
+  const historyByRecipient = new Map<number, DeliveryHistoryRow>();
+  for (const item of (history ?? []) as DeliveryHistoryRow[]) if (item.recipient_id !== null) historyByRecipient.set(item.recipient_id, item);
 
-  const rows: CustomSmsRecipientRow[] = ((guests ?? []) as GuestRow[]).map((guest) => {
-    const idempotencyKey = `custom-sms:v1:${campaignRow.id}:${guest.id}`;
-    const existing = historyByGuest.get(guest.id) ?? null;
-    const normalizedPhone = normalizePhoneForCheck(guest.phone);
+  const rows: CustomSmsRecipientRow[] = ((recipients ?? []) as RecipientRow[]).map((recipient) => {
+    const idempotencyKey = `custom-sms:v1:${campaignRow.id}:${recipient.normalized_phone}`;
+    const existing = historyByRecipient.get(recipient.id) ?? null;
     const values: PledgeMessageValues = {
-      guestName: guest.full_name,
+      guestName: recipient.full_name,
       eventTitle: eventRow.title,
       pledgedAmount: "0",
       totalPaid: "0",
@@ -162,16 +205,14 @@ export async function previewCustomSmsCampaign(
     const analysis = analyzeSms(message);
 
     let reason: CustomSmsSkipReason | null = null;
-    if (!guest.phone) reason = "missing_phone";
-    else if (!normalizedPhone) reason = "invalid_phone";
-    else if (!provider.configured) reason = "provider_unavailable";
+    if (!provider.configured) reason = "provider_unavailable";
     else if (existing?.delivery_status === "sent") reason = "already_sent";
     else if (existing?.delivery_status === "processing") reason = "in_progress";
 
     return {
-      guestId: guest.id,
-      name: guest.full_name,
-      phone: normalizedPhone,
+      recipientId: recipient.id,
+      name: recipient.full_name,
+      phone: recipient.normalized_phone,
       message,
       smsSegments: analysis.segments,
       smsEncoding: analysis.encoding,
@@ -195,7 +236,7 @@ export async function previewCustomSmsCampaign(
 
 export async function sendCustomSmsCampaign(
   db: SupabaseClient,
-  input: { campaignId: number; guestIds: number[] }
+  input: { campaignId: number; recipientIds: number[] }
 ): Promise<CustomSmsSendResult> {
   const preview = await previewCustomSmsCampaign(db, input);
   const result: CustomSmsSendResult = { queued: 0, sent: 0, failed: 0, skipped: 0, errors: [] };
@@ -208,11 +249,7 @@ export async function sendCustomSmsCampaign(
           ? `${row.name} was already sent this campaign.`
           : row.skippedReason === "in_progress"
             ? `${row.name}'s SMS is already in progress.`
-            : row.skippedReason === "provider_unavailable"
-              ? preview.providerMessage
-              : row.skippedReason === "invalid_phone"
-                ? `${row.name} has an invalid phone number.`
-                : `${row.name} has no phone number.`
+            : preview.providerMessage
       );
       continue;
     }
@@ -238,7 +275,7 @@ export async function sendCustomSmsCampaign(
     if (existing.data && existing.data.delivery_status === "failed") {
       const retry = await db
         .from("sms_campaign_deliveries")
-        .update({ delivery_status: "processing", recipient_phone: row.phone, message_body: row.message, error_message: null, failed_at: null })
+        .update({ delivery_status: "processing", full_name: row.name, recipient_phone: row.phone, message_body: row.message, error_message: null, failed_at: null })
         .eq("id", existing.data.id)
         .eq("delivery_status", "failed")
         .select("id")
@@ -255,7 +292,8 @@ export async function sendCustomSmsCampaign(
         .insert({
           campaign_id: preview.campaign.id,
           event_id: preview.event.id,
-          guest_id: row.guestId,
+          recipient_id: row.recipientId,
+          full_name: row.name,
           recipient_phone: row.phone,
           message_body: row.message,
           delivery_status: "processing",
@@ -273,7 +311,7 @@ export async function sendCustomSmsCampaign(
 
     result.queued += 1;
     try {
-      const sent = await sendBeemSms({ phoneNumber: row.phone!, message: row.message });
+      const sent = await sendBeemSms({ phoneNumber: row.phone, message: row.message });
       if (!sent.success) throw new Error(sent.message);
       const saved = await db
         .from("sms_campaign_deliveries")

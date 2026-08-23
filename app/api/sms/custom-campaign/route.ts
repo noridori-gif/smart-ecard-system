@@ -3,10 +3,13 @@ import { NextResponse } from "next/server";
 import {
   listCampaigns,
   listDeliveries,
+  listRecipients,
   previewCustomSmsCampaign,
   saveCampaign,
   sendCustomSmsCampaign,
+  uploadRecipients,
 } from "@/services/customSmsCampaignService";
+import type { RecipientImportRow } from "@/services/customSmsRecipientImportService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,8 +39,20 @@ function eventId(value: unknown) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function guestIds(value: unknown) {
+function idList(value: unknown) {
   return Array.isArray(value) ? [...new Set(value.map(Number).filter((item) => Number.isInteger(item) && item > 0))] : [];
+}
+
+function recipientRows(value: unknown): RecipientImportRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      const record = item as Record<string, unknown> | null;
+      if (!record || typeof record !== "object") return null;
+      return { rowNumber: Number.isInteger(record.rowNumber) ? Number(record.rowNumber) : index + 1, fullName: text(record.fullName, 160), phone: text(record.phone, 30) };
+    })
+    .filter((row): row is RecipientImportRow => row !== null)
+    .slice(0, 2000);
 }
 
 export async function POST(request: Request) {
@@ -70,6 +85,12 @@ export async function POST(request: Request) {
       return reply({ deliveries: await listDeliveries(db, id) });
     }
 
+    if (action === "listRecipients") {
+      const campaignId = Number(body?.campaignId);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) return reply({ error: "Choose a campaign." }, 400);
+      return reply({ recipients: await listRecipients(db, campaignId) });
+    }
+
     if (action === "saveCampaign") {
       const id = eventId(body?.eventId);
       const name = text(body?.name, 160);
@@ -88,21 +109,29 @@ export async function POST(request: Request) {
       return reply({ campaign });
     }
 
+    if (action === "uploadRecipients") {
+      const campaignId = Number(body?.campaignId);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) return reply({ error: "Choose a campaign." }, 400);
+      const rows = recipientRows(body?.rows);
+      if (!rows.length) return reply({ error: "No recipient rows were provided." }, 400);
+      return reply(await uploadRecipients(db, { campaignId, rows }));
+    }
+
     if (action === "preview") {
       const campaignId = Number(body?.campaignId);
       if (!Number.isInteger(campaignId) || campaignId <= 0) return reply({ error: "Choose a campaign." }, 400);
-      const ids = guestIds(body?.guestIds);
+      const ids = idList(body?.recipientIds);
       if (!ids.length) return reply({ error: "Choose at least one recipient." }, 400);
-      return reply(await previewCustomSmsCampaign(db, { campaignId, guestIds: ids }));
+      return reply(await previewCustomSmsCampaign(db, { campaignId, recipientIds: ids }));
     }
 
     if (action === "send") {
       const campaignId = Number(body?.campaignId);
       if (!Number.isInteger(campaignId) || campaignId <= 0) return reply({ error: "Choose a campaign." }, 400);
-      const ids = guestIds(body?.guestIds);
+      const ids = idList(body?.recipientIds);
       if (!ids.length) return reply({ error: "Choose at least one recipient." }, 400);
       if (body?.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
-      return reply(await sendCustomSmsCampaign(db, { campaignId, guestIds: ids }));
+      return reply(await sendCustomSmsCampaign(db, { campaignId, recipientIds: ids }));
     }
 
     return reply({ error: "Unsupported action." }, 400);

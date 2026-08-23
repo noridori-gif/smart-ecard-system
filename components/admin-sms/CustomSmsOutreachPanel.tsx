@@ -1,21 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import MessagePreviewDialog from "@/components/financial-suite/reminders/MessagePreviewDialog";
 import { analyzeSms, CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, renderCustomSmsTemplate, type PledgeMessageValues } from "@/services/pledgeMessageService";
 import {
+  downloadRecipientImportTemplate,
+  readRecipientImportFile,
+  validateRecipientRows,
+  type RecipientImportRow,
+  type RecipientImportValidation,
+} from "@/services/customSmsRecipientImportService";
+import {
   listCampaigns,
   listDeliveries,
+  listRecipients,
   previewCampaign,
   saveCampaign,
   sendCampaign,
+  uploadRecipients,
   type CustomSmsCampaign,
   type CustomSmsDeliveryRow,
   type CustomSmsPreview,
+  type CustomSmsRecipientListRow,
   type CustomSmsRecipientRow,
 } from "@/services/customSmsCampaignClientService";
-
-export type OutreachGuest = { id: number; full_name: string; phone: string | null };
 
 const DEFAULT_TEMPLATE = `Habari Ndugu {name}
 Hongera na pole kwa majukumu.
@@ -31,8 +39,6 @@ MUNGU AKUBARIKI
 AHSANTE SANA`;
 
 const skipLabels: Record<string, string> = {
-  missing_phone: "Missing Phone",
-  invalid_phone: "Invalid Phone",
   provider_unavailable: "Provider Unavailable",
   already_sent: "Already Sent",
   in_progress: "In Progress",
@@ -54,12 +60,10 @@ export default function CustomSmsOutreachPanel({
   eventId,
   eventTitle,
   eventDate,
-  guests,
 }: {
   eventId: number;
   eventTitle: string;
   eventDate: string;
-  guests: OutreachGuest[];
 }) {
   const [campaigns, setCampaigns] = useState<CustomSmsCampaign[]>([]);
   const [campaignId, setCampaignId] = useState<number | null>(null);
@@ -68,8 +72,14 @@ export default function CustomSmsOutreachPanel({
   const [templateDirty, setTemplateDirty] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [selectedGuestIds, setSelectedGuestIds] = useState<Set<number>>(new Set());
-  const [guestQuery, setGuestQuery] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileRows, setFileRows] = useState<RecipientImportRow[]>([]);
+  const [fileValidation, setFileValidation] = useState<RecipientImportValidation | null>(null);
+  const [fileName, setFileName] = useState("");
+
+  const [recipients, setRecipients] = useState<CustomSmsRecipientListRow[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<Set<number>>(new Set());
+  const [recipientQuery, setRecipientQuery] = useState("");
 
   const [preview, setPreview] = useState<CustomSmsPreview | null>(null);
   const [previewRow, setPreviewRow] = useState<CustomSmsRecipientRow | null>(null);
@@ -95,10 +105,24 @@ export default function CustomSmsOutreachPanel({
     return () => clearTimeout(timer);
   }, [loadCampaigns]);
 
+  const loadRecipients = useCallback(async (id: number) => {
+    setRecipients(await listRecipients(id));
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (campaignId) void loadRecipients(campaignId).catch((err) => setError(err instanceof Error ? err.message : "Recipients could not be loaded."));
+      else setRecipients([]);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [campaignId, loadRecipients]);
+
   function chooseCampaign(id: number | null) {
     setCampaignId(id);
     setPreview(null);
     setConfirmed(false);
+    setSelectedRecipientIds(new Set());
+    resetFileState();
     if (id === null) {
       setName(`${eventTitle} outreach`);
       setTemplate(DEFAULT_TEMPLATE);
@@ -148,7 +172,7 @@ export default function CustomSmsOutreachPanel({
       await loadCampaigns();
       setCampaignId(saved.id);
       setTemplateDirty(false);
-      setNotice(campaignId ? "Template updated." : "Template saved.");
+      setNotice(campaignId ? "Template updated." : "Campaign saved -- you can now upload recipients below.");
       return saved;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Template could not be saved.");
@@ -158,14 +182,56 @@ export default function CustomSmsOutreachPanel({
     }
   }
 
-  const guestsById = useMemo(() => new Map(guests.map((guest) => [guest.id, guest])), [guests]);
-  const visibleGuests = useMemo(
-    () => guests.filter((guest) => `${guest.full_name} ${guest.phone ?? ""}`.toLowerCase().includes(guestQuery.toLowerCase())),
-    [guests, guestQuery]
+  function resetFileState() {
+    setFileRows([]);
+    setFileValidation(null);
+    setFileName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setNotice("");
+    try {
+      const rows = await readRecipientImportFile(file);
+      if (!rows.length) throw new Error("The file has no readable recipient rows.");
+      setFileRows(rows);
+      setFileValidation(validateRecipientRows(rows));
+      setFileName(file.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The file could not be read.");
+      resetFileState();
+    }
+  }
+
+  async function confirmUploadRecipients() {
+    if (!campaignId || !fileValidation?.validRows.length) return;
+    try {
+      setBusy(true);
+      setError("");
+      const result = await uploadRecipients({ campaignId, rows: fileValidation.validRows });
+      setRecipients(result.recipients);
+      setNotice(`${result.inserted} recipient${result.inserted === 1 ? "" : "s"} added.${result.duplicates ? ` ${result.duplicates} already in this campaign, skipped.` : ""}`);
+      resetFileState();
+      setPreview(null);
+      setConfirmed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recipients could not be uploaded.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recipientsById = useMemo(() => new Map(recipients.map((recipient) => [recipient.id, recipient])), [recipients]);
+  const visibleRecipients = useMemo(
+    () => recipients.filter((recipient) => `${recipient.full_name} ${recipient.phone}`.toLowerCase().includes(recipientQuery.toLowerCase())),
+    [recipients, recipientQuery]
   );
 
-  function toggleGuest(id: number) {
-    setSelectedGuestIds((current) => {
+  function toggleRecipient(id: number) {
+    setSelectedRecipientIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -175,17 +241,17 @@ export default function CustomSmsOutreachPanel({
     setConfirmed(false);
   }
   function selectVisible() {
-    setSelectedGuestIds((current) => new Set([...current, ...visibleGuests.map((guest) => guest.id)]));
+    setSelectedRecipientIds((current) => new Set([...current, ...visibleRecipients.map((recipient) => recipient.id)]));
     setPreview(null);
     setConfirmed(false);
   }
-  function selectAllImported() {
-    setSelectedGuestIds(new Set(guests.map((guest) => guest.id)));
+  function selectAll() {
+    setSelectedRecipientIds(new Set(recipients.map((recipient) => recipient.id)));
     setPreview(null);
     setConfirmed(false);
   }
   function clearSelection() {
-    setSelectedGuestIds(new Set());
+    setSelectedRecipientIds(new Set());
     setPreview(null);
     setConfirmed(false);
   }
@@ -204,7 +270,7 @@ export default function CustomSmsOutreachPanel({
       if (!saved) return;
       activeCampaignId = saved.id;
     }
-    if (!selectedGuestIds.size) {
+    if (!selectedRecipientIds.size) {
       setError("Select at least one recipient.");
       return;
     }
@@ -212,7 +278,7 @@ export default function CustomSmsOutreachPanel({
       setBusy(true);
       setError("");
       setWarning("");
-      const result = await previewCampaign({ campaignId: activeCampaignId, guestIds: [...selectedGuestIds] });
+      const result = await previewCampaign({ campaignId: activeCampaignId, recipientIds: [...selectedRecipientIds] });
       setPreview(result);
       setConfirmed(false);
     } catch (err) {
@@ -240,7 +306,7 @@ export default function CustomSmsOutreachPanel({
       setError("");
       setNotice("");
       setWarning("");
-      const result = await sendCampaign({ campaignId: preview.campaign.id, guestIds: preview.rows.map((row) => row.guestId) });
+      const result = await sendCampaign({ campaignId: preview.campaign.id, recipientIds: preview.rows.map((row) => row.recipientId) });
       const totals = `${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped.`;
       if (result.failed > 0) setError(`Send result: ${totals} ${result.errors.join(" ")}`);
       else if (result.sent > 0) setNotice(`Send result: ${totals}`);
@@ -259,15 +325,14 @@ export default function CustomSmsOutreachPanel({
   const eligibleRows = preview?.rows.filter((row) => row.eligible) ?? [];
   const totalSegments = eligibleRows.reduce((sum, row) => sum + row.smsSegments, 0);
   const alreadySentCount = preview?.rows.filter((row) => row.skippedReason === "already_sent").length ?? 0;
-  const missingPhoneCount = preview?.rows.filter((row) => row.skippedReason === "missing_phone" || row.skippedReason === "invalid_phone").length ?? 0;
 
   return (
     <section className="space-y-5 rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
       <div>
         <h2 className="text-xl font-bold text-slate-950">Custom SMS Outreach</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Write a fully custom SMS, choose recipients from {eventTitle}&apos;s guest list, preview the exact message per person, then confirm before
-          sending.
+          Write a fully custom SMS, upload recipients (Full Name + Phone) for this campaign, preview the exact message per person, then confirm
+          before sending. Recipients are scoped to this campaign only -- nothing here creates or touches an event Guest record.
         </p>
       </div>
 
@@ -293,100 +358,150 @@ export default function CustomSmsOutreachPanel({
         </label>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
-          <label className="text-sm font-semibold text-slate-700">
-            Campaign name
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"
-            />
-          </label>
-
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">Message template</p>
-            {template !== DEFAULT_TEMPLATE && (
-              <button type="button" onClick={() => updateTemplate(DEFAULT_TEMPLATE)} className="text-xs font-bold text-emerald-700 underline underline-offset-2">
-                Reset to default template
-              </button>
-            )}
-          </div>
-          <textarea
-            ref={textareaRef}
-            value={template}
-            onChange={(event) => updateTemplate(event.target.value)}
-            rows={8}
-            className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2 font-normal"
+      <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
+        <label className="text-sm font-semibold text-slate-700">
+          Campaign name
+          <input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"
           />
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {CUSTOM_SMS_TEMPLATE_PLACEHOLDERS.map((token) => (
-              <button
-                key={token}
-                type="button"
-                onClick={() => insertPlaceholder(token)}
-                className="rounded-full border border-[#e7e1d7] bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-              >
-                {`{${token}}`}
-              </button>
-            ))}
-          </div>
-          <p className={`mt-2 text-xs font-semibold ${templateAnalysis.segments > 1 ? "text-amber-700" : "text-slate-500"}`}>
-            {templateAnalysis.units}/{templateAnalysis.singleLimit} characters &middot; {templateAnalysis.segments} SMS segment
-            {templateAnalysis.segments === 1 ? "" : "s"} per recipient ({templateAnalysis.encoding})
-          </p>
-          <div className="mt-3 rounded-lg border border-[#e7e1d7] bg-white p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Preview (sample: Jane Doe)</p>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{templatePreview}</p>
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void persistCampaign()}
-            className="mt-3 min-h-10 rounded-lg border border-[#e7e1d7] bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-40"
-          >
-            {campaignId ? "Save Template Changes" : "Save Campaign"}
-          </button>
-        </div>
+        </label>
 
-        <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
-          <p className="text-sm font-semibold text-slate-700">Recipients</p>
-          <p className="mt-1 text-xs text-slate-500">Select from {eventTitle}&apos;s guest list -- imported guests, a manual subset, or everyone.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              value={guestQuery}
-              onChange={(event) => setGuestQuery(event.target.value)}
-              placeholder="Search name or phone"
-              className="min-h-10 flex-1 rounded-lg border border-stone-300 px-3 text-sm"
-            />
-            <button type="button" onClick={selectAllImported} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
-              Select all ({guests.length})
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-700">Message template</p>
+          {template !== DEFAULT_TEMPLATE && (
+            <button type="button" onClick={() => updateTemplate(DEFAULT_TEMPLATE)} className="text-xs font-bold text-emerald-700 underline underline-offset-2">
+              Reset to default template
             </button>
-            <button type="button" onClick={selectVisible} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
-              Select visible
-            </button>
-            <button type="button" onClick={clearSelection} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
-              Clear
-            </button>
-          </div>
-          <p className="mt-2 text-xs font-semibold text-slate-600">{selectedGuestIds.size} recipient{selectedGuestIds.size === 1 ? "" : "s"} selected</p>
-          <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-stone-200 bg-white">
-            {visibleGuests.map((guest) => (
-              <label key={guest.id} className="flex items-center gap-2 border-t border-stone-100 px-3 py-2 text-sm first:border-t-0">
-                <input type="checkbox" checked={selectedGuestIds.has(guest.id)} onChange={() => toggleGuest(guest.id)} />
-                <span className="flex-1">{guest.full_name}</span>
-                <span className="text-xs text-slate-500">{guest.phone ?? "No phone"}</span>
-              </label>
-            ))}
-            {!visibleGuests.length && <p className="p-4 text-center text-sm text-slate-500">No guests match this search.</p>}
-          </div>
+          )}
         </div>
+        <textarea
+          ref={textareaRef}
+          value={template}
+          onChange={(event) => updateTemplate(event.target.value)}
+          rows={8}
+          className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2 font-normal"
+        />
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {CUSTOM_SMS_TEMPLATE_PLACEHOLDERS.map((token) => (
+            <button
+              key={token}
+              type="button"
+              onClick={() => insertPlaceholder(token)}
+              className="rounded-full border border-[#e7e1d7] bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              {`{${token}}`}
+            </button>
+          ))}
+        </div>
+        <p className={`mt-2 text-xs font-semibold ${templateAnalysis.segments > 1 ? "text-amber-700" : "text-slate-500"}`}>
+          {templateAnalysis.units}/{templateAnalysis.singleLimit} characters &middot; {templateAnalysis.segments} SMS segment
+          {templateAnalysis.segments === 1 ? "" : "s"} per recipient ({templateAnalysis.encoding})
+        </p>
+        <div className="mt-3 rounded-lg border border-[#e7e1d7] bg-white p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Preview (sample: Jane Doe)</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{templatePreview}</p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void persistCampaign()}
+          className="mt-3 min-h-10 rounded-lg border border-[#e7e1d7] bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-40"
+        >
+          {campaignId ? "Save Template Changes" : "Save Campaign"}
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
+        <p className="text-sm font-semibold text-slate-700">Recipients</p>
+        {!campaignId ? (
+          <p className="mt-2 text-sm text-slate-500">Save the campaign above first, then upload recipients here.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-xs text-slate-500">
+              Upload an Excel/CSV with Full Name and Phone columns. These recipients belong only to this campaign -- no event Guest record is
+              created or touched.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={(event) => void handleFileChange(event)} className="hidden" />
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-800">
+                Choose File
+              </button>
+              <button type="button" onClick={() => downloadRecipientImportTemplate(name)} className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">
+                Download Template
+              </button>
+              {fileName && <span className="text-xs text-slate-500">{fileName}</span>}
+            </div>
+
+            {fileValidation && (
+              <div className="mt-3 rounded-lg border border-stone-200 bg-white p-3">
+                <p className="text-sm font-semibold text-slate-700">
+                  {fileRows.length} row{fileRows.length === 1 ? "" : "s"} found &middot;{" "}
+                  <span className="text-emerald-700">{fileValidation.validRows.length} valid</span> &middot;{" "}
+                  <span className="text-red-700">{fileValidation.invalidRows.length} invalid</span>
+                </p>
+                {fileValidation.errors.length > 0 && (
+                  <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+                    {fileValidation.errors.slice(0, 20).map((rowError, index) => (
+                      <p key={`${rowError.rowNumber}-${rowError.field}-${index}`} className="text-xs text-red-700">
+                        Row {rowError.rowNumber} &mdash; {rowError.field}: {rowError.message}
+                      </p>
+                    ))}
+                    {fileValidation.errors.length > 20 && <p className="text-xs text-slate-500">...and {fileValidation.errors.length - 20} more.</p>}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  disabled={busy || !fileValidation.validRows.length}
+                  onClick={() => void confirmUploadRecipients()}
+                  className="mt-3 min-h-10 rounded-lg bg-emerald-700 px-4 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  Upload {fileValidation.validRows.length} Valid Recipient{fileValidation.validRows.length === 1 ? "" : "s"}
+                </button>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <input
+                value={recipientQuery}
+                onChange={(event) => setRecipientQuery(event.target.value)}
+                placeholder="Search name or phone"
+                className="min-h-10 flex-1 rounded-lg border border-stone-300 px-3 text-sm"
+              />
+              <button type="button" onClick={selectAll} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+                Select all ({recipients.length})
+              </button>
+              <button type="button" onClick={selectVisible} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+                Select visible
+              </button>
+              <button type="button" onClick={clearSelection} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+                Clear
+              </button>
+            </div>
+            <p className="mt-2 text-xs font-semibold text-slate-600">{selectedRecipientIds.size} recipient{selectedRecipientIds.size === 1 ? "" : "s"} selected</p>
+            <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-stone-200 bg-white">
+              {visibleRecipients.map((recipient) => (
+                <label key={recipient.id} className="flex items-center gap-2 border-t border-stone-100 px-3 py-2 text-sm first:border-t-0">
+                  <input type="checkbox" checked={selectedRecipientIds.has(recipient.id)} onChange={() => toggleRecipient(recipient.id)} />
+                  <span className="flex-1">{recipient.full_name}</span>
+                  <span className="text-xs text-slate-500">{recipient.phone}</span>
+                </label>
+              ))}
+              {!visibleRecipients.length && (
+                <p className="p-4 text-center text-sm text-slate-500">
+                  {recipients.length ? "No recipients match this search." : "No recipients uploaded yet."}
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          disabled={busy || !selectedGuestIds.size}
+          disabled={busy || !selectedRecipientIds.size}
           onClick={() => void loadPreview()}
           className="min-h-11 rounded-xl border border-stone-300 px-4 font-bold disabled:opacity-40"
         >
@@ -396,12 +511,11 @@ export default function CustomSmsOutreachPanel({
 
       {preview && (
         <>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             {[
               ["Selected", preview.rows.length],
               ["Ready to Send", eligibleRows.length],
               ["Already Sent", alreadySentCount],
-              ["Missing/Invalid Phone", missingPhoneCount],
               ["Total SMS Segments", totalSegments],
             ].map(([label, value]) => (
               <article key={label} className="rounded-xl border bg-stone-50 p-3">
@@ -422,12 +536,12 @@ export default function CustomSmsOutreachPanel({
               ))}
             </div>
             {preview.rows.map((row) => (
-              <article key={row.guestId} className="border-t p-3 first:border-t-0 lg:grid lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto] lg:items-center lg:gap-2">
+              <article key={row.recipientId} className="border-t p-3 first:border-t-0 lg:grid lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto] lg:items-center lg:gap-2">
                 <div>
                   <b>{row.name}</b>
-                  <p className="text-xs text-slate-500 lg:hidden">{guestsById.get(row.guestId)?.phone ?? "No phone"}</p>
+                  <p className="text-xs text-slate-500 lg:hidden">{row.phone ?? recipientsById.get(row.recipientId)?.phone ?? "No phone"}</p>
                 </div>
-                <span className="hidden text-sm lg:block">{row.phone ?? guestsById.get(row.guestId)?.phone ?? "No phone"}</span>
+                <span className="hidden text-sm lg:block">{row.phone ?? recipientsById.get(row.recipientId)?.phone ?? "No phone"}</span>
                 <span className="hidden text-sm tabular-nums lg:block">{row.smsSegments}</span>
                 <div className="mt-2 lg:mt-0">
                   <Badge value={row.eligible ? "Ready" : skipLabels[row.skippedReason ?? ""] ?? row.deliveryStatus ?? "Not Sent"} />
@@ -462,7 +576,7 @@ export default function CustomSmsOutreachPanel({
 
       {!preview && (
         <div className="rounded-xl border border-dashed bg-stone-50 p-6 text-center text-sm text-slate-600">
-          Select recipients and choose Preview Recipients. Previewing never sends messages.
+          Upload and select recipients, then choose Preview Recipients. Previewing never sends messages.
         </div>
       )}
 
@@ -482,7 +596,7 @@ export default function CustomSmsOutreachPanel({
             </div>
             {deliveries.map((delivery) => (
               <article key={delivery.id} className="border-t p-3 first:border-t-0 lg:grid lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-center lg:gap-2">
-                <b>{delivery.guest_name}</b>
+                <b>{delivery.full_name}</b>
                 <span className="text-sm">{delivery.recipient_phone}</span>
                 <Badge value={delivery.delivery_status} />
                 <span className="text-xs text-slate-500">{delivery.sent_at ? new Date(delivery.sent_at).toLocaleString() : "-"}</span>
