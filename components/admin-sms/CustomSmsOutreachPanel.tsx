@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { pdf } from "@react-pdf/renderer";
+import Button from "@/components/ui/Button";
 import MessagePreviewDialog from "@/components/financial-suite/reminders/MessagePreviewDialog";
 import CustomSmsOutreachReportPDF from "@/components/admin-sms/CustomSmsOutreachReportPDF";
 import { analyzeSms, CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, renderCustomSmsTemplate, type PledgeMessageValues } from "@/services/pledgeMessageService";
@@ -9,10 +10,12 @@ import {
   downloadRecipientImportTemplate,
   readRecipientImportFile,
   validateRecipientRows,
+  type RecipientImportError,
   type RecipientImportRow,
   type RecipientImportValidation,
 } from "@/services/customSmsRecipientImportService";
 import {
+  addRecipient,
   listCampaigns,
   listDeliveries,
   listRecipients,
@@ -79,6 +82,10 @@ export default function CustomSmsOutreachPanel({
   const [fileValidation, setFileValidation] = useState<RecipientImportValidation | null>(null);
   const [fileName, setFileName] = useState("");
 
+  const [manualName, setManualName] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualErrors, setManualErrors] = useState<RecipientImportError[]>([]);
+
   const [recipients, setRecipients] = useState<CustomSmsRecipientListRow[]>([]);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<Set<number>>(new Set());
   const [recipientQuery, setRecipientQuery] = useState("");
@@ -125,6 +132,9 @@ export default function CustomSmsOutreachPanel({
     setConfirmed(false);
     setSelectedRecipientIds(new Set());
     resetFileState();
+    setManualName("");
+    setManualPhone("");
+    setManualErrors([]);
     if (id === null) {
       setName(`${eventTitle} outreach`);
       setTemplate(DEFAULT_TEMPLATE);
@@ -221,6 +231,41 @@ export default function CustomSmsOutreachPanel({
       setConfirmed(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Recipients could not be uploaded.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addManualRecipient() {
+    if (!campaignId) return;
+    // Same validateRecipientRows() call the Excel path uses, so a bad phone format or empty
+    // name is caught here -- before the API is ever hit -- with the identical error text.
+    const validation = validateRecipientRows([{ rowNumber: 1, fullName: manualName, phone: manualPhone }]);
+    if (validation.errors.length) {
+      setManualErrors(validation.errors);
+      return;
+    }
+    setManualErrors([]);
+    try {
+      setBusy(true);
+      setError("");
+      const result = await addRecipient({ campaignId, fullName: manualName.trim(), phone: manualPhone.trim() });
+      if (result.status === "duplicate") {
+        setManualErrors([{ rowNumber: 1, field: "Phone", message: "This number is already in the recipient list for this campaign." }]);
+        return;
+      }
+      if (result.status === "invalid") {
+        setManualErrors(result.errors);
+        return;
+      }
+      await loadRecipients(campaignId);
+      setNotice(`${manualName.trim()} added to recipients.`);
+      setManualName("");
+      setManualPhone("");
+      setPreview(null);
+      setConfirmed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recipient could not be added.");
     } finally {
       setBusy(false);
     }
@@ -476,6 +521,42 @@ export default function CustomSmsOutreachPanel({
                 Download Template
               </button>
               {fileName && <span className="text-xs text-slate-500">{fileName}</span>}
+            </div>
+
+            <div className="mt-3 rounded-lg border border-[#e7e1d7] bg-white p-3">
+              <p className="sep-label">Add recipient manually</p>
+              <div className="mt-1.5 flex flex-wrap items-end gap-2">
+                <label className="sep-label min-w-[10rem] flex-1">
+                  Full Name
+                  <input
+                    value={manualName}
+                    onChange={(event) => setManualName(event.target.value)}
+                    placeholder="e.g. John Peter"
+                    className="sep-control mt-1.5 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  />
+                </label>
+                <label className="sep-label min-w-[10rem] flex-1">
+                  Phone
+                  <input
+                    value={manualPhone}
+                    onChange={(event) => setManualPhone(event.target.value)}
+                    placeholder="e.g. 0712345678"
+                    className="sep-control mt-1.5 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  />
+                </label>
+                <Button type="button" size="md" disabled={busy} onClick={() => void addManualRecipient()}>
+                  Add
+                </Button>
+              </div>
+              {manualErrors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {manualErrors.map((err, index) => (
+                    <p key={`${err.field}-${index}`} className="text-xs text-red-700">
+                      {err.field}: {err.message}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             {fileValidation && (

@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms } from "@/services/beemSmsService";
 import { analyzeSms, renderCustomSmsTemplate, type PledgeMessageValues, type SmsAnalysis } from "@/services/pledgeMessageService";
-import { normalizeRecipientPhone, validateRecipientRows, type RecipientImportRow } from "@/services/customSmsRecipientImportService";
+import { normalizeRecipientPhone, validateRecipientRows, type RecipientImportError, type RecipientImportRow } from "@/services/customSmsRecipientImportService";
 
 export type CustomSmsCampaign = {
   id: number;
@@ -132,6 +132,50 @@ export async function uploadRecipients(
   }
 
   return { inserted: toInsert.length, duplicates, invalid: validation.invalidRows.length, recipients: await listRecipients(db, input.campaignId) };
+}
+
+export type AddRecipientResult =
+  | { status: "added"; recipient: CustomSmsRecipientListRow }
+  | { status: "duplicate" }
+  | { status: "invalid"; errors: RecipientImportError[] };
+
+// Single-recipient counterpart to uploadRecipients, for the manual "Add recipient"
+// form -- same validation/normalization (validateRecipientRows) and the same
+// campaign_id + normalized_phone uniqueness rule, but returns a distinct
+// "duplicate" status instead of a silent skip count, so the UI can show one
+// clear inline message. Also never touches public.guests, same as uploadRecipients.
+export async function addRecipient(
+  db: SupabaseClient,
+  input: { campaignId: number; fullName: string; phone: string }
+): Promise<AddRecipientResult> {
+  const validation = validateRecipientRows([{ rowNumber: 1, fullName: input.fullName, phone: input.phone }]);
+  if (validation.errors.length) return { status: "invalid", errors: validation.errors };
+
+  const row = validation.validRows[0]!;
+  // validateRecipientRows already confirmed this normalizes cleanly.
+  const normalizedPhone = normalizeRecipientPhone(row.phone)!;
+
+  const { data: existing, error: existingError } = await db
+    .from("sms_campaign_recipients")
+    .select("id")
+    .eq("campaign_id", input.campaignId)
+    .eq("normalized_phone", normalizedPhone)
+    .maybeSingle();
+  if (existingError) throw new Error(existingError.message);
+  if (existing) return { status: "duplicate" };
+
+  const { data: inserted, error: insertError } = await db
+    .from("sms_campaign_recipients")
+    .insert({ campaign_id: input.campaignId, full_name: row.fullName, phone: row.phone, normalized_phone: normalizedPhone })
+    .select("id,full_name,phone,normalized_phone")
+    .single();
+  if (insertError) {
+    // 23505 = unique_violation -- a concurrent add for the same number landed between our
+    // existence check and this insert; surface it the same way as a pre-existing duplicate.
+    if (insertError.code === "23505") return { status: "duplicate" };
+    throw new Error(insertError.message);
+  }
+  return { status: "added", recipient: inserted as CustomSmsRecipientListRow };
 }
 
 export type CustomSmsDeliveryRow = {

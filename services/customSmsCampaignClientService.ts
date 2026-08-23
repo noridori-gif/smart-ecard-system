@@ -41,6 +41,11 @@ export type CustomSmsSendResult = { queued: number; sent: number; failed: number
 
 export type RecipientUploadResult = { inserted: number; duplicates: number; invalid: number; recipients: CustomSmsRecipientListRow[] };
 
+export type AddRecipientResult =
+  | { status: "added"; recipient: CustomSmsRecipientListRow }
+  | { status: "duplicate" }
+  | { status: "invalid"; errors: { rowNumber: number; field: string; message: string }[] };
+
 export type CustomSmsDeliveryRow = {
   id: number;
   campaign_id: number;
@@ -90,6 +95,10 @@ export async function saveCampaign(input: { eventId: number; name: string; messa
 
 export async function uploadRecipients(input: { campaignId: number; rows: RecipientImportRow[] }) {
   return callApi<RecipientUploadResult>({ action: "uploadRecipients", ...input });
+}
+
+export async function addRecipient(input: { campaignId: number; fullName: string; phone: string }) {
+  return callApi<AddRecipientResult>({ action: "addRecipient", ...input });
 }
 
 export async function previewCampaign(input: { campaignId: number; recipientIds: number[] }) {

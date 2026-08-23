@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import {
+  addRecipient,
   listCampaigns,
   listDeliveries,
   listRecipients,
@@ -115,6 +116,14 @@ export async function POST(request: Request) {
       const rows = recipientRows(body?.rows);
       if (!rows.length) return reply({ error: "No recipient rows were provided." }, 400);
       return reply(await uploadRecipients(db, { campaignId, rows }));
+    }
+
+    if (action === "addRecipient") {
+      const campaignId = Number(body?.campaignId);
+      if (!Number.isInteger(campaignId) || campaignId <= 0) return reply({ error: "Choose a campaign." }, 400);
+      const fullName = text(body?.fullName, 160);
+      const phone = text(body?.phone, 30);
+      return reply(await addRecipient(db, { campaignId, fullName, phone }));
     }
 
     if (action === "preview") {
