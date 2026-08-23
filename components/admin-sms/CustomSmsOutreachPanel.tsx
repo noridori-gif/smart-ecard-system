@@ -1,0 +1,527 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MessagePreviewDialog from "@/components/financial-suite/reminders/MessagePreviewDialog";
+import { analyzeSms, CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, renderCustomSmsTemplate, type PledgeMessageValues } from "@/services/pledgeMessageService";
+import {
+  listCampaigns,
+  listDeliveries,
+  previewCampaign,
+  saveCampaign,
+  sendCampaign,
+  type CustomSmsCampaign,
+  type CustomSmsDeliveryRow,
+  type CustomSmsPreview,
+  type CustomSmsRecipientRow,
+} from "@/services/customSmsCampaignClientService";
+
+export type OutreachGuest = { id: number; full_name: string; phone: string | null };
+
+const DEFAULT_TEMPLATE = `Habari Ndugu {name}
+Hongera na pole kwa majukumu.
+Familia ya Dr. Godwin Munuo na Dr. Lucy Shirima kwa kushirikiana Kamati ya Harusi ya
+Dr. Elia Godwin Munuo.
+Kwa upendo tunakukumbusha kuwa tumebakiwa na siku {days_left} tu kuelekea kilele tarehe 17/10/2026, hivyo tunaomba mchango wako ili tushirikiane pamoja.
+Tuma Mchango wako kupitia:
+0766960140 (M-PESA) - Dkt. Godwin Munuo
+0786497230 (AIRTEL)- Dkt. Lucy Shirima
+0772792088 (MIX BY YAS)- Dkt. Elia Munuo
+0152843349600 (CRDB Akaunti) - Elisha Munuo
+MUNGU AKUBARIKI
+AHSANTE SANA`;
+
+const skipLabels: Record<string, string> = {
+  missing_phone: "Missing Phone",
+  invalid_phone: "Invalid Phone",
+  provider_unavailable: "Provider Unavailable",
+  already_sent: "Already Sent",
+  in_progress: "In Progress",
+};
+
+function statusBadgeStyle(value: string) {
+  const lower = value.toLowerCase();
+  if (lower.includes("failed") || lower.includes("invalid")) return "bg-red-50 text-red-700";
+  if (lower.includes("sent") || lower.includes("ready")) return "bg-emerald-50 text-emerald-700";
+  if (lower.includes("missing") || lower.includes("provider") || lower.includes("progress")) return "bg-amber-50 text-amber-800";
+  return "bg-stone-100 text-slate-700";
+}
+
+function Badge({ value }: { value: string }) {
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${statusBadgeStyle(value)}`}>{value}</span>;
+}
+
+export default function CustomSmsOutreachPanel({
+  eventId,
+  eventTitle,
+  eventDate,
+  guests,
+}: {
+  eventId: number;
+  eventTitle: string;
+  eventDate: string;
+  guests: OutreachGuest[];
+}) {
+  const [campaigns, setCampaigns] = useState<CustomSmsCampaign[]>([]);
+  const [campaignId, setCampaignId] = useState<number | null>(null);
+  const [name, setName] = useState(`${eventTitle} outreach`);
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [templateDirty, setTemplateDirty] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [selectedGuestIds, setSelectedGuestIds] = useState<Set<number>>(new Set());
+  const [guestQuery, setGuestQuery] = useState("");
+
+  const [preview, setPreview] = useState<CustomSmsPreview | null>(null);
+  const [previewRow, setPreviewRow] = useState<CustomSmsRecipientRow | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const [deliveries, setDeliveries] = useState<CustomSmsDeliveryRow[] | null>(null);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [warning, setWarning] = useState("");
+
+  const loadCampaigns = useCallback(async () => {
+    const rows = await listCampaigns(eventId);
+    setCampaigns(rows);
+    return rows;
+  }, [eventId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadCampaigns().catch((err) => setError(err instanceof Error ? err.message : "Campaigns could not be loaded."));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadCampaigns]);
+
+  function chooseCampaign(id: number | null) {
+    setCampaignId(id);
+    setPreview(null);
+    setConfirmed(false);
+    if (id === null) {
+      setName(`${eventTitle} outreach`);
+      setTemplate(DEFAULT_TEMPLATE);
+      setTemplateDirty(false);
+      return;
+    }
+    const campaign = campaigns.find((item) => item.id === id);
+    if (campaign) {
+      setName(campaign.name);
+      setTemplate(campaign.message_template);
+      setTemplateDirty(false);
+    }
+  }
+
+  function updateTemplate(value: string) {
+    setTemplate(value);
+    setTemplateDirty(true);
+    setPreview(null);
+    setConfirmed(false);
+  }
+
+  function insertPlaceholder(token: string) {
+    const el = textareaRef.current;
+    const start = el?.selectionStart ?? template.length;
+    const end = el?.selectionEnd ?? template.length;
+    const next = `${template.slice(0, start)}{${token}}${template.slice(end)}`;
+    updateTemplate(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + token.length + 2, start + token.length + 2);
+    });
+  }
+
+  async function persistCampaign() {
+    if (!name.trim()) {
+      setError("Campaign name is required.");
+      return null;
+    }
+    if (!template.trim()) {
+      setError("Message template is required.");
+      return null;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      const saved = await saveCampaign({ eventId, name: name.trim(), messageTemplate: template, campaignId: campaignId ?? undefined });
+      await loadCampaigns();
+      setCampaignId(saved.id);
+      setTemplateDirty(false);
+      setNotice(campaignId ? "Template updated." : "Template saved.");
+      return saved;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Template could not be saved.");
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const guestsById = useMemo(() => new Map(guests.map((guest) => [guest.id, guest])), [guests]);
+  const visibleGuests = useMemo(
+    () => guests.filter((guest) => `${guest.full_name} ${guest.phone ?? ""}`.toLowerCase().includes(guestQuery.toLowerCase())),
+    [guests, guestQuery]
+  );
+
+  function toggleGuest(id: number) {
+    setSelectedGuestIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setPreview(null);
+    setConfirmed(false);
+  }
+  function selectVisible() {
+    setSelectedGuestIds((current) => new Set([...current, ...visibleGuests.map((guest) => guest.id)]));
+    setPreview(null);
+    setConfirmed(false);
+  }
+  function selectAllImported() {
+    setSelectedGuestIds(new Set(guests.map((guest) => guest.id)));
+    setPreview(null);
+    setConfirmed(false);
+  }
+  function clearSelection() {
+    setSelectedGuestIds(new Set());
+    setPreview(null);
+    setConfirmed(false);
+  }
+
+  const sampleValues: PledgeMessageValues = useMemo(
+    () => ({ guestName: "Jane Doe", eventTitle, pledgedAmount: "0", totalPaid: "0", balance: "0", eventDate }),
+    [eventTitle, eventDate]
+  );
+  const templatePreview = template.trim() ? renderCustomSmsTemplate(template, sampleValues) : "";
+  const templateAnalysis = analyzeSms(templatePreview);
+
+  async function loadPreview() {
+    let activeCampaignId = campaignId;
+    if (!activeCampaignId || templateDirty) {
+      const saved = await persistCampaign();
+      if (!saved) return;
+      activeCampaignId = saved.id;
+    }
+    if (!selectedGuestIds.size) {
+      setError("Select at least one recipient.");
+      return;
+    }
+    try {
+      setBusy(true);
+      setError("");
+      setWarning("");
+      const result = await previewCampaign({ campaignId: activeCampaignId, guestIds: [...selectedGuestIds] });
+      setPreview(result);
+      setConfirmed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Recipients could not be loaded.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadDeliveryHistory() {
+    try {
+      setBusy(true);
+      setDeliveries(await listDeliveries(eventId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send history could not be loaded.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function send() {
+    if (!preview) return;
+    try {
+      setBusy(true);
+      setError("");
+      setNotice("");
+      setWarning("");
+      const result = await sendCampaign({ campaignId: preview.campaign.id, guestIds: preview.rows.map((row) => row.guestId) });
+      const totals = `${result.sent} sent, ${result.failed} failed, ${result.skipped} skipped.`;
+      if (result.failed > 0) setError(`Send result: ${totals} ${result.errors.join(" ")}`);
+      else if (result.sent > 0) setNotice(`Send result: ${totals}`);
+      else setWarning(`Nothing was sent: ${result.errors.join(" ") || totals}`);
+      setConfirmed(false);
+      await loadPreview();
+      await loadDeliveryHistory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send failed.");
+      setConfirmed(false);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const eligibleRows = preview?.rows.filter((row) => row.eligible) ?? [];
+  const totalSegments = eligibleRows.reduce((sum, row) => sum + row.smsSegments, 0);
+  const alreadySentCount = preview?.rows.filter((row) => row.skippedReason === "already_sent").length ?? 0;
+  const missingPhoneCount = preview?.rows.filter((row) => row.skippedReason === "missing_phone" || row.skippedReason === "invalid_phone").length ?? 0;
+
+  return (
+    <section className="space-y-5 rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm sm:p-6">
+      <div>
+        <h2 className="text-xl font-bold text-slate-950">Custom SMS Outreach</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Write a fully custom SMS, choose recipients from {eventTitle}&apos;s guest list, preview the exact message per person, then confirm before
+          sending.
+        </p>
+      </div>
+
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
+      {warning && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{warning}</p>}
+
+      <div>
+        <label className="text-sm font-semibold text-slate-700">
+          Campaign
+          <select
+            value={campaignId ?? ""}
+            onChange={(event) => chooseCampaign(event.target.value ? Number(event.target.value) : null)}
+            className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"
+          >
+            <option value="">Create new campaign</option>
+            {campaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
+          <label className="text-sm font-semibold text-slate-700">
+            Campaign name
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="mt-1 min-h-11 w-full rounded-xl border border-stone-300 px-3 font-normal"
+            />
+          </label>
+
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">Message template</p>
+            {template !== DEFAULT_TEMPLATE && (
+              <button type="button" onClick={() => updateTemplate(DEFAULT_TEMPLATE)} className="text-xs font-bold text-emerald-700 underline underline-offset-2">
+                Reset to default template
+              </button>
+            )}
+          </div>
+          <textarea
+            ref={textareaRef}
+            value={template}
+            onChange={(event) => updateTemplate(event.target.value)}
+            rows={8}
+            className="mt-2 w-full rounded-xl border border-stone-300 px-3 py-2 font-normal"
+          />
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {CUSTOM_SMS_TEMPLATE_PLACEHOLDERS.map((token) => (
+              <button
+                key={token}
+                type="button"
+                onClick={() => insertPlaceholder(token)}
+                className="rounded-full border border-[#e7e1d7] bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              >
+                {`{${token}}`}
+              </button>
+            ))}
+          </div>
+          <p className={`mt-2 text-xs font-semibold ${templateAnalysis.segments > 1 ? "text-amber-700" : "text-slate-500"}`}>
+            {templateAnalysis.units}/{templateAnalysis.singleLimit} characters &middot; {templateAnalysis.segments} SMS segment
+            {templateAnalysis.segments === 1 ? "" : "s"} per recipient ({templateAnalysis.encoding})
+          </p>
+          <div className="mt-3 rounded-lg border border-[#e7e1d7] bg-white p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Preview (sample: Jane Doe)</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{templatePreview}</p>
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void persistCampaign()}
+            className="mt-3 min-h-10 rounded-lg border border-[#e7e1d7] bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-stone-50 disabled:opacity-40"
+          >
+            {campaignId ? "Save Template Changes" : "Save Campaign"}
+          </button>
+        </div>
+
+        <div className="rounded-xl border border-[#e7e1d7] bg-stone-50/70 p-4">
+          <p className="text-sm font-semibold text-slate-700">Recipients</p>
+          <p className="mt-1 text-xs text-slate-500">Select from {eventTitle}&apos;s guest list -- imported guests, a manual subset, or everyone.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              value={guestQuery}
+              onChange={(event) => setGuestQuery(event.target.value)}
+              placeholder="Search name or phone"
+              className="min-h-10 flex-1 rounded-lg border border-stone-300 px-3 text-sm"
+            />
+            <button type="button" onClick={selectAllImported} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+              Select all ({guests.length})
+            </button>
+            <button type="button" onClick={selectVisible} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+              Select visible
+            </button>
+            <button type="button" onClick={clearSelection} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+              Clear
+            </button>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-600">{selectedGuestIds.size} recipient{selectedGuestIds.size === 1 ? "" : "s"} selected</p>
+          <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-stone-200 bg-white">
+            {visibleGuests.map((guest) => (
+              <label key={guest.id} className="flex items-center gap-2 border-t border-stone-100 px-3 py-2 text-sm first:border-t-0">
+                <input type="checkbox" checked={selectedGuestIds.has(guest.id)} onChange={() => toggleGuest(guest.id)} />
+                <span className="flex-1">{guest.full_name}</span>
+                <span className="text-xs text-slate-500">{guest.phone ?? "No phone"}</span>
+              </label>
+            ))}
+            {!visibleGuests.length && <p className="p-4 text-center text-sm text-slate-500">No guests match this search.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={busy || !selectedGuestIds.size}
+          onClick={() => void loadPreview()}
+          className="min-h-11 rounded-xl border border-stone-300 px-4 font-bold disabled:opacity-40"
+        >
+          Preview Recipients
+        </button>
+      </div>
+
+      {preview && (
+        <>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+            {[
+              ["Selected", preview.rows.length],
+              ["Ready to Send", eligibleRows.length],
+              ["Already Sent", alreadySentCount],
+              ["Missing/Invalid Phone", missingPhoneCount],
+              ["Total SMS Segments", totalSegments],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-xl border bg-stone-50 p-3">
+                <p className="text-xs text-slate-500">{label}</p>
+                <p className="mt-1 text-xl font-bold tabular-nums">{value}</p>
+              </article>
+            ))}
+          </div>
+
+          <p className={`rounded-xl p-3 text-sm ${preview.providerReady ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+            <b>SMS provider:</b> {preview.providerMessage}
+          </p>
+
+          <div className="overflow-hidden rounded-xl border">
+            <div className="hidden grid-cols-[1.3fr_1fr_1fr_1fr_auto] gap-2 bg-stone-100 p-3 text-xs font-bold lg:grid">
+              {["Recipient", "Phone", "Segments", "Status", "Action"].map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            {preview.rows.map((row) => (
+              <article key={row.guestId} className="border-t p-3 first:border-t-0 lg:grid lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto] lg:items-center lg:gap-2">
+                <div>
+                  <b>{row.name}</b>
+                  <p className="text-xs text-slate-500 lg:hidden">{guestsById.get(row.guestId)?.phone ?? "No phone"}</p>
+                </div>
+                <span className="hidden text-sm lg:block">{row.phone ?? guestsById.get(row.guestId)?.phone ?? "No phone"}</span>
+                <span className="hidden text-sm tabular-nums lg:block">{row.smsSegments}</span>
+                <div className="mt-2 lg:mt-0">
+                  <Badge value={row.eligible ? "Ready" : skipLabels[row.skippedReason ?? ""] ?? row.deliveryStatus ?? "Not Sent"} />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewRow(row)}
+                  className="mt-2 min-h-8 rounded-lg border px-3 text-xs font-bold lg:mt-0"
+                >
+                  Preview
+                </button>
+              </article>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-stone-300 px-3 text-sm">
+              <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+              I confirm sending to {eligibleRows.length} people ({totalSegments} SMS segments total)
+            </label>
+            <button
+              type="button"
+              disabled={busy || !confirmed || !eligibleRows.length || !preview.providerReady}
+              onClick={() => void send()}
+              className="min-h-11 rounded-xl bg-emerald-700 px-4 font-bold text-white hover:bg-emerald-800 disabled:opacity-40"
+            >
+              Send SMS
+            </button>
+          </div>
+        </>
+      )}
+
+      {!preview && (
+        <div className="rounded-xl border border-dashed bg-stone-50 p-6 text-center text-sm text-slate-600">
+          Select recipients and choose Preview Recipients. Previewing never sends messages.
+        </div>
+      )}
+
+      <div className="border-t border-[#e7e1d7] pt-5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-slate-950">Send History</h3>
+          <button type="button" disabled={busy} onClick={() => void loadDeliveryHistory()} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+            {deliveries ? "Refresh" : "Load Send History"}
+          </button>
+        </div>
+        {deliveries && (
+          <div className="mt-3 overflow-hidden rounded-xl border">
+            <div className="hidden grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 bg-stone-100 p-3 text-xs font-bold lg:grid">
+              {["Recipient", "Phone", "Status", "Sent At", "Error"].map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            {deliveries.map((delivery) => (
+              <article key={delivery.id} className="border-t p-3 first:border-t-0 lg:grid lg:grid-cols-[1fr_1fr_1fr_1fr_auto] lg:items-center lg:gap-2">
+                <b>{delivery.guest_name}</b>
+                <span className="text-sm">{delivery.recipient_phone}</span>
+                <Badge value={delivery.delivery_status} />
+                <span className="text-xs text-slate-500">{delivery.sent_at ? new Date(delivery.sent_at).toLocaleString() : "-"}</span>
+                <span className="max-w-xs truncate text-xs text-red-700">{delivery.error_message ?? ""}</span>
+              </article>
+            ))}
+            {!deliveries.length && <p className="p-6 text-center text-sm text-slate-500">No SMS outreach has been sent for this event yet.</p>}
+          </div>
+        )}
+      </div>
+
+      <MessagePreviewDialog
+        open={Boolean(previewRow)}
+        title={previewRow ? `SMS preview for ${previewRow.name}` : "SMS preview"}
+        channel="SMS"
+        message={previewRow?.message ?? ""}
+        providerMessage={preview?.providerMessage ?? ""}
+        providerReady={Boolean(preview?.providerReady)}
+        confirmed={false}
+        busy={busy}
+        canSend={false}
+        previewDetails={
+          previewRow && (
+            <div className={`mt-3 rounded-xl p-3 text-sm ${previewRow.smsSegments === 1 ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+              <p>
+                <b>{previewRow.smsEncoding} usage:</b> {previewRow.smsUnits} {previewRow.smsEncoding === "GSM-7" ? "septets" : "code units"}
+              </p>
+              <p className="mt-1">
+                <b>Estimated SMS segments: {previewRow.smsSegments}</b>
+              </p>
+            </div>
+          )
+        }
+        confirmationLabel={`Estimated SMS segments: ${previewRow?.smsSegments ?? 0}`}
+        sendLabel="Use bulk confirmation to send"
+        onConfirmedChange={() => {}}
+        onClose={() => setPreviewRow(null)}
+        onSend={() => {}}
+      />
+    </section>
+  );
+}
