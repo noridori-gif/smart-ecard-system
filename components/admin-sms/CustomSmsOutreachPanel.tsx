@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { pdf } from "@react-pdf/renderer";
 import MessagePreviewDialog from "@/components/financial-suite/reminders/MessagePreviewDialog";
+import CustomSmsOutreachReportPDF from "@/components/admin-sms/CustomSmsOutreachReportPDF";
 import { analyzeSms, CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, renderCustomSmsTemplate, type PledgeMessageValues } from "@/services/pledgeMessageService";
 import {
   downloadRecipientImportTemplate,
@@ -299,6 +301,48 @@ export default function CustomSmsOutreachPanel({
     }
   }
 
+  const campaignDeliveries = useMemo(
+    () => (campaignId ? (deliveries ?? []).filter((delivery) => delivery.campaign_id === campaignId) : []),
+    [deliveries, campaignId]
+  );
+
+  async function downloadReport() {
+    const campaign = campaigns.find((item) => item.id === campaignId);
+    if (!campaign || !campaignDeliveries.length) return;
+    try {
+      setBusy(true);
+      setError("");
+      const sentRows = campaignDeliveries.filter((delivery) => delivery.delivery_status === "sent");
+      const failedRows = campaignDeliveries.filter((delivery) => delivery.delivery_status === "failed");
+      const latestSentAt = sentRows.map((delivery) => delivery.sent_at).filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+      const reportSampleValues: PledgeMessageValues = { guestName: "Recipient", eventTitle, pledgedAmount: "0", totalPaid: "0", balance: "0", eventDate };
+      const segmentsPerMessage = analyzeSms(renderCustomSmsTemplate(campaign.message_template, reportSampleValues)).segments;
+      const blob = await pdf(
+        <CustomSmsOutreachReportPDF
+          eventTitle={eventTitle}
+          campaignName={campaign.name}
+          dateSent={latestSentAt}
+          totalRecipients={campaignDeliveries.length}
+          sentCount={sentRows.length}
+          failedCount={failedRows.length}
+          segmentsPerMessage={segmentsPerMessage}
+          totalSegmentsUsed={segmentsPerMessage * sentRows.length}
+          failedRows={failedRows.map((delivery) => ({ name: delivery.full_name, phone: delivery.recipient_phone, reason: delivery.error_message ?? "Unknown error" }))}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${campaign.name.replace(/\W+/g, "_")}_SMS_Outreach_Report.pdf`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Report could not be generated.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function send() {
     if (!preview) return;
     try {
@@ -581,11 +625,21 @@ export default function CustomSmsOutreachPanel({
       )}
 
       <div className="border-t border-[#e7e1d7] pt-5">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-slate-950">Send History</h3>
-          <button type="button" disabled={busy} onClick={() => void loadDeliveryHistory()} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
-            {deliveries ? "Refresh" : "Load Send History"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy || !campaignDeliveries.length}
+              onClick={() => void downloadReport()}
+              className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              Download Report
+            </button>
+            <button type="button" disabled={busy} onClick={() => void loadDeliveryHistory()} className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-bold">
+              {deliveries ? "Refresh" : "Load Send History"}
+            </button>
+          </div>
         </div>
         {deliveries && (
           <div className="mt-3 overflow-hidden rounded-xl border">
