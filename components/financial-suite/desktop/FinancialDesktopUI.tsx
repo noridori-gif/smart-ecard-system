@@ -149,7 +149,7 @@ export function FinancialStatusBadge({
         ? "bg-amber-100 text-amber-800"
         : status === "cancelled"
           ? "bg-slate-200 text-slate-700"
-          : "bg-rose-100 text-rose-800";
+          : "bg-red-100 text-red-700";
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold ${style}`}>
       {label}
@@ -220,7 +220,7 @@ export function FinancialOverviewContent({
 }) {
   const { language, t } = useAppLanguage();
   const statusCards = [
-    [t("overview.completed"), summary.completed_count, "bg-emerald-50 text-emerald-800"], [t("overview.partial"), summary.partial_count, "bg-amber-50 text-amber-800"], [t("overview.notStarted"), summary.pledged_count, "bg-rose-50 text-rose-800"],
+    [t("overview.completed"), summary.completed_count, "bg-emerald-50 text-emerald-800"], [t("overview.partial"), summary.partial_count, "bg-amber-50 text-amber-800"], [t("overview.notStarted"), summary.pledged_count, "bg-red-50 text-red-700"],
   ];
   const collection = Number(summary.completion_percentage || 0);
   const budget = Number(summary.budget_progress_percentage || 0);

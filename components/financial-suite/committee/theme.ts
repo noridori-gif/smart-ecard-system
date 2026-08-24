@@ -11,7 +11,7 @@ export const committeeTheme = {
 } as const;
 
 export function progressColour(value: number) {
-  if (value < 30) return "bg-rose-500";
+  if (value < 30) return "bg-red-500";
   if (value < 70) return "bg-amber-500";
   return "bg-emerald-600";
 }

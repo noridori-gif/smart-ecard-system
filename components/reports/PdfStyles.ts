@@ -1,9 +1,9 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
 export const pdfColors = {
-  primary: "#1D4ED8",
-  primaryDark: "#1E3A8A",
-  primaryLight: "#DBEAFE",
+  primary: "#047857",
+  primaryDark: "#0F172A",
+  primaryLight: "#34D399",
 
   success: "#059669",
   successLight: "#D1FAE5",
@@ -13,9 +13,6 @@ export const pdfColors = {
 
   danger: "#DC2626",
   dangerLight: "#FEE2E2",
-
-  violet: "#7C3AED",
-  violetLight: "#EDE9FE",
 
   dark: "#0F172A",
   text: "#334155",
