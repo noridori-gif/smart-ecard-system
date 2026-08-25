@@ -36,7 +36,7 @@ export function CommitteeStatusBadge({
         ? "bg-amber-100 text-amber-800"
         : status === "cancelled"
           ? "bg-slate-200 text-slate-700"
-          : "bg-rose-100 text-rose-800";
+          : "bg-red-100 text-red-700";
   return (
     <span className={`inline-flex rounded-full px-3 py-1.5 text-[13px] font-bold ${style}`}>
       {label}

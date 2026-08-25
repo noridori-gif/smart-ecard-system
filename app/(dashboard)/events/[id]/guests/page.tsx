@@ -352,7 +352,95 @@ export default function EventGuestsPage() {
         )}
 
         {guests.length > 0 && (
-          <div className="overflow-x-auto">
+          <div className="space-y-3 p-4 md:hidden">
+            {guests.map((guest) => (
+              <article
+                key={guest.id}
+                className={`rounded-2xl border p-4 shadow-sm ${
+                  editingGuestId === guest.id
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-[#e7e1d7] bg-white"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      {guest.full_name}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {guest.phone || "-"}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                      guest.status === "checked_in"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {guest.status}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs uppercase text-slate-400">
+                      Category
+                    </p>
+
+                    <p className="mt-1 font-medium text-slate-800">
+                      {guest.category || "Normal"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase text-slate-400">
+                      Allowed
+                    </p>
+
+                    <p className="mt-1 font-semibold text-slate-800">
+                      {guest.allowed_guests}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Link
+                    href={`/events/${eventId}/guests/${guest.id}/qr`}
+                    className="flex min-h-11 items-center justify-center rounded-xl bg-emerald-700 px-2 text-xs font-semibold text-white hover:bg-emerald-800"
+                  >
+                    View QR
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => handleEditGuest(guest)}
+                    disabled={deletingGuestId === guest.id}
+                    className="min-h-11 rounded-xl border border-[#ddd7cc] bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-[#faf8f4] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(guest)}
+                    disabled={deletingGuestId === guest.id}
+                    className="min-h-11 rounded-xl bg-red-600 px-2 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                  >
+                    {deletingGuestId === guest.id
+                      ? "Deleting..."
+                      : "Delete"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {guests.length > 0 && (
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[950px] text-left">
               <thead className="bg-stone-100 text-sm uppercase text-slate-600">
                 <tr>
@@ -420,7 +508,7 @@ export default function EventGuestsPage() {
                           disabled={
                             deletingGuestId === guest.id
                           }
-                          className="min-h-11 rounded-xl bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="min-h-11 rounded-xl border border-[#ddd7cc] bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-[#faf8f4] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Edit
                         </button>
