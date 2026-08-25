@@ -44,18 +44,18 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     if (body?.action === "history") {
       const [reminders, meetingInvitations] = await Promise.all([
         authClient.from("pledge_reminders")
-          .select("id,pledge_id,channel,reminder_type,created_at,sent_at,delivery_status,retry_count,next_retry_at,error_message,event_pledges(full_name)")
-          .eq("event_id", eventId).order("created_at", { ascending: false }).limit(100),
+          .select("id,pledge_id,channel,reminder_type,recipient_phone,created_at,sent_at,delivery_status,retry_count,next_retry_at,error_message,event_pledges(full_name)")
+          .eq("event_id", eventId).order("created_at", { ascending: false }).limit(300),
         authClient.from("meeting_invitation_deliveries")
-          .select("id,pledge_id,channel,created_at,sent_at,delivery_status,retry_count,error_message,event_pledges(full_name)")
-          .eq("event_id", eventId).order("created_at", { ascending: false }).limit(100),
+          .select("id,pledge_id,channel,recipient_phone,created_at,sent_at,delivery_status,retry_count,error_message,event_pledges(full_name)")
+          .eq("event_id", eventId).order("created_at", { ascending: false }).limit(300),
       ]);
       if (reminders.error) throw reminders.error;
       if (meetingInvitations.error) throw meetingInvitations.error;
       const combined = [
         ...(reminders.data ?? []),
         ...(meetingInvitations.data ?? []).map((row) => ({ ...row, reminder_type: "meeting_invitation", next_retry_at: null })),
-      ].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 100);
+      ].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 300);
       return reply({ reminders: combined });
     }
     const date = typeof body?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
