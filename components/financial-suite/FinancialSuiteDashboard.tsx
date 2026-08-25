@@ -25,6 +25,7 @@ import FinancialCommunicationDialog from "./FinancialCommunicationDialog";
 import EditPaymentDialog from "./EditPaymentDialog";
 import VoidPaymentDialog from "./VoidPaymentDialog";
 import ContributorPermanentDeleteDialog from "./ContributorPermanentDeleteDialog";
+import Dialog from "@/components/ui/Dialog";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import {
   FinancialDesktopHeader,
@@ -405,23 +406,32 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       )}
 
       {mode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true">
-          <div
-            className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 ${
-              mode === "import"
-                ? "max-w-5xl"
-                : mode === "bulk"
-                  ? "max-w-3xl"
-                  : "max-w-xl"
-            }`}
-          >
-            {mode === "import" ? (
+        <Dialog
+          titleId={mode === "communication" ? "communication-dialog-title" : "financial-mode-dialog-title"}
+          onClose={() => setMode(null)}
+          className={
+            mode === "import"
+              ? "max-w-5xl"
+              : mode === "bulk"
+                ? "max-w-3xl"
+                : "max-w-xl"
+          }
+        >
+          {mode === "import" ? (
+            <>
+              <h2 id="financial-mode-dialog-title" className="sr-only">Import contributions</h2>
               <FinancialImportWizard eventId={eventId} onClose={() => setMode(null)} onImported={load} />
-            ) : mode === "bulk" ? (
+            </>
+          ) : mode === "bulk" ? (
+            <>
+              <h2 id="financial-mode-dialog-title" className="sr-only">Bulk actions</h2>
               <ContributionBulkActionsDialog eventId={eventId} onClose={() => setMode(null)} onCompleted={load} />
-            ) : mode === "communication" && selected ? (
-              <FinancialCommunicationDialog pledge={selected} kind={communication.kind} initialChannel={communication.channel} language={data.event.language} adapter={buildAdminCommunicationAdapter(eventId)} onClose={() => setMode(null)} onSent={load} />
-            ) : mode === "correct-payment" && selected && selectedPayment ? (
+            </>
+          ) : mode === "communication" && selected ? (
+            <FinancialCommunicationDialog pledge={selected} kind={communication.kind} initialChannel={communication.channel} language={data.event.language} adapter={buildAdminCommunicationAdapter(eventId)} onClose={() => setMode(null)} onSent={load} />
+          ) : mode === "correct-payment" && selected && selectedPayment ? (
+            <>
+              <h2 id="financial-mode-dialog-title" className="sr-only">Correct payment</h2>
               <EditPaymentDialog
                 payment={selectedPayment}
                 pledge={selected}
@@ -431,7 +441,10 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
                   setMode("history");
                 }}
               />
-            ) : mode === "void-payment" && selected && selectedPayment ? (
+            </>
+          ) : mode === "void-payment" && selected && selectedPayment ? (
+            <>
+              <h2 id="financial-mode-dialog-title" className="sr-only">Void payment</h2>
               <VoidPaymentDialog
                 payment={selectedPayment}
                 pledge={selected}
@@ -441,63 +454,62 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
                   setMode("history");
                 }}
               />
-            ) : (
-              <>
-                <h2 className="mb-4 text-xl font-bold">
-                  {mode === "payment"
-                    ? `Record payment · ${selected?.full_name}`
-                    : mode === "history"
-                      ? `Payment history · ${selected?.full_name}`
-                      : selected
-                        ? "Hariri ahadi"
-                        : "Tengeneza ahadi"}
-                </h2>
-                {mode === "pledge" ? (
-                  <PledgeForm
-                    eventId={eventId}
-                    guests={data.guests}
-                    pledge={selected}
-                    onSave={savePledge}
-                    onClose={() => setMode(null)}
-                  />
-                ) : mode === "history" ? (
-                  <PaymentHistoryDialog
-                    payments={payments}
-                    language={data.event.language}
-                    issueReceipt={issueReceipt}
-                    editPayment={(payment) => {
-                      setSelectedPayment(payment);
-                      setMode("correct-payment");
-                    }}
-                    voidPayment={(payment) => {
-                      setSelectedPayment(payment);
-                      setMode("void-payment");
-                    }}
-                    onClose={() => setMode(null)}
-                  />
-                ) : selected ? (
-                  <RecordPaymentDialog
-                    pledge={selected}
-                    onSave={savePayment}
-                    onClose={() => setMode(null)}
-                  />
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
+            </>
+          ) : (
+            <>
+              <h2 id="financial-mode-dialog-title" className="mb-4 text-xl font-bold">
+                {mode === "payment"
+                  ? `Record payment · ${selected?.full_name}`
+                  : mode === "history"
+                    ? `Payment history · ${selected?.full_name}`
+                    : selected
+                      ? "Hariri ahadi"
+                      : "Tengeneza ahadi"}
+              </h2>
+              {mode === "pledge" ? (
+                <PledgeForm
+                  eventId={eventId}
+                  guests={data.guests}
+                  pledge={selected}
+                  onSave={savePledge}
+                  onClose={() => setMode(null)}
+                />
+              ) : mode === "history" ? (
+                <PaymentHistoryDialog
+                  payments={payments}
+                  language={data.event.language}
+                  issueReceipt={issueReceipt}
+                  editPayment={(payment) => {
+                    setSelectedPayment(payment);
+                    setMode("correct-payment");
+                  }}
+                  voidPayment={(payment) => {
+                    setSelectedPayment(payment);
+                    setMode("void-payment");
+                  }}
+                  onClose={() => setMode(null)}
+                />
+              ) : selected ? (
+                <RecordPaymentDialog
+                  pledge={selected}
+                  onSave={savePayment}
+                  onClose={() => setMode(null)}
+                />
+              ) : null}
+            </>
+          )}
+        </Dialog>
       )}
 
       {newReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6">
-            <ReceiptDialog
-              {...newReceipt}
-              language={data.event.language}
-              onClose={() => setNewReceipt(null)}
-            />
-          </div>
-        </div>
+        <Dialog titleId="new-receipt-dialog-title" onClose={() => setNewReceipt(null)} className="max-w-xl">
+          <h2 id="new-receipt-dialog-title" className="sr-only">Contribution receipt</h2>
+          <ReceiptDialog
+            {...newReceipt}
+            language={data.event.language}
+            onClose={() => setNewReceipt(null)}
+          />
+        </Dialog>
       )}
 
       {permanentDeletePledge && (
