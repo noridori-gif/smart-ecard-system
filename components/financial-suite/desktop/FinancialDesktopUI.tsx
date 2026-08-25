@@ -220,7 +220,9 @@ export function FinancialOverviewContent({
 }) {
   const { language, t } = useAppLanguage();
   const statusCards = [
-    [t("overview.completed"), summary.completed_count, "bg-emerald-50 text-emerald-800"], [t("overview.partial"), summary.partial_count, "bg-amber-50 text-amber-800"], [t("overview.notStarted"), summary.pledged_count, "bg-red-50 text-red-700"],
+    { label: t("overview.completed"), value: summary.completed_count, card: "border-emerald-300 bg-emerald-100 text-emerald-800", icon: "bg-white text-emerald-600" },
+    { label: t("overview.partial"), value: summary.partial_count, card: "border-amber-300 bg-amber-100 text-amber-800", icon: "bg-white text-amber-700" },
+    { label: t("overview.notStarted"), value: summary.pledged_count, card: "border-red-300 bg-red-100 text-red-700", icon: "bg-white text-red-700" },
   ];
   const collection = Number(summary.completion_percentage || 0);
   const budget = Number(summary.budget_progress_percentage || 0);
@@ -230,11 +232,11 @@ export function FinancialOverviewContent({
       <section>
         <h2 className="text-xl font-bold text-slate-950">{t("overview.contributorStatus")}</h2>
         <div className="mt-3 grid gap-4 md:grid-cols-3">
-          {statusCards.map(([label, value, style]) => (
-            <article key={label} className={`rounded-2xl border border-transparent p-5 ${style}`}>
+          {statusCards.map(({ label, value, card, icon }) => (
+            <article key={label} className={`rounded-2xl border p-5 ${card}`}>
               <div className="flex items-center justify-between">
                 <p className="text-[14px] font-semibold">{label}</p>
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-white/70">
+                <span className={`grid h-10 w-10 place-items-center rounded-full ${icon}`}>
                   <FinanceIcon name="users" className="h-5 w-5" />
                 </span>
               </div>
