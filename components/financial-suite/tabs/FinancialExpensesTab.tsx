@@ -12,6 +12,7 @@ import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import RecordExpenseDialog from "../RecordExpenseDialog";
 import EditExpenseDialog from "../EditExpenseDialog";
 import VoidExpenseDialog from "../VoidExpenseDialog";
+import Dialog from "@/components/ui/Dialog";
 
 export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
   const { language } = useAppLanguage();
@@ -210,8 +211,8 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
       </div>
     </section>
 
-    {mode === "add" && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><RecordExpenseDialog eventId={eventId} categorySuggestions={categorySuggestions} onSave={addExpense} onClose={() => setMode(null)} /></div></div>}
-    {mode === "edit" && selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><EditExpenseDialog expense={selected} eventId={eventId} categorySuggestions={categorySuggestions} onSave={saveCorrection} onClose={() => { setMode(null); setSelected(null); }} /></div></div>}
-    {mode === "void" && selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true"><div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><VoidExpenseDialog expense={selected} onVoid={saveVoid} onClose={() => { setMode(null); setSelected(null); }} /></div></div>}
+    {mode === "add" && <Dialog titleId="expense-dialog-title" onClose={() => setMode(null)} className="max-w-xl"><h2 id="expense-dialog-title" className="sr-only">Add expense</h2><RecordExpenseDialog eventId={eventId} categorySuggestions={categorySuggestions} onSave={addExpense} onClose={() => setMode(null)} /></Dialog>}
+    {mode === "edit" && selected && <Dialog titleId="expense-dialog-title" onClose={() => { setMode(null); setSelected(null); }} className="max-w-xl"><h2 id="expense-dialog-title" className="sr-only">Edit expense</h2><EditExpenseDialog expense={selected} eventId={eventId} categorySuggestions={categorySuggestions} onSave={saveCorrection} onClose={() => { setMode(null); setSelected(null); }} /></Dialog>}
+    {mode === "void" && selected && <Dialog titleId="expense-dialog-title" onClose={() => { setMode(null); setSelected(null); }} className="max-w-xl"><h2 id="expense-dialog-title" className="sr-only">Void expense</h2><VoidExpenseDialog expense={selected} onVoid={saveVoid} onClose={() => { setMode(null); setSelected(null); }} /></Dialog>}
   </div>;
 }
