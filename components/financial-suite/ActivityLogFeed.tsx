@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
 import { getFinanceActivityLog, type ActivityLogCursor, type FinanceActivityLogEntry } from "@/services/financeActivityLogService";
 import { describeActivityEntry } from "@/lib/financeActivitySentences";
 import { formatAppRelativeTime, formatAppTzs } from "@/lib/i18n/formatters";
@@ -67,9 +68,9 @@ export default function ActivityLogFeed({ eventId }: { eventId: number }) {
       </div>
       {hasMore && !loading && (
         <div className="mt-4 flex justify-center">
-          <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50">
+          <Button type="button" variant="secondary" size="sm" loading={loadingMore} disabled={loadingMore} onClick={() => void loadMore()}>
             {loadingMore ? "Loading…" : "Load more"}
-          </button>
+          </Button>
         </div>
       )}
     </section>
