@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import RecordPaymentDialog from "./RecordPaymentDialog";
 import PaymentHistoryDialog from "./PaymentHistoryDialog";
@@ -558,16 +559,18 @@ export default function CommitteePortalTabbed({
               ]}
             />
             {data.permissions.create_pledges && (
-              <button
+              <Button
                 type="button"
+                variant="primary"
+                size="lg"
+                className="w-full"
                 onClick={() => {
                   setSelected(null);
                   setDialog("create");
                 }}
-                className={`min-h-12 w-full rounded-2xl px-4 text-base font-semibold ${committeeTheme.primaryButton} ${committeeTheme.focus}`}
               >
                 + {t.newPledge}
-              </button>
+              </Button>
             )}
             <div className="grid gap-3 lg:grid-cols-2">
               {contributors.map((item) => (
@@ -786,14 +789,15 @@ export default function CommitteePortalTabbed({
                       </div>
                     </dl>
                     {permitted && (
-                      <button
+                      <Button
                         type="button"
+                        variant="success"
+                        className="mt-3 w-full"
                         onClick={() => act(item, "message")}
-                        className="mt-3 min-h-11 w-full rounded-xl bg-emerald-50 px-4 text-[15px] font-semibold text-emerald-700 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                       >
                         ✉{" "}
                         {kind === "completed" ? t.thankPreview : t.preview}
-                      </button>
+                      </Button>
                     )}
                     {permitted && (!validPhone || !eligible) && (
                       <p className="mt-2 text-sm leading-5 text-amber-800">
@@ -915,20 +919,11 @@ function ActionButton({
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  const style =
-    tone === "green"
-      ? "border-emerald-100 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-      : tone === "blue"
-        ? "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100"
-        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50";
+  const variant = tone === "green" ? "success" : tone === "blue" ? "info" : "secondary";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`min-h-11 rounded-xl border px-3 text-[15px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${style}`}
-    >
+    <Button type="button" variant={variant} onClick={onClick}>
       {children}
-    </button>
+    </Button>
   );
 }
 
