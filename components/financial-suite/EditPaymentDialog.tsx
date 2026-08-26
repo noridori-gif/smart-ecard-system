@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Button from "@/components/ui/Button";
 import type { FinancialPledge, PaymentCorrectionInput, PledgePayment } from "@/services/financialSuiteService";
 import { formatTzs } from "@/services/pledgeMessageService";
 import { providerOptionsForMethod } from "@/lib/paymentProviderOptions";
@@ -75,8 +76,8 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
     </dl>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
-      <button disabled={busy} onClick={() => setConfirming(false)} className="rounded-xl border px-4 py-2">Back</button>
-      <button disabled={busy} onClick={() => void submit()} className="rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Confirm correction"}</button>
+      <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>Back</Button>
+      <Button variant="caution" loading={busy} disabled={busy} onClick={() => void submit()}>{busy ? "Saving…" : "Confirm correction"}</Button>
     </div>
   </div>;
 
@@ -103,6 +104,6 @@ export default function EditPaymentDialog({ payment, pledge, onSave, onClose }: 
     </div>
     <label className="block text-sm font-semibold">Correction reason <span className="text-red-600">*</span><textarea required minLength={3} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="mt-1 min-h-24 w-full rounded-xl border px-3 py-2" /></label>
     {amounts.newBalance < 0 && <p role="alert" className="text-sm text-red-700">This amount would exceed the pledged amount.</p>}
-    <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">Cancel</button><button type="submit" disabled={!valid} className="rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-40">Review correction</button></div>
+    <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" variant="caution" disabled={!valid}>Review correction</Button></div>
   </form>;
 }
