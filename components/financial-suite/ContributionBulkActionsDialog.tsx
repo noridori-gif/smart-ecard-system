@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
 import { getCurrentUserProfile } from "@/services/profileService";
 import {
   previewContributionCleanup,
@@ -71,7 +72,7 @@ export default function ContributionBulkActionsDialog({ eventId, onClose, onComp
     {action==="delete_contributions_and_guests" && <label className="flex gap-2 text-sm"><input type="checkbox" checked={removeGuests} onChange={(e)=>{setRemoveGuests(e.target.checked);void loadPreview(e.target.checked);}} /><span>Permanently remove eligible linked guests and their unused invitations. Unmarked existing guests require this explicit confirmation.</span></label>}
     {destructive && <label className="block text-sm font-semibold">Type DELETE CONTRIBUTIONS<input value={confirmation} onChange={(e)=>setConfirmation(e.target.value)} className="mt-2 w-full rounded-lg border px-3 py-2 font-normal" /></label>}
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    <button disabled={busy || reason.trim().length < 3 || (destructive && confirmation !== "DELETE CONTRIBUTIONS")} onClick={() => void execute()} className="w-full rounded-lg bg-red-700 px-4 py-3 font-semibold text-white disabled:opacity-40">{busy ? "Working…" : action==="cancel_all" ? "Cancel all active pledges" : "Execute permanent cleanup"}</button></>}
-    {result && <div className="space-y-4"><div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"><b>Bulk action completed.</b><p className="mt-1 text-sm">{result.deletedPledges} pledges deleted, {result.cancelledPledges} pledges cancelled, {result.deletedGuests} guests deleted.</p></div><button onClick={onClose} className="w-full rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white">Done</button></div>}
+    <Button variant="destructive" size="lg" className="w-full" loading={busy} disabled={busy || reason.trim().length < 3 || (destructive && confirmation !== "DELETE CONTRIBUTIONS")} onClick={() => void execute()}>{busy ? "Working…" : action==="cancel_all" ? "Cancel all active pledges" : "Execute permanent cleanup"}</Button></>}
+    {result && <div className="space-y-4"><div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"><b>Bulk action completed.</b><p className="mt-1 text-sm">{result.deletedPledges} pledges deleted, {result.cancelledPledges} pledges cancelled, {result.deletedGuests} guests deleted.</p></div><Button variant="dark" size="lg" className="w-full" onClick={onClose}>Done</Button></div>}
   </div>;
 }
