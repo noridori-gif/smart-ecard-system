@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 
 export default function MessagePreviewDialog({
@@ -48,9 +49,9 @@ export default function MessagePreviewDialog({
             {title}
           </h2>
         </div>
-        <button type="button" onClick={onClose} className="min-h-11 rounded-xl px-3 font-semibold text-slate-600 hover:bg-stone-100">
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
       <pre className="mt-5 whitespace-pre-wrap rounded-xl border border-stone-200 bg-stone-50 p-4 font-sans text-[15px] leading-6 text-slate-800">
         {message}
@@ -63,14 +64,16 @@ export default function MessagePreviewDialog({
         <input type="checkbox" checked={confirmed} onChange={(event) => onConfirmedChange(event.target.checked)} />
         {confirmationLabel}
       </label>
-      <button
+      <Button
         type="button"
+        variant="primary"
+        className="mt-4 w-full"
+        loading={busy}
         disabled={busy || !confirmed || !providerReady || !canSend}
         onClick={onSend}
-        className="mt-4 min-h-11 w-full rounded-xl bg-emerald-700 px-4 font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {sendLabel}
-      </button>
+      </Button>
     </Dialog>
   );
 }
