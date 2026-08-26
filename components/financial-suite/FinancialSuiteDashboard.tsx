@@ -25,13 +25,13 @@ import FinancialCommunicationDialog from "./FinancialCommunicationDialog";
 import EditPaymentDialog from "./EditPaymentDialog";
 import VoidPaymentDialog from "./VoidPaymentDialog";
 import ContributorPermanentDeleteDialog from "./ContributorPermanentDeleteDialog";
+import Button from "@/components/ui/Button";
 import Dialog from "@/components/ui/Dialog";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import {
   FinancialDesktopHeader,
   FinancialOverviewContent,
   FinancialToolbarButton,
-  financialDesktop,
 } from "./desktop/FinancialDesktopUI";
 import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsWorkspace";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
@@ -394,13 +394,14 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             <p className="mt-1 text-sm text-slate-600">
               Provider readiness is checked safely in reminder previews. Secret credentials are never displayed.
             </p>
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              className="mt-4"
               onClick={() => changeTab("reminders")}
-              className={`mt-4 ${financialDesktop.secondary}`}
             >
               Check provider readiness
-            </button>
+            </Button>
           </section>
         </div>
       )}
