@@ -9,6 +9,7 @@ export type ButtonVariant =
   | "warning"
   | "caution"
   | "danger"
+  | "destructive"
   | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
 
@@ -24,6 +25,7 @@ const variants: Record<ButtonVariant, string> = {
     "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
   caution: "bg-amber-600 text-white hover:bg-amber-700",
   danger: "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+  destructive: "bg-red-700 text-white hover:bg-red-800",
   ghost: "bg-transparent text-slate-700 hover:bg-stone-100",
 };
 
