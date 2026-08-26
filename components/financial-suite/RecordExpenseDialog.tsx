@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Button from "@/components/ui/Button";
 import { EXPENSE_CATEGORY_PRESETS, uploadExpenseReceipt, type ExpenseInput } from "@/services/expenseService";
 
 export default function RecordExpenseDialog({ eventId, categorySuggestions, onSave, onClose }: {
@@ -43,8 +44,8 @@ export default function RecordExpenseDialog({ eventId, categorySuggestions, onSa
     <label className="block text-sm font-semibold">Notes<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={field} /></label>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex flex-wrap justify-end gap-2">
-      <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">Cancel</button>
-      <button disabled={saving} className="rounded-xl bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">{saving ? "Saving…" : "Save expense"}</button>
+      <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+      <Button type="submit" variant="primary" loading={saving} disabled={saving}>{saving ? "Saving…" : "Save expense"}</Button>
     </div>
   </form>;
 }
