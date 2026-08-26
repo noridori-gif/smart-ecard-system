@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Button from "@/components/ui/Button";
 import { formatTzs } from "@/services/pledgeMessageService";
 import { EXPENSE_CATEGORY_PRESETS, uploadExpenseReceipt, type EventExpense, type ExpenseCorrectionInput } from "@/services/expenseService";
 
@@ -43,8 +44,8 @@ export default function EditExpenseDialog({ expense, eventId, categorySuggestion
     </dl>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
-      <button disabled={busy} onClick={() => setConfirming(false)} className="rounded-xl border px-4 py-2">Back</button>
-      <button disabled={busy} onClick={() => void submit()} className="rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? "Saving…" : "Confirm correction"}</button>
+      <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>Back</Button>
+      <Button variant="caution" loading={busy} disabled={busy} onClick={() => void submit()}>{busy ? "Saving…" : "Confirm correction"}</Button>
     </div>
   </div>;
 
@@ -63,6 +64,6 @@ export default function EditExpenseDialog({ expense, eventId, categorySuggestion
     <label className="block text-sm font-semibold">{expense.receipt_path ? "Replace receipt / proof (optional)" : "Add receipt / proof (optional)"}<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={`${field} cursor-pointer`} /></label>
     <label className="block text-sm font-semibold">Notes<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={field} /></label>
     <label className="block text-sm font-semibold">Correction reason <span className="text-red-600">*</span><textarea required minLength={3} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className={`${field} min-h-24`} /></label>
-    <div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">Cancel</button><button type="submit" disabled={!valid} className="rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-40">Review correction</button></div>
+    <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" variant="caution" disabled={!valid}>Review correction</Button></div>
   </form>;
 }
