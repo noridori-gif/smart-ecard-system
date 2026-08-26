@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Button from "@/components/ui/Button";
 import MessagePreviewDialog from "../reminders/MessagePreviewDialog";
 import {
   previewPledgeThankYous,
@@ -91,10 +92,10 @@ export default function CompletedThankYouPanel({ eventId,onShowReminders }: { ev
       {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{error}</p>}
       {notice && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">{notice}</p>}
       <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" disabled={busy} onClick={() => void build()} className="min-h-11 rounded-xl border border-stone-300 px-4 font-semibold hover:bg-stone-50">Load Completed Contributors</button>
+        <Button type="button" variant="secondary" loading={busy} disabled={busy} onClick={() => void build()}>Load Completed Contributors</Button>
         {preview && <>
           <label className="flex min-h-11 items-center gap-2 rounded-xl border border-stone-300 px-3 text-sm"><input type="checkbox" checked={bulkConfirmed} onChange={(event) => setBulkConfirmed(event.target.checked)} />Confirm sending to {eligibleContributors} contributors ({eligibleRows.length} eligible messages)</label>
-          <button type="button" disabled={!bulkConfirmed || !providersReady || !eligibleRows.length || busy} onClick={() => void send()} className="min-h-11 rounded-xl bg-emerald-700 px-4 font-bold text-white hover:bg-emerald-800 disabled:opacity-40">Send Thank You</button>
+          <Button type="button" variant="primary" disabled={!bulkConfirmed || !providersReady || !eligibleRows.length || busy} onClick={() => void send()}>Send Thank You</Button>
         </>}
       </div>
       {preview && <>
