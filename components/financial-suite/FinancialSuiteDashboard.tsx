@@ -160,6 +160,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
     await load();
   }
   function changeTab(tab:FinancialTab){router.push(`${pathname}?tab=${tab}`,{scroll:false});}
+  function openContributorsByStatus(value:string){setStatus(value);setPage(1);changeTab("contributors");}
   if (loading) {
     return (
       <div
@@ -211,6 +212,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       {activeTab === "overview" && (
         <FinancialOverviewContent
           summary={data.summary}
+          onStatusCardClick={openContributorsByStatus}
           actions={
             <>
               <FinancialToolbarButton
