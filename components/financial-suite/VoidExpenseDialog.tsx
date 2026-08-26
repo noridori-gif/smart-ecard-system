@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Button from "@/components/ui/Button";
 import type { EventExpense } from "@/services/expenseService";
 import { formatTzs } from "@/services/pledgeMessageService";
 
@@ -47,11 +48,10 @@ export default function VoidExpenseDialog({ expense, onVoid, onClose }: {
     </label>
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="flex justify-end gap-2">
-      <button disabled={busy} onClick={onClose} className="rounded-xl border px-4 py-2">Cancel</button>
-      <button disabled={busy || !valid} onClick={() => void submit()}
-        className="rounded-xl bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-40">
+      <Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button>
+      <Button variant="destructive" loading={busy} disabled={busy || !valid} onClick={() => void submit()}>
         {busy ? "Saving…" : "Confirm void"}
-      </button>
+      </Button>
     </div>
   </div>;
 }
