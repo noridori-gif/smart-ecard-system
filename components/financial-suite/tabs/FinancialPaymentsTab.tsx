@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Button from "@/components/ui/Button";
 import {
   getClosingReport,
   previewDailySummary,
@@ -298,14 +299,15 @@ export default function FinancialPaymentsTab({
               }}
               className={financialDesktop.input}
             />
-            <button
+            <Button
               type="button"
+              variant="primary"
+              loading={busy === "daily"}
               disabled={busy === "daily"}
               onClick={() => void preview()}
-              className={financialDesktop.primary}
             >
               Generate preview
-            </button>
+            </Button>
           </div>
           {daily && (
             <>
@@ -331,14 +333,14 @@ export default function FinancialPaymentsTab({
                   ["WhatsApp preview", () => setNotice(`WhatsApp preview:\n${daily.message}`)],
                   ["SMS preview", () => setNotice(`SMS preview:\n${daily.message}`)],
                 ].map(([label, action]) => (
-                  <button
+                  <Button
                     key={String(label)}
                     type="button"
+                    variant="secondary"
                     onClick={() => void (action as () => void | Promise<void>)()}
-                    className={financialDesktop.secondary}
                   >
                     {String(label)}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </>
