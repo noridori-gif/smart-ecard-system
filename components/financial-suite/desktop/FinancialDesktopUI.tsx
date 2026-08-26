@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Button from "@/components/ui/Button";
 import type {
   FinanceSummary,
   FinancialPledge,
@@ -84,21 +85,11 @@ export function FinancialToolbarButton({
   icon: FinanceIconName;
   tone?: "primary" | "secondary" | "attention";
 }) {
-  const style =
-    tone === "primary"
-      ? financialDesktop.primary
-      : tone === "attention"
-        ? "min-h-11 rounded-xl border border-red-200 bg-red-50 px-4 text-[15px] font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
-        : financialDesktop.secondary;
+  const variant = tone === "primary" ? "primary" : tone === "attention" ? "danger" : "secondary";
   return (
-    <button
-      type="button"
-      {...props}
-      className={`inline-flex items-center justify-center gap-2 ${style} ${props.className ?? ""}`}
-    >
-      <FinanceIcon name={icon} />
+    <Button type="button" variant={variant} icon={<FinanceIcon name={icon} />} {...props}>
       {children}
-    </button>
+    </Button>
   );
 }
 
