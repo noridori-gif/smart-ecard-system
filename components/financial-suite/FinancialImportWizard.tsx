@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import {
   downloadFinancialImportErrors, downloadFinancialImportTemplate, readFinancialImportFile,
@@ -88,7 +89,7 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
       <label className="flex gap-2"><input type="checkbox" checked={options.skipDuplicates} onChange={(e) => { setOptions({ ...options, skipDuplicates: e.target.checked }); setPreview(null); }} />Skip duplicates</label>
       <label className="flex gap-2"><input type="checkbox" checked readOnly />Preview before import (required)</label>
     </fieldset>
-    {!preview && <button disabled={busy || !rows.length} onClick={() => void buildPreview()} className="w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">{busy ? "Checking..." : "Preview import"}</button>}
+    {!preview && <Button variant="primary" size="lg" className="w-full" loading={busy} disabled={busy || !rows.length} onClick={() => void buildPreview()}>{busy ? "Checking..." : "Preview import"}</Button>}
     {stats && <><div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
       {[
         ["Total rows", stats.totalRows], ["Valid rows", stats.validRows], ["Invalid rows", stats.invalidRows],
@@ -114,12 +115,12 @@ export default function FinancialImportWizard({ eventId, onClose, onImported }: 
       </table>
     </div>
     <label className="flex min-h-11 items-center gap-2 rounded-xl border p-3 text-sm font-semibold"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />I confirm this contributor and guest classification preview.</label>
-    <button disabled={busy || !confirmed || stats.validRows === 0 || unresolvedNames.length > 0 || needsReview > 0} onClick={() => void runImport()} className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-50">{busy ? "Importing..." : needsReview ? `Resolve ${needsReview} ambiguous guest match(es)` : unresolvedNames.length ? `Resolve ${unresolvedNames.length} name warning(s)` : "Import contributions"}</button></>}
+    <Button variant="dark" size="lg" className="w-full" loading={busy} disabled={busy || !confirmed || stats.validRows === 0 || unresolvedNames.length > 0 || needsReview > 0} onClick={() => void runImport()}>{busy ? "Importing..." : needsReview ? `Resolve ${needsReview} ambiguous guest match(es)` : unresolvedNames.length ? `Resolve ${unresolvedNames.length} name warning(s)` : "Import contributions"}</Button></>}
     </>}
     {result && <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 text-center"><div className="rounded-xl bg-emerald-50 p-4"><b className="text-2xl text-emerald-700">{result.importedRows}</b><span className="block text-sm">Imported rows</span></div><div className="rounded-xl bg-slate-100 p-4"><b className="text-2xl">{result.skippedRows}</b><span className="block text-sm">Skipped rows</span></div><div className="rounded-xl bg-amber-50 p-4"><b className="text-2xl text-amber-700">{result.duplicateRows}</b><span className="block text-sm">Duplicate rows</span></div><div className="rounded-xl bg-red-50 p-4"><b className="text-2xl text-red-700">{result.failedRows.length}</b><span className="block text-sm">Failed rows</span></div></div>
       {result.failedRows.length > 0 && <><ul className="max-h-40 overflow-auto rounded-xl border p-3 text-sm">{result.failedRows.map((row) => <li key={row.rowNumber}>Row {row.rowNumber} · {row.fullName}: {row.reason}</li>)}</ul><button onClick={() => downloadFinancialImportErrors(result)} className="font-semibold text-red-700 underline">Download error report</button></>}
-      <button onClick={onClose} className="w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-800">Done</button>
+      <Button variant="primary" size="lg" className="w-full" onClick={onClose}>Done</Button>
     </div>}
     {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
   </div>;
