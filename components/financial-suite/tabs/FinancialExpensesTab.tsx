@@ -9,6 +9,7 @@ import {
 import { DEFAULT_EVENT_BUDGET_CATEGORIES } from "@/lib/eventBudgetCategories";
 import { formatAppTzs } from "@/lib/i18n/formatters";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
+import Button from "@/components/ui/Button";
 import RecordExpenseDialog from "../RecordExpenseDialog";
 import EditExpenseDialog from "../EditExpenseDialog";
 import VoidExpenseDialog from "../VoidExpenseDialog";
@@ -127,7 +128,7 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
       <p className="mt-3 text-xs text-slate-500">Expense budget is the sum of each category&apos;s budget below — set or edit them in &quot;By Category&quot;.</p>
     </section>
 
-    <div className="flex justify-end"><button type="button" onClick={() => setMode("add")} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800">+ Add Expense</button></div>
+    <div className="flex justify-end"><Button type="button" variant="primary" size="sm" onClick={() => setMode("add")}>+ Add Expense</Button></div>
 
     <section className="sep-card overflow-hidden">
       <div className="border-b border-[#ece7df] p-5"><h2 className="text-xl font-bold">Expenses</h2></div>
