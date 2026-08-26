@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Dialog from "@/components/ui/Dialog";
 import RecordPaymentDialog from "./RecordPaymentDialog";
 import PaymentHistoryDialog from "./PaymentHistoryDialog";
 import ReceiptDialog from "./ReceiptDialog";
@@ -817,8 +818,8 @@ export default function CommitteePortalTabbed({
       </footer>
 
       {dialog && (
-        <Modal onClose={() => setDialog(null)} closeLabel={t.close}>
-          <h2 className="mb-4 text-xl font-bold">
+        <Modal onClose={() => setDialog(null)} closeLabel={t.close} titleId="committee-dialog-title">
+          <h2 id="committee-dialog-title" className="mb-4 text-xl font-bold">
             {dialog === "payment"
               ? t.record
               : dialog === "history"
@@ -874,7 +875,7 @@ export default function CommitteePortalTabbed({
       )}
 
       {selected && messageType && (
-        <Modal onClose={() => { setSelected(null); setMessageType(null); }} closeLabel={t.close}>
+        <Modal onClose={() => { setSelected(null); setMessageType(null); }} closeLabel={t.close} titleId="communication-dialog-title">
           <FinancialCommunicationDialog
             pledge={selected}
             kind={messageType === "thank_you" ? "thank-you" : "reminder"}
@@ -890,7 +891,10 @@ export default function CommitteePortalTabbed({
       )}
 
       {receipt && (
-        <Modal onClose={() => setReceipt(null)} closeLabel={t.close}>
+        <Modal onClose={() => setReceipt(null)} closeLabel={t.close} titleId="committee-receipt-dialog-title">
+          <h2 id="committee-receipt-dialog-title" className="sr-only">
+            Contribution receipt
+          </h2>
           <ReceiptDialog
             {...receipt}
             language={language}
@@ -940,31 +944,27 @@ function Modal({
   children,
   onClose,
   closeLabel,
+  titleId,
 }: {
   children: React.ReactNode;
   onClose: () => void;
   closeLabel: string;
+  titleId: string;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/65 p-0 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[24px] bg-white p-5 shadow-2xl sm:rounded-[24px]">
-        <div className="mb-2 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-full text-xl text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-            aria-label={closeLabel}
-          >
-            ×
-          </button>
-        </div>
-        {children}
+    <Dialog titleId={titleId} onClose={onClose} className="max-w-lg">
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid h-11 w-11 place-items-center rounded-full text-xl text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          aria-label={closeLabel}
+        >
+          ×
+        </button>
       </div>
-    </div>
+      {children}
+    </Dialog>
   );
 }
 
