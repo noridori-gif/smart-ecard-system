@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { getContributorGuestSettings, saveContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 
@@ -31,7 +32,7 @@ export default function ContributorGuestEligibilitySettings({ eventId, onSaved }
         <div className="space-y-2"><Toggle label={t("settings.autoUpgrade")} checked={settings.auto_upgrade_guest_card} onChange={(value) => setSettings({...settings, auto_upgrade_guest_card: value})} /><Toggle label={t("settings.autoDowngrade")} checked={settings.auto_downgrade_guest_card} onChange={(value) => setSettings({...settings, auto_downgrade_guest_card: value})} /></div>
       </div>
       <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("settings.protectionNote")}</p>
-      <button type="button" disabled={busy} onClick={() => void save()} className="mt-5 min-h-11 rounded-xl bg-emerald-700 px-5 font-bold text-white disabled:opacity-50">{busy ? t("common.saving") : t("settings.save")}</button>
+      <Button type="button" variant="primary" className="mt-5" loading={busy} disabled={busy} onClick={() => void save()}>{busy ? t("common.saving") : t("settings.save")}</Button>
     </>}
   </section>;
 }
