@@ -822,7 +822,7 @@ export default function ReportsPage() {
                 Total Guests
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-blue-700">
+              <p className="mt-2 text-3xl font-bold text-slate-900">
                 {summary.totalGuests}
               </p>
             </div>
@@ -874,7 +874,7 @@ export default function ReportsPage() {
                 Viewed
               </p>
 
-              <p className="mt-2 text-3xl font-bold text-blue-600">
+              <p className="mt-2 text-3xl font-bold text-emerald-600">
                 {summary.viewed}
               </p>
             </div>
