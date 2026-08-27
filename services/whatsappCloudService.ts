@@ -440,6 +440,9 @@ export async function sendFinancialWhatsAppTemplate(input: FinancialWhatsAppTemp
   if(input.templateKind==="meeting_invitation"&&input.parameters.length!==6){
     throw new Error("The meeting invitation template payload is incomplete.");
   }
+  if(input.templateKind==="reminder"&&input.parameters.length!==5){
+    throw new Error("The pledge reminder template payload is incomplete.");
+  }
   const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
   const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
   const response = await fetch(`https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`, {

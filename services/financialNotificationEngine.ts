@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendBeemSms, type BeemSmsErrorDetails } from "@/services/beemSmsService";
-import { buildPledgeMessage, formatTzs, renderCustomSmsTemplate, resolveFinancialSmsMessage } from "@/services/pledgeMessageService";
+import { buildPledgeMessage, daysRemaining, formatTzs, renderCustomSmsTemplate, resolveFinancialSmsMessage } from "@/services/pledgeMessageService";
 import { sendFinancialWhatsAppTemplate } from "@/services/whatsappCloudService";
 import { getFinancialWhatsAppTemplate, type FinancialWhatsAppTemplateOverride } from "@/lib/financialWhatsAppConfig";
 import { automaticMessagingEnabled } from "@/services/automationMasterServer";
@@ -47,21 +47,76 @@ function eventTitleForSlot(templateKind: "reminder" | "pledge_acknowledgement" |
   return language === "en" ? `wedding of ${title}` : `harusi ya ${title}`;
 }
 
+// Default {{1}}..{{5}} shape shared by the global reminder templates (env-var configured,
+// see lib/financialWhatsAppConfig.ts): contributor name, event title, total pledge, total
+// received, balance.
+type ReminderTemplateToken = "name" | "event" | "days_left" | "pledged" | "paid" | "balance";
+const DEFAULT_REMINDER_TEMPLATE_ORDER: ReminderTemplateToken[] = ["name", "event", "pledged", "paid", "balance"];
+
+// Per-event WhatsApp reminder overrides (event_finance_automation_settings.whatsapp_reminder_template_sw/en,
+// see migration 202608110002) point at an organizer's own Meta-approved template, which is
+// free to use a different variable set than the shared default -- Meta's approved body text
+// isn't visible from this codebase, so each entry here must be the CONFIRMED order for that
+// exact template name (checked directly against Meta Business Manager, never assumed). A
+// template name not listed here falls back to DEFAULT_REMINDER_TEMPLATE_ORDER.
+//
+// pledge_reminder_elia_wedding: confirmed 2026-08-27 after event_title was found leaking into
+// this template's days-left slot ({{2}}) -- the fixed default array had no days_left value at
+// all, so 3 real recipients received the couple's name where a "Siku N" countdown belonged.
+const REMINDER_TEMPLATE_PARAMETER_ORDER: Record<string, ReminderTemplateToken[]> = {
+  pledge_reminder_elia_wedding: ["name", "days_left", "pledged", "paid", "balance"],
+};
+
+// Shared by buildWhatsAppTemplateParameters() (the actual send) and describeWhatsAppPreview()
+// (the admin preview) so both always agree on which slot is which -- otherwise the preview's
+// labels can drift from what's actually being sent, same failure shape as Bug 2.
+function resolveReminderTemplateOrder(
+  templateKind: "reminder" | "pledge_acknowledgement" | "pledge_thank_you",
+  overrideTemplateName?: string | null
+): ReminderTemplateToken[] {
+  return (
+    (templateKind === "reminder" && overrideTemplateName && REMINDER_TEMPLATE_PARAMETER_ORDER[overrideTemplateName]) ||
+    DEFAULT_REMINDER_TEMPLATE_ORDER
+  );
+}
+
 // Single source of truth for the positional variables sent into an approved WhatsApp
-// financial template ({{1}}..{{5}}: contributor name, event title, total pledge, total
-// received, balance -- see docs/financial-automation.md). Used by BOTH the actual send
+// financial template -- see docs/financial-automation.md. Used by BOTH the actual send
 // (deliverReminder) and the admin-facing preview (previewFinancialReminders,
 // previewPledgeThankYous). Keep call sites pointed at this function rather than inlining
 // a parameter array again -- that's exactly how Bug 1 (wrong value in slot 2) and Bug 2
 // (preview showing different content than what's actually sent) diverged last time.
+//
+// overrideTemplateName selects the per-template parameter order above; pass it whenever the
+// event has a WhatsApp reminder override configured (undefined/unmatched falls back to the
+// default 5-slot shape used by the shared global templates).
 function buildWhatsAppTemplateParameters(
   templateKind: "reminder" | "pledge_acknowledgement" | "pledge_thank_you",
   language: "sw" | "en",
   pledge: Pick<PledgeRow, "full_name" | "pledged_amount" | "total_paid" | "balance">,
-  event: Pick<EventRow, "title">
+  event: Pick<EventRow, "title" | "event_date">,
+  overrideTemplateName?: string | null
 ): string[] {
-  return [pledge.full_name, eventTitleForSlot(templateKind, language, event.title), formatTzs(pledge.pledged_amount), formatTzs(pledge.total_paid), formatTzs(pledge.balance)];
+  const order = resolveReminderTemplateOrder(templateKind, overrideTemplateName);
+  const tokens: Record<ReminderTemplateToken, string> = {
+    name: pledge.full_name,
+    event: eventTitleForSlot(templateKind, language, event.title),
+    days_left: `Siku ${daysRemaining(event.event_date)}`,
+    pledged: formatTzs(pledge.pledged_amount),
+    paid: formatTzs(pledge.total_paid),
+    balance: formatTzs(pledge.balance),
+  };
+  return order.map((token) => tokens[token]);
 }
+
+// Position labels shown in the admin preview -- must stay keyed by the same
+// ReminderTemplateToken that buildWhatsAppTemplateParameters() used to fill that slot, so a
+// per-template remap (e.g. pledge_reminder_elia_wedding's {{2}} = days_left, not event) shows
+// the admin the right label instead of a stale "Tukio"/"Event" for a days-left value.
+const REMINDER_TEMPLATE_TOKEN_LABELS: Record<"sw" | "en", Record<ReminderTemplateToken, string>> = {
+  sw: { name: "Mchangiaji", event: "Tukio", days_left: "Siku Zilizobaki", pledged: "Jumla ya ahadi", paid: "Jumla iliyopokelewa", balance: "Salio" },
+  en: { name: "Contributor", event: "Event", days_left: "Days Remaining", pledged: "Total pledged", paid: "Total received", balance: "Balance" },
+};
 
 // Meta's approved WhatsApp template body text lives only in Meta Business Manager, not in
 // this codebase -- env vars here only carry the template NAME + language code (see
@@ -73,12 +128,11 @@ function describeWhatsAppPreview(
   templateKind: "reminder" | "pledge_thank_you",
   language: "sw" | "en",
   override: FinancialWhatsAppTemplateOverride | undefined,
-  parameters: string[]
+  parameters: string[],
+  order: ReminderTemplateToken[]
 ): string {
   const template = getFinancialWhatsAppTemplate(templateKind, language, override);
-  const labels = language === "en"
-    ? ["Contributor", "Event", "Total pledged", "Total received", "Balance"]
-    : ["Mchangiaji", "Tukio", "Jumla ya ahadi", "Jumla iliyopokelewa", "Salio"];
+  const labels = order.map((token) => REMINDER_TEMPLATE_TOKEN_LABELS[language][token]);
   const lines = parameters.map((param, index) => `${index + 1}. ${labels[index] ?? `Var ${index + 1}`}: ${param}`).join("\n");
   if (!template.configured) {
     return language === "en"
@@ -199,7 +253,7 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
         // custom_reminder_message or the generic buildPledgeMessage() fallback (that
         // mismatch was Bug 2).
         message: channel === "whatsapp"
-          ? describeWhatsAppPreview("reminder", language, whatsappReminderOverride(effectiveSetting, language), buildWhatsAppTemplateParameters("reminder", language, pledge, effectiveEvent))
+          ? describeWhatsAppPreview("reminder", language, whatsappReminderOverride(effectiveSetting, language), buildWhatsAppTemplateParameters("reminder", language, pledge, effectiveEvent, whatsappReminderOverride(effectiveSetting, language).templateName), resolveReminderTemplateOrder("reminder", whatsappReminderOverride(effectiveSetting, language).templateName))
           : effectiveSetting.custom_reminder_message?.trim()
             ? renderCustomSmsTemplate(effectiveSetting.custom_reminder_message, {
                 guestName: pledge.full_name, eventTitle: event.title, pledgedAmount: pledge.pledged_amount,
@@ -290,7 +344,7 @@ export async function previewPledgeThankYous(db:SupabaseClient,input:{eventId:nu
       // buildWhatsAppTemplateParameters() -- see the comment on that function. This was the
       // same Bug 2 preview/actual-send mismatch as the reminder preview above.
       const message=channel==="whatsapp"
-        ?describeWhatsAppPreview("pledge_thank_you",language,undefined,buildWhatsAppTemplateParameters("pledge_thank_you",language,pledge,event as EventRow))
+        ?describeWhatsAppPreview("pledge_thank_you",language,undefined,buildWhatsAppTemplateParameters("pledge_thank_you",language,pledge,event as EventRow),resolveReminderTemplateOrder("pledge_thank_you"))
         :channel==="sms"&&customThankYouMessage?.trim()
           ?renderCustomSmsTemplate(customThankYouMessage,thankYouValues)
           :buildPledgeMessage("pledge_thank_you",language,thankYouValues);
@@ -357,7 +411,7 @@ async function deliverReminder(db: SupabaseClient, reminder: {
       const result = await sendFinancialWhatsAppTemplate({
         phoneNumber: reminder.recipient_phone, language,
         templateKind,
-        parameters: buildWhatsAppTemplateParameters(templateKind, language, pledge, event),
+        parameters: buildWhatsAppTemplateParameters(templateKind, language, pledge, event, templateOverride?.templateName),
         templateOverride,
       });
       providerMessageId = result.messageId;
