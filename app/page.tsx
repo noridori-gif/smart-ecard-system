@@ -507,10 +507,6 @@ export default function Home() {
           </Link>
         </div>
       </section>
-
-      <footer className="border-t border-white/10 bg-slate-950 px-6 py-8 text-center text-sm text-slate-400">
-        <p>© 2026 Smart Event Pass. Your invitation. Your moment.</p>
-      </footer>
     </main>
   );
 }

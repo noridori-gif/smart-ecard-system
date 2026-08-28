@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Great_Vibes, Playfair_Display } from "next/font/google";
 import { canonicalAppUrl } from "@/lib/publicPledgeMetadata";
+import Footer from "@/components/Footer";
+import TopContactBar from "@/components/TopContactBar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -73,7 +75,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${greatVibes.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <TopContactBar />
+        <div className="flex-1">{children}</div>
+        <Footer />
+      </body>
     </html>
   );
 }
