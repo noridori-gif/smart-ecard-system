@@ -36,7 +36,7 @@ import {
 import { FinancialContributorsWorkspace } from "./desktop/FinancialContributorsWorkspace";
 import type { FinanceReceipt } from "@/services/receiptMessageService";
 import { createClient } from "@/lib/supabase/client";
-import { getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
+import { classifyContribution, getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 import { getCurrentUserProfile } from "@/services/profileService";
 import { buildAdminCommunicationAdapter, getReminderHistory, type ReminderHistoryRow } from "@/services/financialAutomationService";
 import {
@@ -65,6 +65,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const [permanentDeletePledge,setPermanentDeletePledge]=useState<FinancialPledge|null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [guestFilter, setGuestFilter] = useState("all");
+  const [cardTypeFilter, setCardTypeFilter] = useState("all");
   const [page, setPage] = useState(1); const pageSize = 10;
   const load = useCallback(async () => {
     if (!validEventId) {
@@ -99,8 +100,9 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   const filtered = useMemo(() => pledgesNewestFirst.filter((p) =>
     (status === "all" || p.calculated_status === status) &&
     (guestFilter === "all" || (guestFilter === "none" ? !["single", "double", "pending_guest"].includes(p.guest_eligibility_status) : guestFilter === p.guest_eligibility_status)) &&
+    (cardTypeFilter === "all" || (eligibilitySettings !== null && p.calculated_status !== "cancelled" && classifyContribution(p, eligibilitySettings) === cardTypeFilter)) &&
     (`${p.full_name} ${p.phone} ${p.normalized_phone}`.toLowerCase().includes(query.toLowerCase()))
-  ), [pledgesNewestFirst, guestFilter, query, status]);
+  ), [pledgesNewestFirst, guestFilter, cardTypeFilter, eligibilitySettings, query, status]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize)); const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   async function savePledge(input: PledgeInput) {
     const acknowledgement=selected?null:await createPledge(input); if(selected)await updatePledge(selected.id,input,selected.total_paid);
@@ -161,6 +163,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
   }
   function changeTab(tab:FinancialTab){router.push(`${pathname}?tab=${tab}`,{scroll:false});}
   function openContributorsByStatus(value:string){setStatus(value);setPage(1);changeTab("contributors");}
+  function openContributorsByCardType(value:string){setCardTypeFilter(value);setPage(1);changeTab("contributors");}
   if (loading) {
     return (
       <div
@@ -215,6 +218,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           pledges={data.pledges}
           guestEligibilitySettings={eligibilitySettings}
           onStatusCardClick={openContributorsByStatus}
+          onCardTypeClick={openContributorsByCardType}
           actions={
             <>
               <FinancialToolbarButton
@@ -254,6 +258,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           query={query}
           status={status}
           guestFilter={guestFilter}
+          cardTypeFilter={cardTypeFilter}
           page={page}
           pages={pages}
           total={filtered.length}
@@ -268,6 +273,7 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
             setPage(1);
           }}
           onGuestFilter={(value) => { setGuestFilter(value); setPage(1); }}
+          onCardTypeFilter={(value) => { setCardTypeFilter(value); setPage(1); }}
           onPage={setPage}
           onCreate={() => {
             setSelected(null);

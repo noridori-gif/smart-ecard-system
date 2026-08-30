@@ -10,10 +10,10 @@ import Button from "@/components/ui/Button";
 
 type WorkspaceProps = {
   eventTitle: string; pledges: FinancialPledge[]; visible: FinancialPledge[]; serialByPledgeId: Map<number, number>; isAdmin: boolean;
-  query: string; status: string; guestFilter: string; page: number; pages: number; total: number;
+  query: string; status: string; guestFilter: string; cardTypeFilter: string; page: number; pages: number; total: number;
   actionPledgeId: number | null;
   communicationHistory: ReminderHistoryRow[];
-  onQuery: (value: string) => void; onStatus: (value: string) => void; onGuestFilter: (value: string) => void; onPage: (value: number) => void;
+  onQuery: (value: string) => void; onStatus: (value: string) => void; onGuestFilter: (value: string) => void; onCardTypeFilter: (value: string) => void; onPage: (value: number) => void;
   onCreate: () => void; onImport: () => void; onBulk: () => void; onExport: (title: string, pledges: FinancialPledge[]) => void; onTemplate: () => void;
   onPay: (pledge: FinancialPledge) => void; onCommunicate: (pledge: FinancialPledge, kind: "reminder" | "thank-you", channel?: "sms" | "whatsapp") => void; onHistory: (pledge: FinancialPledge) => void; onEdit: (pledge: FinancialPledge) => void;
   onCancel: (pledge: FinancialPledge) => void; onRestore: (pledge: FinancialPledge) => void; onDelete: (pledge: FinancialPledge) => void;
@@ -24,12 +24,14 @@ export function FinancialContributorsWorkspace(props: WorkspaceProps) {
   const { language, t } = useAppLanguage();
   const statusOptions = [["all",t("common.all")],["completed",t("overview.completed")],["partial",t("overview.partial")],["pledged",t("overview.notStarted")],["cancelled",language === "sw" ? "Zilizofutwa" : "Cancelled"]];
   const guestOptions = [["all",t("common.all")],["single",language === "sw" ? "Mtu Mmoja" : "Single"],["double",language === "sw" ? "Watu Wawili" : "Double"],["pending_guest",language === "sw" ? "Inasubiri" : "Pending"],["none",language === "sw" ? "Hakuna" : "None"]];
+  const cardTypeOptions = [["all",t("common.all")],["single",t("eligibility.single")],["double",t("eligibility.double")],["below_minimum",t("eligibility.belowMinimum")]];
   return <div className="space-y-4">
     <section className="sep-card overflow-visible">
-      <div className="grid gap-3 border-b border-[#ece7df] bg-[#fffdf9] p-4 lg:grid-cols-[minmax(260px,1fr)_180px_180px_auto] lg:items-center">
+      <div className="grid gap-3 border-b border-[#ece7df] bg-[#fffdf9] p-4 lg:grid-cols-[minmax(220px,1fr)_150px_150px_150px_auto] lg:items-center">
         <label className="relative"><span className="sr-only">{t("queue.search")}</span><span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400"><SearchIcon /></span><input id="pledge-search" value={props.query} onChange={(event)=>props.onQuery(event.target.value)} placeholder={language === "sw" ? "Tafuta jina au simu..." : "Search name or phone..."} className={`w-full pl-12 ${financialDesktop.input}`}/></label>
         <label><span className="sr-only">{language === "sw" ? "Chuja hali" : "Status filter"}</span><select value={props.status} onChange={(event)=>props.onStatus(event.target.value)} className={`w-full ${financialDesktop.input}`}>{statusOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
         <label><span className="sr-only">{language === "sw" ? "Chuja aina ya mgeni" : "Guest filter"}</span><select value={props.guestFilter} onChange={(event)=>props.onGuestFilter(event.target.value)} className={`w-full ${financialDesktop.input}`}>{guestOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span className="sr-only">{language === "sw" ? "Chuja aina ya kadi" : "Card type filter"}</span><select value={props.cardTypeFilter} onChange={(event)=>props.onCardTypeFilter(event.target.value)} className={`w-full ${financialDesktop.input}`}>{cardTypeOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
         <div className="flex flex-wrap justify-start gap-2 lg:justify-end"><FinancialToolbarButton icon="upload" onClick={props.onImport}>{t("overview.importExcel")}</FinancialToolbarButton><FinancialToolbarButton icon="plus" tone="primary" onClick={props.onCreate}>{language === "sw" ? "Ongeza Mchangiaji" : "Add Contributor"}</FinancialToolbarButton></div>
       </div>
       <details className="group border-b border-[#ece7df] px-4 py-2"><summary className="cursor-pointer list-none text-xs font-semibold text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">{language === "sw" ? "Vitendo zaidi" : "More actions"}</summary><div className="mt-2 flex flex-wrap gap-2 pb-2"><FinancialToolbarButton icon="layers" tone="attention" onClick={props.onBulk}>{language === "sw" ? "Vitendo vya Wengi" : "Bulk Actions"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={()=>props.onExport(props.eventTitle,props.pledges)}>{language === "sw" ? "Pakua Wachangiaji" : "Export Contributors"}</FinancialToolbarButton><FinancialToolbarButton icon="download" onClick={props.onTemplate}>{language === "sw" ? "Muundo wa Excel" : "Excel Template"}</FinancialToolbarButton></div></details>

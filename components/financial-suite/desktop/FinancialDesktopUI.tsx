@@ -207,28 +207,30 @@ export function FinancialOverviewContent({
   summary,
   actions,
   onStatusCardClick,
+  onCardTypeClick,
   pledges,
   guestEligibilitySettings,
 }: {
   summary: FinanceSummary;
   actions: ReactNode;
   onStatusCardClick?: (status: string) => void;
+  onCardTypeClick?: (cardType: string) => void;
   pledges?: FinancialPledge[];
   guestEligibilitySettings?: ContributorGuestSettings | null;
 }) {
   const { language, t } = useAppLanguage();
-  const statusCards = [
-    { label: t("overview.completed"), value: summary.completed_count, status: "completed", card: "border-emerald-300 bg-emerald-100 text-emerald-800", icon: "bg-white text-emerald-600" },
-    { label: t("overview.partial"), value: summary.partial_count, status: "partial", card: "border-amber-300 bg-amber-100 text-amber-800", icon: "bg-white text-amber-700" },
-    { label: t("overview.notStarted"), value: summary.pledged_count, status: "pledged", card: "border-red-300 bg-red-100 text-red-700", icon: "bg-white text-red-700" },
+  const statusCards: { label: string; value: number; status: string; card: string; icon: string; kind: "status" | "cardType" }[] = [
+    { label: t("overview.completed"), value: summary.completed_count, status: "completed", card: "border-emerald-300 bg-emerald-100 text-emerald-800", icon: "bg-white text-emerald-600", kind: "status" },
+    { label: t("overview.partial"), value: summary.partial_count, status: "partial", card: "border-amber-300 bg-amber-100 text-amber-800", icon: "bg-white text-amber-700", kind: "status" },
+    { label: t("overview.notStarted"), value: summary.pledged_count, status: "pledged", card: "border-red-300 bg-red-100 text-red-700", icon: "bg-white text-red-700", kind: "status" },
   ];
   if (guestEligibilitySettings && pledges) {
     const active = pledges.filter((p) => p.calculated_status !== "cancelled");
     const singleCount = active.filter((p) => classifyContribution(p, guestEligibilitySettings) === "single").length;
     const doubleCount = active.filter((p) => classifyContribution(p, guestEligibilitySettings) === "double").length;
     statusCards.push(
-      { label: t("eligibility.single"), value: singleCount, status: "single", card: "border-blue-300 bg-blue-100 text-blue-800", icon: "bg-white text-blue-600" },
-      { label: t("eligibility.double"), value: doubleCount, status: "double", card: "border-violet-300 bg-violet-100 text-violet-800", icon: "bg-white text-violet-600" },
+      { label: t("eligibility.single"), value: singleCount, status: "single", card: "border-blue-300 bg-blue-100 text-blue-800", icon: "bg-white text-blue-600", kind: "cardType" },
+      { label: t("eligibility.double"), value: doubleCount, status: "double", card: "border-violet-300 bg-violet-100 text-violet-800", icon: "bg-white text-violet-600", kind: "cardType" },
     );
   }
   const collection = Number(summary.completion_percentage || 0);
@@ -239,15 +241,16 @@ export function FinancialOverviewContent({
       <section>
         <h2 className="text-xl font-bold text-slate-950">{t("overview.contributorStatus")}</h2>
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {statusCards.map(({ label, value, status, card, icon }) => {
-            const clickable = Boolean(onStatusCardClick) && status !== "single" && status !== "double";
+          {statusCards.map(({ label, value, status, card, icon, kind }) => {
+            const handler = kind === "status" ? onStatusCardClick : onCardTypeClick;
+            const clickable = Boolean(handler);
             return (
             <article
               key={label}
-              onClick={clickable ? () => onStatusCardClick!(status) : undefined}
+              onClick={clickable ? () => handler!(status) : undefined}
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}
-              onKeyDown={clickable ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onStatusCardClick!(status); } } : undefined}
+              onKeyDown={clickable ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); handler!(status); } } : undefined}
               aria-label={clickable ? `${label}: ${value}. ${language === "sw" ? "Ona wachangiaji" : "View contributors"}` : undefined}
               className={`rounded-2xl border p-5 ${card} ${clickable ? "cursor-pointer transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2" : ""}`}
             >
