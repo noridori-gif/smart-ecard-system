@@ -212,6 +212,8 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
       {activeTab === "overview" && (
         <FinancialOverviewContent
           summary={data.summary}
+          pledges={data.pledges}
+          guestEligibilitySettings={eligibilitySettings}
           onStatusCardClick={openContributorsByStatus}
           actions={
             <>

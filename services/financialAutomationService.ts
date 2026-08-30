@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/lib/supabase";
 import type { FinancialPledge, PledgePayment } from "@/services/financialSuiteService";
 import { normalizeTanzanianPhone } from "@/services/pledgeMessageService";
+import { cardClassificationLabel, classifyContribution, getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 
 export type AutomationSettings = {
   event_id:number; reminders_enabled:boolean; reminder_channel:"sms"|"whatsapp"|"both";
@@ -37,6 +38,7 @@ export type ClosingReport={
   financial:{activePledges:number;totalContributors:number;totalPledged:number;totalCollected:number;outstanding:number;percentage:number;completed:number;partial:number;pending:number;cancelled:number;validTransactions:number;voidedTransactions:number;target:FinanceTargetReport};
   pledges:FinancialPledge[];payments:ClosingReportPayment[];trend:TrendPoint[];paymentMethods:{method:string;amount:number}[];
   reminders:ReminderHistoryRow[];
+  guestEligibilitySettings:ContributorGuestSettings;
 };
 const defaults=(eventId:number):AutomationSettings=>({event_id:eventId,reminders_enabled:false,reminder_channel:"sms",reminder_frequency:"manual",custom_interval_days:null,stop_after_completion:true,stop_after_event_date:true,allow_after_event_date:false,next_reminder_at:null,reminder_cooldown_hours:24,owner_summary_phone:null,daily_summary_enabled:false,daily_summary_channel:"sms",daily_summary_time:"18:00",allow_after_deadline:false,custom_reminder_message:null,custom_thank_you_message:null,custom_pledge_acknowledgement_message:null,custom_payment_received_message:null,custom_meeting_invitation_message:null,whatsapp_reminder_template_sw:null,whatsapp_reminder_template_en:null,whatsapp_reminder_template_language_sw:"sw",whatsapp_reminder_template_language_en:"en_US"});
 const policyDefaults=(eventId:number):PledgeReminderPolicy=>({event_id:eventId,reminder_mode:"manual",date_based_enabled:true,before_due_days:3,on_due_date_enabled:true,after_due_days:3,repeat_after_due_days:null,maximum_automatic_reminders:3,no_date_behavior:"manual_only",no_date_delay_days:14,stop_after_event:true,is_enabled:false});
@@ -59,7 +61,7 @@ export function getReminderEligibility(pledges:FinancialPledge[],eventDate:strin
   });
 }
 export async function getClosingReport(eventId:number):Promise<ClosingReport>{
-  const [eventResult,pledgeResult,paymentResult,guestResult,invitationResult,targetResult,reminderResult]=await Promise.all([
+  const [eventResult,pledgeResult,paymentResult,guestResult,invitationResult,targetResult,reminderResult,guestEligibilitySettings]=await Promise.all([
     supabase.from("events").select("id,title,event_type,event_date,venue").eq("id",eventId).single(),
     supabase.from("event_pledge_financial_summary").select("*").eq("event_id",eventId),
     supabase.rpc("get_closing_report_payments",{target_event_id:eventId}),
@@ -67,6 +69,7 @@ export async function getClosingReport(eventId:number):Promise<ClosingReport>{
     supabase.from("invitations").select("id,viewed_at,rsvp_status").eq("event_id",eventId),
     supabase.from("event_finance_targets").select("budget_amount,contribution_deadline").eq("event_id",eventId).maybeSingle(),
     getReminderHistory(eventId).catch(()=>[] as ReminderHistoryRow[]),
+    getContributorGuestSettings(eventId),
   ]);
   const error=eventResult.error||pledgeResult.error||paymentResult.error||guestResult.error||invitationResult.error||targetResult.error;if(error)throw new Error(error.message);
   const pledges=(pledgeResult.data??[]) as FinancialPledge[];const payments=(paymentResult.data??[]) as unknown as ClosingReportPayment[];
@@ -77,7 +80,7 @@ export async function getClosingReport(eventId:number):Promise<ClosingReport>{
   const guests=guestResult.data??[];const invitations=invitationResult.data??[];
   const budget=targetResult.data?.budget_amount?Number(targetResult.data.budget_amount):null;const deadline=targetResult.data?.contribution_deadline??null;const dayMs=86400000;const today=new Date();today.setHours(0,0,0,0);const daysRemaining=deadline?Math.round((new Date(`${deadline}T00:00:00`).getTime()-today.getTime())/dayMs):null;
   const target:FinanceTargetReport={budget,deadline,remaining:budget===null?null:Math.max(budget-totalCollected,0),progress:budget===null?null:totalCollected/budget*100,daysRemaining,deadlineStatus:budget!==null&&totalCollected>=budget?"Budget achieved":deadline===null?"No deadline":daysRemaining!==null&&daysRemaining<0?"Deadline passed":daysRemaining===0?"Due today":"Upcoming"};
-  return {event:eventResult.data,guestStats:{totalGuests:guests.length,totalInvitations:invitations.length,viewed:invitations.filter(i=>i.viewed_at).length,accepted:invitations.filter(i=>i.rsvp_status==="accepted").length,maybe:invitations.filter(i=>i.rsvp_status==="maybe").length,declined:invitations.filter(i=>i.rsvp_status==="declined").length,checkedIn:guests.filter(g=>g.checked_in_at).length},financial:{activePledges:active.length,totalContributors:active.length,totalPledged,totalCollected,outstanding:Math.max(totalPledged-totalCollected,0),percentage:totalPledged?totalCollected/totalPledged*100:0,completed:pledges.filter(p=>p.calculated_status==="completed").length,partial:pledges.filter(p=>p.calculated_status==="partial").length,pending:pledges.filter(p=>p.calculated_status==="pledged").length,cancelled:pledges.filter(p=>p.calculated_status==="cancelled").length,validTransactions:valid.length,voidedTransactions:payments.length-valid.length,target},pledges,payments,trend:[...trendMap].sort().map(([date,v])=>({date,...v})),paymentMethods:[...methodMap].map(([method,amount])=>({method,amount})),reminders:reminderResult};
+  return {event:eventResult.data,guestStats:{totalGuests:guests.length,totalInvitations:invitations.length,viewed:invitations.filter(i=>i.viewed_at).length,accepted:invitations.filter(i=>i.rsvp_status==="accepted").length,maybe:invitations.filter(i=>i.rsvp_status==="maybe").length,declined:invitations.filter(i=>i.rsvp_status==="declined").length,checkedIn:guests.filter(g=>g.checked_in_at).length},financial:{activePledges:active.length,totalContributors:active.length,totalPledged,totalCollected,outstanding:Math.max(totalPledged-totalCollected,0),percentage:totalPledged?totalCollected/totalPledged*100:0,completed:pledges.filter(p=>p.calculated_status==="completed").length,partial:pledges.filter(p=>p.calculated_status==="partial").length,pending:pledges.filter(p=>p.calculated_status==="pledged").length,cancelled:pledges.filter(p=>p.calculated_status==="cancelled").length,validTransactions:valid.length,voidedTransactions:payments.length-valid.length,target},pledges,payments,trend:[...trendMap].sort().map(([date,v])=>({date,...v})),paymentMethods:[...methodMap].map(([method,amount])=>({method,amount})),reminders:reminderResult,guestEligibilitySettings};
 }
 export function dailySummary(report:ClosingReport,date:string):DailySummary{
   const payments=report.payments.filter(p=>p.payment_date===date&&!p.voided_at);
@@ -86,7 +89,7 @@ export function dailySummary(report:ClosingReport,date:string):DailySummary{
 export function exportClosingWorkbook(report:ClosingReport){
   const book=XLSX.utils.book_new();const add=(name:string,rows:Record<string,unknown>[])=>XLSX.utils.book_append_sheet(book,XLSX.utils.json_to_sheet(rows),name);
   add("Summary",[{Metric:"Event",Value:report.event.title},{Metric:"Event Type",Value:report.event.event_type},{Metric:"Event Date",Value:report.event.event_date},{Metric:"Venue",Value:report.event.venue},{Metric:"Total Guests",Value:report.guestStats.totalGuests},{Metric:"Total Contributors",Value:report.financial.totalContributors},{Metric:"Total Invitations",Value:report.guestStats.totalInvitations},{Metric:"Viewed Invitations",Value:report.guestStats.viewed},{Metric:"Accepted RSVP",Value:report.guestStats.accepted},{Metric:"Maybe RSVP",Value:report.guestStats.maybe},{Metric:"Declined RSVP",Value:report.guestStats.declined},{Metric:"Checked In",Value:report.guestStats.checkedIn},{Metric:"Event Budget",Value:report.financial.target.budget??"Not set"},{Metric:"Total Pledged",Value:report.financial.totalPledged},{Metric:"Total Collected",Value:report.financial.totalCollected},{Metric:"Remaining to Budget",Value:report.financial.target.remaining??"Not set"},{Metric:"Budget Progress Percentage",Value:report.financial.target.progress??"Not set"},{Metric:"Contribution Deadline",Value:report.financial.target.deadline??"No deadline"},{Metric:"Deadline Status",Value:report.financial.target.deadlineStatus},{Metric:"Outstanding",Value:report.financial.outstanding},{Metric:"Collection Percentage",Value:report.financial.percentage},{Metric:"Generated",Value:new Date().toISOString()}]);
-  const pledgeRows=report.pledges.map(p=>({Contributor:p.full_name,Phone:p.phone,Pledged:p.pledged_amount,Paid:p.total_paid,Balance:p.balance,Status:p.calculated_status,Notes:p.notes??""}));
+  const pledgeRows=report.pledges.map(p=>({Contributor:p.full_name,Phone:p.phone,Pledged:p.pledged_amount,Paid:p.total_paid,Balance:p.balance,Status:p.calculated_status,"Card Type":cardClassificationLabel[classifyContribution(p,report.guestEligibilitySettings)],Notes:p.notes??""}));
   add("Pledges",pledgeRows);
   const validPayments=report.payments.filter(p=>!p.voided_at);
   const voidedPayments=report.payments.filter(p=>p.voided_at);

@@ -1,6 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ClosingReport, ClosingReportPayment, ReminderHistoryRow } from "@/services/financialAutomationService";
 import { formatTzs } from "@/services/pledgeMessageService";
+import { cardClassificationLabel, classifyContribution } from "@/services/contributorGuestService";
 
 // Same dark navy/emerald family as OverviewSummaryPDF.tsx and
 // CustomSmsOutreachReportPDF.tsx, reusing their exact fixed color values and
@@ -94,22 +95,24 @@ function paidAfterReminderLabel(row: ReminderHistoryRow, payments: ClosingReport
   return days === 0 ? "Paid same day" : `Paid in ${days} day${days === 1 ? "" : "s"}`;
 }
 
-function Table({ title, rows }: { title: string; rows: { name: string; paid: number; balance: number; status: string }[] }) {
+function Table({ title, rows }: { title: string; rows: { name: string; paid: number; balance: number; status: string; cardType: string }[] }) {
   return (
     <View style={s.section} wrap>
       <Text style={s.heading}>{title}</Text>
       <View style={s.headerRow}>
-        <Text style={[s.headerCell, { width: "40%" }]}>Contributor</Text>
-        <Text style={[s.headerCell, { width: "20%" }]}>Paid</Text>
-        <Text style={[s.headerCell, { width: "20%" }]}>Balance</Text>
-        <Text style={[s.headerCell, { width: "20%" }]}>Status</Text>
+        <Text style={[s.headerCell, { width: "32%" }]}>Contributor</Text>
+        <Text style={[s.headerCell, { width: "17%" }]}>Paid</Text>
+        <Text style={[s.headerCell, { width: "17%" }]}>Balance</Text>
+        <Text style={[s.headerCell, { width: "17%" }]}>Status</Text>
+        <Text style={[s.headerCell, { width: "17%" }]}>Card Type</Text>
       </View>
       {rows.length ? rows.slice(0, 15).map((r, i) => (
         <View key={`${r.name}-${i}`} style={s.row} wrap={false}>
-          <Text style={[s.cell, { width: "40%" }]}>{r.name}</Text>
-          <Text style={[s.cell, { width: "20%" }]}>{formatTzs(r.paid)}</Text>
-          <Text style={[s.cell, { width: "20%" }]}>{formatTzs(r.balance)}</Text>
-          <Text style={[s.cell, { width: "20%" }]}>{r.status}</Text>
+          <Text style={[s.cell, { width: "32%" }]}>{r.name}</Text>
+          <Text style={[s.cell, { width: "17%" }]}>{formatTzs(r.paid)}</Text>
+          <Text style={[s.cell, { width: "17%" }]}>{formatTzs(r.balance)}</Text>
+          <Text style={[s.cell, { width: "17%" }]}>{r.status}</Text>
+          <Text style={[s.cell, { width: "17%" }]}>{r.cardType}</Text>
         </View>
       )) : <Text style={s.empty}>No data.</Text>}
     </View>
@@ -222,7 +225,7 @@ export default function FinancialClosingPDF({ report, generatedBy }: { report: C
     ["Valid Transactions", report.financial.validTransactions],
     ["Voided Transactions", report.financial.voidedTransactions],
   ];
-  const rows = report.pledges.map((p) => ({ name: p.full_name, paid: Number(p.total_paid), balance: Number(p.balance), status: p.calculated_status }));
+  const rows = report.pledges.map((p) => ({ name: p.full_name, paid: Number(p.total_paid), balance: Number(p.balance), status: p.calculated_status, cardType: cardClassificationLabel[classifyContribution(p, report.guestEligibilitySettings)] }));
   const contributorNameFor = (pledgeId: number) => report.pledges.find((p) => p.id === pledgeId)?.full_name ?? "Contributor";
   const paymentRow = (p: ClosingReportPayment) => ({
     key: String(p.id),

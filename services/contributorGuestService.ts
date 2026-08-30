@@ -61,6 +61,24 @@ export async function saveContributorGuestSettings(settings: ContributorGuestSet
   return data as ContributorGuestSettings;
 }
 
+export type CardClassification = "single" | "double" | "below_minimum";
+
+export function classifyContribution(
+  amounts: { pledged_amount: string | number; total_paid: string | number },
+  settings: Pick<ContributorGuestSettings, "classification_basis" | "single_card_minimum" | "double_card_minimum">
+): CardClassification {
+  const basisAmount = settings.classification_basis === "pledged_amount"
+    ? Number(amounts.pledged_amount)
+    : Number(amounts.total_paid);
+  if (basisAmount >= Number(settings.double_card_minimum)) return "double";
+  if (basisAmount >= Number(settings.single_card_minimum)) return "single";
+  return "below_minimum";
+}
+
+export const cardClassificationLabel: Record<CardClassification, string> = {
+  single: "Single", double: "Double", below_minimum: "Below Minimum",
+};
+
 export async function recalculateContributorGuest(pledgeId: number) {
   const { data, error } = await supabase.rpc("sync_contributor_guest", {
     target_pledge_id: pledgeId,

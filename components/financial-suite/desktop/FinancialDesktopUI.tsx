@@ -9,6 +9,7 @@ import type {
 import { formatTzs } from "@/services/pledgeMessageService";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { formatAppDate, formatAppNumber, formatAppTzs } from "@/lib/i18n/formatters";
+import { classifyContribution, type ContributorGuestSettings } from "@/services/contributorGuestService";
 
 export const financialDesktop = {
   card:
@@ -206,10 +207,14 @@ export function FinancialOverviewContent({
   summary,
   actions,
   onStatusCardClick,
+  pledges,
+  guestEligibilitySettings,
 }: {
   summary: FinanceSummary;
   actions: ReactNode;
   onStatusCardClick?: (status: string) => void;
+  pledges?: FinancialPledge[];
+  guestEligibilitySettings?: ContributorGuestSettings | null;
 }) {
   const { language, t } = useAppLanguage();
   const statusCards = [
@@ -217,6 +222,15 @@ export function FinancialOverviewContent({
     { label: t("overview.partial"), value: summary.partial_count, status: "partial", card: "border-amber-300 bg-amber-100 text-amber-800", icon: "bg-white text-amber-700" },
     { label: t("overview.notStarted"), value: summary.pledged_count, status: "pledged", card: "border-red-300 bg-red-100 text-red-700", icon: "bg-white text-red-700" },
   ];
+  if (guestEligibilitySettings && pledges) {
+    const active = pledges.filter((p) => p.calculated_status !== "cancelled");
+    const singleCount = active.filter((p) => classifyContribution(p, guestEligibilitySettings) === "single").length;
+    const doubleCount = active.filter((p) => classifyContribution(p, guestEligibilitySettings) === "double").length;
+    statusCards.push(
+      { label: t("eligibility.single"), value: singleCount, status: "single", card: "border-blue-300 bg-blue-100 text-blue-800", icon: "bg-white text-blue-600" },
+      { label: t("eligibility.double"), value: doubleCount, status: "double", card: "border-violet-300 bg-violet-100 text-violet-800", icon: "bg-white text-violet-600" },
+    );
+  }
   const collection = Number(summary.completion_percentage || 0);
   const budget = Number(summary.budget_progress_percentage || 0);
   return (
@@ -224,16 +238,18 @@ export function FinancialOverviewContent({
       <div className="flex flex-wrap gap-3">{actions}</div>
       <section>
         <h2 className="text-xl font-bold text-slate-950">{t("overview.contributorStatus")}</h2>
-        <div className="mt-3 grid gap-4 md:grid-cols-3">
-          {statusCards.map(({ label, value, status, card, icon }) => (
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {statusCards.map(({ label, value, status, card, icon }) => {
+            const clickable = Boolean(onStatusCardClick) && status !== "single" && status !== "double";
+            return (
             <article
               key={label}
-              onClick={onStatusCardClick ? () => onStatusCardClick(status) : undefined}
-              role={onStatusCardClick ? "button" : undefined}
-              tabIndex={onStatusCardClick ? 0 : undefined}
-              onKeyDown={onStatusCardClick ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onStatusCardClick(status); } } : undefined}
-              aria-label={onStatusCardClick ? `${label}: ${value}. ${language === "sw" ? "Ona wachangiaji" : "View contributors"}` : undefined}
-              className={`rounded-2xl border p-5 ${card} ${onStatusCardClick ? "cursor-pointer transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2" : ""}`}
+              onClick={clickable ? () => onStatusCardClick!(status) : undefined}
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              onKeyDown={clickable ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onStatusCardClick!(status); } } : undefined}
+              aria-label={clickable ? `${label}: ${value}. ${language === "sw" ? "Ona wachangiaji" : "View contributors"}` : undefined}
+              className={`rounded-2xl border p-5 ${card} ${clickable ? "cursor-pointer transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2" : ""}`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-[14px] font-semibold">{label}</p>
@@ -243,7 +259,7 @@ export function FinancialOverviewContent({
               </div>
               <p className="mt-3 text-3xl font-bold tabular-nums">{value}</p>
             </article>
-          ))}
+          );})}
         </div>
       </section>
       <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
