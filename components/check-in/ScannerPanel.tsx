@@ -32,9 +32,12 @@ export default function ScannerPanel({
   const showResult = checking || Boolean(state);
   const config = state === "checked_in"
     ? { title: "Check-in Successful", icon: "success" as const, shell: "border-emerald-200 bg-emerald-50", accent: "text-emerald-700" }
-    : state === "already_checked_in"
-      ? { title: "Already Checked In", icon: "warning" as const, shell: "border-amber-200 bg-amber-50", accent: "text-amber-700" }
-      : { title: "Invalid Event Pass", icon: "error" as const, shell: "border-red-200 bg-red-50", accent: "text-red-700" };
+    : state === "partially_checked_in"
+      ? { title: "Partially Checked In", icon: "clock" as const, shell: "border-sky-200 bg-sky-50", accent: "text-sky-700" }
+      : state === "already_checked_in"
+        ? { title: "Fully Checked In", icon: "warning" as const, shell: "border-amber-200 bg-amber-50", accent: "text-amber-700" }
+        : { title: "Invalid Event Pass", icon: "error" as const, shell: "border-red-200 bg-red-50", accent: "text-red-700" };
+  const remainingGuests = result?.guest ? result.guest.allowed_guests - result.guest.checked_in_count : 0;
 
   return <section className="sep-card min-w-0 p-4 sm:p-6" aria-labelledby="scanner-title">
     <div className="flex items-start gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><CheckInIcon name="camera" /></span><div><h2 id="scanner-title" className="sep-card-title">QR Scanner</h2><p className="sep-secondary mt-1">Point the camera at the guest&apos;s QR code or use the upload option in the scanner.</p></div></div>
@@ -64,10 +67,16 @@ export default function ScannerPanel({
               <div className="min-w-0 flex-1">
                 <h3 className={`text-xl font-bold ${config.accent}`}>{config.title}</h3>
                 <p className="mt-1 text-sm text-slate-700">{errorMessage || result?.message}</p>
+                {result?.guest && result.guest.allowed_guests > 1 && (state === "checked_in" || state === "partially_checked_in" || state === "already_checked_in") && (
+                  <p className={`mt-2 text-sm font-bold ${config.accent}`}>
+                    Checked in: {result.guest.checked_in_count} of {result.guest.allowed_guests}
+                    {state === "partially_checked_in" && ` — ${remainingGuests} more guest${remainingGuests === 1 ? "" : "s"} expected`}
+                  </p>
+                )}
                 {result?.guest && <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Detail label="Guest Name" value={result.guest.full_name} />
                   <Detail label="Pass ID" value={result.guest.event_pass_id ? formatPassIdForDisplay(result.guest.event_pass_id) : "Not available"} mono />
-                  <Detail label="Allowed Guests" value={String(result.guest.allowed_guests)} />
+                  <Detail label="Checked In Progress" value={`${result.guest.checked_in_count} of ${result.guest.allowed_guests}`} />
                   <Detail label="Category" value={result.guest.category || "Normal"} />
                   <Detail label="Checked In Time" value={formatTime(result.guest.checked_in_at)} wide />
                 </dl>}

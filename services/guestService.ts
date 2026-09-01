@@ -31,6 +31,8 @@ export type Guest = {
   event_pass_id: string | null;
   status: string;
   checked_in_at: string | null;
+  checked_in_count: number;
+  last_checked_in_at: string | null;
   created_at: string;
 };
 
@@ -38,6 +40,7 @@ export type CheckInResult = {
   success: boolean;
   status:
     | "checked_in"
+    | "partially_checked_in"
     | "already_checked_in"
     | "invalid";
   message: string;
@@ -109,6 +112,7 @@ function normalizeCheckInResult(
 
   const validStatuses = [
     "checked_in",
+    "partially_checked_in",
     "already_checked_in",
     "invalid",
   ] as const;
@@ -121,6 +125,7 @@ function normalizeCheckInResult(
     )
       ? (result.status as
           | "checked_in"
+          | "partially_checked_in"
           | "already_checked_in"
           | "invalid")
       : "invalid";
