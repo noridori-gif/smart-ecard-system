@@ -6,8 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GuestImportPanel from "@/components/guest-import/GuestImportPanel";
 import { supabase } from "@/lib/supabase";
 import { formatPassIdForDisplay } from "@/lib/passId";
+import { checkInGuest, checkInGuestByEventPassId } from "@/services/guestService";
 
-type GuestStatus = "pending" | "checked_in";
+type GuestStatus = "pending" | "partially_checked_in" | "checked_in";
 
 type GuestEvent = {
   id: number;
@@ -26,6 +27,7 @@ type Guest = {
   event_pass_id: string | null;
   status: GuestStatus | string;
   checked_in_at: string | null;
+  checked_in_count: number;
   created_at: string;
   events: GuestEvent | GuestEvent[] | null;
 };
@@ -54,6 +56,37 @@ function getSingleEvent(
   }
 
   return eventRelation;
+}
+
+function statusBadge(guest: Guest): { label: string; className: string } {
+  if (guest.status === "checked_in") {
+    return { label: "Checked In", className: "bg-emerald-100 text-emerald-700" };
+  }
+
+  if (guest.status === "partially_checked_in") {
+    return {
+      label: `Partial ${guest.checked_in_count}/${guest.allowed_guests}`,
+      className: "bg-sky-100 text-sky-700",
+    };
+  }
+
+  return { label: "Pending", className: "bg-amber-100 text-amber-700" };
+}
+
+function checkInButtonLabel(guest: Guest, isProcessing: boolean, doneLabel: string): string {
+  if (isProcessing) {
+    return "Please wait...";
+  }
+
+  if (guest.status === "checked_in") {
+    return doneLabel;
+  }
+
+  if (guest.status === "partially_checked_in") {
+    return `Check-In (${guest.checked_in_count}/${guest.allowed_guests})`;
+  }
+
+  return "Check-In";
 }
 
 function formatDate(dateValue: string | null) {
@@ -112,6 +145,7 @@ export default function GuestsPage() {
               event_pass_id,
               status,
               checked_in_at,
+              checked_in_count,
               created_at,
               events (
                 id,
@@ -203,15 +237,20 @@ export default function GuestsPage() {
   async function handleCheckIn(guest: Guest) {
     if (guest.status === "checked_in") {
       showNotification(
-        `${guest.full_name} tayari amefanyiwa check-in.`,
+        `${guest.full_name} tayari amekamilisha check-in (${guest.allowed_guests} ya ${guest.allowed_guests}).`,
         "error"
       );
 
       return;
     }
 
+    const progressHint =
+      guest.allowed_guests > 1
+        ? ` (${guest.checked_in_count} ya ${guest.allowed_guests} tayari wamefanyiwa check-in)`
+        : "";
+
     const confirmed = window.confirm(
-      `Unataka kumfanyia check-in ${guest.full_name}?`
+      `Unataka kumfanyia check-in ${guest.full_name}?${progressHint}`
     );
 
     if (!confirmed) {
@@ -221,37 +260,52 @@ export default function GuestsPage() {
     try {
       setProcessingGuestId(guest.id);
 
-      const checkedInAt =
-        new Date().toISOString();
+      // Route through the same secure_guest_check_in RPC the scanner and
+      // manual-entry flows use, so this is the only code path that ever
+      // mutates check-in state — it's what keeps checked_in_count honest.
+      const verification = guest.event_pass_id
+        ? await checkInGuestByEventPassId(guest.event_pass_id)
+        : await checkInGuest(guest.qr_token);
 
-      const { error } = await supabase
-        .from("guests")
-        .update({
-          status: "checked_in",
-          checked_in_at: checkedInAt,
-        })
-        .eq("id", guest.id);
+      if (verification.status === "invalid" || !verification.guest) {
+        showNotification(
+          verification.message || "Check-in imeshindikana.",
+          "error"
+        );
 
-      if (error) {
-        throw new Error(error.message);
+        return;
       }
+
+      const updatedGuest = verification.guest;
 
       setGuests((currentGuests) =>
         currentGuests.map((currentGuest) =>
           currentGuest.id === guest.id
-            ? {
-                ...currentGuest,
-                status: "checked_in",
-                checked_in_at: checkedInAt,
-              }
+            ? { ...currentGuest, ...updatedGuest }
             : currentGuest
         )
       );
 
-      showNotification(
-        `${guest.full_name} amefanyiwa check-in vizuri.`,
-        "success"
-      );
+      if (verification.status === "checked_in") {
+        showNotification(
+          `${guest.full_name} amefanyiwa check-in kikamilifu${
+            updatedGuest.allowed_guests > 1
+              ? ` (${updatedGuest.checked_in_count} ya ${updatedGuest.allowed_guests})`
+              : ""
+          }.`,
+          "success"
+        );
+      } else if (verification.status === "partially_checked_in") {
+        showNotification(
+          `${guest.full_name}: ${updatedGuest.checked_in_count} ya ${updatedGuest.allowed_guests} wamefanyiwa check-in.`,
+          "success"
+        );
+      } else {
+        showNotification(
+          `${guest.full_name} tayari amekamilisha check-in (${updatedGuest.allowed_guests} ya ${updatedGuest.allowed_guests}).`,
+          "error"
+        );
+      }
     } catch (error) {
       console.error(
         "Check-in error:",
@@ -403,17 +457,22 @@ export default function GuestsPage() {
         GUESTS_PER_PAGE
     );
 
-  const checkedInCount =
-    filteredGuests.filter(
-      (guest) =>
-        guest.status === "checked_in"
-    ).length;
+  // Headcount, not pass count: a Double pass with 1 of 2 checked in
+  // contributes 1 to Checked In and 1 to Pending, not 0 or 2 of either.
+  const totalGuestHeadcount = filteredGuests.reduce(
+    (sum, guest) => sum + guest.allowed_guests,
+    0
+  );
 
-  const pendingCount =
-    filteredGuests.filter(
-      (guest) =>
-        guest.status !== "checked_in"
-    ).length;
+  const checkedInCount = filteredGuests.reduce(
+    (sum, guest) => sum + guest.checked_in_count,
+    0
+  );
+
+  const pendingCount = Math.max(
+    totalGuestHeadcount - checkedInCount,
+    0
+  );
 
   if (loading) {
     return (
@@ -462,7 +521,7 @@ export default function GuestsPage() {
             </p>
 
             <p className="mt-1 text-xl font-bold text-slate-900">
-              {filteredGuests.length}
+              {totalGuestHeadcount}
             </p>
           </div>
 
@@ -577,6 +636,10 @@ export default function GuestsPage() {
                 Pending
               </option>
 
+              <option value="partially_checked_in">
+                Partially Checked In
+              </option>
+
               <option value="checked_in">
                 Checked In
               </option>
@@ -678,11 +741,10 @@ export default function GuestsPage() {
                           </td>
 
                           <td className="px-5 py-4">
-                            {guest.status ===
-                            "checked_in" ? (
+                            {guest.status === "checked_in" || guest.status === "partially_checked_in" ? (
                               <div>
-                                <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                                  Checked In
+                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(guest).className}`}>
+                                  {statusBadge(guest).label}
                                 </span>
 
                                 <p className="mt-1 text-xs text-slate-400">
@@ -692,8 +754,8 @@ export default function GuestsPage() {
                                 </p>
                               </div>
                             ) : (
-                              <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                                Pending
+                              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(guest).className}`}>
+                                {statusBadge(guest).label}
                               </span>
                             )}
                           </td>
@@ -721,12 +783,7 @@ export default function GuestsPage() {
                                 }
                                 className="min-h-11 rounded-xl bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                               >
-                                {isProcessing
-                                  ? "Please wait..."
-                                  : guest.status ===
-                                    "checked_in"
-                                  ? "Checked In"
-                                  : "Check-In"}
+                                {checkInButtonLabel(guest, isProcessing, "Checked In")}
                               </button>
 
                               <button
@@ -783,17 +840,9 @@ export default function GuestsPage() {
                     </div>
 
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        guest.status ===
-                        "checked_in"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${statusBadge(guest).className}`}
                     >
-                      {guest.status ===
-                      "checked_in"
-                        ? "Checked In"
-                        : "Pending"}
+                      {statusBadge(guest).label}
                     </span>
                   </div>
 
@@ -853,10 +902,7 @@ export default function GuestsPage() {
                       }
                       className="min-h-11 rounded-xl bg-emerald-700 px-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:bg-slate-300"
                     >
-                      {guest.status ===
-                      "checked_in"
-                        ? "Done"
-                        : "Check-In"}
+                      {checkInButtonLabel(guest, isProcessing, "Done")}
                     </button>
 
                     <button
