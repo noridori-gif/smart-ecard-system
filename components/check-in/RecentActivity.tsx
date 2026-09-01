@@ -1,7 +1,7 @@
 import { formatPassIdForDisplay } from "@/lib/passId";
 import CheckInIcon, { type CheckInIconName } from "./CheckInIcons";
 
-export type ActivityStatus = "checked_in" | "already_checked_in" | "invalid";
+export type ActivityStatus = "checked_in" | "partially_checked_in" | "already_checked_in" | "invalid";
 
 export type ActivityEntry = {
   id: string;
@@ -18,6 +18,7 @@ export function passLabel(allowed: number) {
 
 const statusConfig: Record<ActivityStatus, { icon: CheckInIconName; iconWrap: string; label: string }> = {
   checked_in: { icon: "success", iconWrap: "bg-emerald-50 text-emerald-700", label: "Checked in" },
+  partially_checked_in: { icon: "clock", iconWrap: "bg-sky-50 text-sky-700", label: "Partially checked in" },
   already_checked_in: { icon: "warning", iconWrap: "bg-amber-50 text-amber-700", label: "Duplicate scan" },
   invalid: { icon: "error", iconWrap: "bg-red-50 text-red-700", label: "Rejected" },
 };

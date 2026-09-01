@@ -130,7 +130,7 @@ export default function CheckInPage() {
       setRejectedPasses((value) => value + 1);
       pushScanLog({ status: "invalid", guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
     }
-    if (verification.status === "checked_in" && verification.guest) {
+    if ((verification.status === "checked_in" || verification.status === "partially_checked_in") && verification.guest) {
       setGuests((current) => verification.guest?.event_id === selectedEventId
         ? current.map((guest) => guest.id === verification.guest?.id ? verification.guest : guest)
         : current);
@@ -259,13 +259,18 @@ export default function CheckInPage() {
     setDashboardLoading(false);
   }, [loadEvents, loadAttendance, selectedEventId]);
 
-  const checkedGuests = useMemo(() => guests.filter((guest) => guest.status === "checked_in" || guest.checked_in_at), [guests]);
-  const recentCheckins = useMemo(() => [...checkedGuests].sort((a, b) => new Date(b.checked_in_at ?? 0).getTime() - new Date(a.checked_in_at ?? 0).getTime()).slice(0, 10), [checkedGuests]);
+  // A guest record with any check-in activity — includes both fully and partially
+  // checked-in passes (checked_in_at is set on first arrival and stays set).
+  const checkedGuests = useMemo(() => guests.filter((guest) => guest.status === "checked_in" || guest.status === "partially_checked_in" || guest.checked_in_at), [guests]);
+  const recentCheckins = useMemo(() => [...checkedGuests].sort((a, b) => new Date(b.last_checked_in_at ?? b.checked_in_at ?? 0).getTime() - new Date(a.last_checked_in_at ?? a.checked_in_at ?? 0).getTime()).slice(0, 10), [checkedGuests]);
 
   // Card type (Single/Double) is sourced from the same Contributor Guest Eligibility
   // classification used in the Financial Suite Overview and Michango closing report,
   // not guessed from allowed_guests — falling back to allowed_guests only for guests
   // with no linked pledge (e.g. manually added guests outside the contributor sync).
+  // Each bucket tracks pass/card count (for "how many passes were issued") separately
+  // from capacity and checked-in headcount (for "how many people"), since a Double
+  // pass can now be partially checked in — 1 of its 2 allowed guests present.
   const cardTypeStats = useMemo(() => {
     const classificationByGuestId = new Map<number, "single" | "double">();
     if (guestEligibilitySettings) {
@@ -277,44 +282,44 @@ export default function CheckInPage() {
         }
       }
     }
-    let singleTotal = 0, singleChecked = 0, doubleTotal = 0, doubleChecked = 0;
+    const single = { passCount: 0, capacity: 0, checkedIn: 0 };
+    const double = { passCount: 0, capacity: 0, checkedIn: 0 };
     for (const guest of guests) {
       const type = classificationByGuestId.get(guest.id)
         ?? (guest.allowed_guests === 1 ? "single" : guest.allowed_guests === 2 ? "double" : null);
       if (!type) continue;
-      const isCheckedIn = guest.status === "checked_in" || Boolean(guest.checked_in_at);
-      if (type === "single") { singleTotal += 1; if (isCheckedIn) singleChecked += 1; }
-      else { doubleTotal += 1; if (isCheckedIn) doubleChecked += 1; }
+      const bucket = type === "single" ? single : double;
+      bucket.passCount += 1;
+      bucket.capacity += guest.allowed_guests;
+      bucket.checkedIn += guest.checked_in_count;
     }
-    return { singleTotal, singleChecked, doubleTotal, doubleChecked };
+    return { single, double };
   }, [guests, pledges, guestEligibilitySettings]);
 
   const metrics = useMemo<AttendanceMetrics>(() => {
     const invitedGuests = guests.reduce((sum, guest) => sum + guest.allowed_guests, 0);
-    const checkedInGuests = checkedGuests.reduce((sum, guest) => sum + guest.allowed_guests, 0);
+    const checkedInGuests = guests.reduce((sum, guest) => sum + guest.checked_in_count, 0);
     return {
       invitations: invitations.length,
       invitedGuests,
-      singlePasses: cardTypeStats.singleTotal,
-      doublePasses: cardTypeStats.doubleTotal,
+      singlePasses: cardTypeStats.single.passCount,
+      doublePasses: cardTypeStats.double.passCount,
       checkedInGuests,
       remainingGuests: Math.max(invitedGuests - checkedInGuests, 0),
     };
-  }, [guests, invitations, checkedGuests, cardTypeStats]);
+  }, [guests, invitations, cardTypeStats]);
   const today = new Date().toDateString();
   const successfulToday = checkedGuests.filter((guest) => guest.checked_in_at && new Date(guest.checked_in_at).toDateString() === today).length;
-  const singleChecked = cardTypeStats.singleChecked;
-  const doubleChecked = cardTypeStats.doubleChecked;
   const attendancePercentage = metrics.invitedGuests ? (metrics.checkedInGuests / metrics.invitedGuests) * 100 : 0;
 
   const activityEntries = useMemo<ActivityEntry[]>(() => {
     const successEntries: ActivityEntry[] = recentCheckins.map((guest) => ({
       id: `guest-${guest.id}`,
-      status: "checked_in",
+      status: guest.status === "partially_checked_in" ? "partially_checked_in" : "checked_in",
       guestName: guest.full_name,
       passId: guest.event_pass_id,
-      detail: passLabel(guest.allowed_guests),
-      occurredAt: guest.checked_in_at ?? new Date(0).toISOString(),
+      detail: guest.allowed_guests > 1 ? `${guest.checked_in_count} of ${guest.allowed_guests} checked in` : passLabel(guest.allowed_guests),
+      occurredAt: guest.last_checked_in_at ?? guest.checked_in_at ?? new Date(0).toISOString(),
     }));
     return [...successEntries, ...scanLog]
       .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
@@ -346,8 +351,8 @@ export default function CheckInPage() {
           remaining={metrics.remainingGuests}
           attendancePercentage={attendancePercentage}
           totalGuests={guests.length}
-          single={{ total: cardTypeStats.singleTotal, checkedIn: cardTypeStats.singleChecked }}
-          double={{ total: cardTypeStats.doubleTotal, checkedIn: cardTypeStats.doubleChecked }}
+          single={{ total: cardTypeStats.single.capacity, checkedIn: cardTypeStats.single.checkedIn }}
+          double={{ total: cardTypeStats.double.capacity, checkedIn: cardTypeStats.double.checkedIn }}
         />
 
         <section aria-labelledby="check-in-tools-title">
@@ -415,7 +420,7 @@ export default function CheckInPage() {
           ) : (
             <div className="space-y-5">
               <AttendanceCards metrics={metrics} />
-              <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: singleChecked, maximum: metrics.singlePasses }} double={{ current: doubleChecked, maximum: metrics.doublePasses }} />
+              <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: cardTypeStats.single.checkedIn, maximum: cardTypeStats.single.capacity }} double={{ current: cardTypeStats.double.checkedIn, maximum: cardTypeStats.double.capacity }} />
             </div>
           )}
         </section>
