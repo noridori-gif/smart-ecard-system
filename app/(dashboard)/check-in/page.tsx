@@ -354,14 +354,16 @@ export default function CheckInPage() {
       <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
     ) : (
       <>
-        <StatStrip
-          totalGuests={classifiedTotalGuests}
-          checkedIn={classifiedCheckedIn}
-          remaining={classifiedRemaining}
-          attendancePercentage={classifiedAttendancePercentage}
-        />
+        <div className="space-y-1.5">
+          <StatStrip
+            totalGuests={classifiedTotalGuests}
+            checkedIn={classifiedCheckedIn}
+            remaining={classifiedRemaining}
+            attendancePercentage={classifiedAttendancePercentage}
+          />
 
-        <CardTypeBreakdown single={cardTypeStats.single} double={cardTypeStats.double} />
+          <CardTypeBreakdown single={cardTypeStats.single} double={cardTypeStats.double} />
+        </div>
 
         <section aria-labelledby="check-in-tools-title">
           <div className="mb-4">
