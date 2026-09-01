@@ -92,6 +92,16 @@ export type PaymentCorrectionInput = {
   provider: string; receivedBy: string; notes: string; reason: string;
 };
 
+export async function getPledgesForEvent(eventId: number): Promise<FinancialPledge[]> {
+  const { data, error } = await supabase
+    .from("event_pledge_financial_summary")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FinancialPledge[];
+}
+
 export async function getFinancialSuite(eventId: number) {
   const [eventResult, pledgeResult, summaryResult, guestsResult] = await Promise.all([
     supabase.from("events").select("id,title,event_date,language,invitation_template").eq("id", eventId).single(),

@@ -7,7 +7,6 @@ import ProgressCards from "@/components/check-in/ProgressCards";
 import RecentActivity, { passLabel, type ActivityEntry, type ActivityStatus } from "@/components/check-in/RecentActivity";
 import ScannerPanel from "@/components/check-in/ScannerPanel";
 import StatStrip from "@/components/check-in/StatStrip";
-import ValidationPanel from "@/components/check-in/ValidationPanel";
 import CheckInIcon from "@/components/check-in/CheckInIcons";
 import EventSelector from "@/components/dashboard/EventSelector";
 import { getEvents, type Event } from "@/services/eventService";
@@ -19,6 +18,8 @@ import {
   type Guest,
 } from "@/services/guestService";
 import { getInvitationsByEvent, type Invitation } from "@/services/invitationService";
+import { getPledgesForEvent, type FinancialPledge } from "@/services/financialSuiteService";
+import { classifyContribution, getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 
 type CheckInMethod = "qr" | "event_pass";
 type SecondaryTab = "activity" | "stats";
@@ -54,6 +55,8 @@ export default function CheckInPage() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [pledges, setPledges] = useState<FinancialPledge[]>([]);
+  const [guestEligibilitySettings, setGuestEligibilitySettings] = useState<ContributorGuestSettings | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [duplicateAttempts, setDuplicateAttempts] = useState(0);
   const [rejectedPasses, setRejectedPasses] = useState(0);
@@ -78,9 +81,16 @@ export default function CheckInPage() {
 
   const loadAttendance = useCallback(async (eventId: number) => {
     try {
-      const [guestData, invitationData] = await Promise.all([getGuestsByEvent(eventId), getInvitationsByEvent(eventId)]);
+      const [guestData, invitationData, pledgeData, settingsData] = await Promise.all([
+        getGuestsByEvent(eventId),
+        getInvitationsByEvent(eventId),
+        getPledgesForEvent(eventId),
+        getContributorGuestSettings(eventId),
+      ]);
       setGuests(guestData);
       setInvitations(invitationData);
+      setPledges(pledgeData);
+      setGuestEligibilitySettings(settingsData);
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "Attendance dashboard could not be loaded.");
     }
@@ -251,22 +261,50 @@ export default function CheckInPage() {
 
   const checkedGuests = useMemo(() => guests.filter((guest) => guest.status === "checked_in" || guest.checked_in_at), [guests]);
   const recentCheckins = useMemo(() => [...checkedGuests].sort((a, b) => new Date(b.checked_in_at ?? 0).getTime() - new Date(a.checked_in_at ?? 0).getTime()).slice(0, 10), [checkedGuests]);
+
+  // Card type (Single/Double) is sourced from the same Contributor Guest Eligibility
+  // classification used in the Financial Suite Overview and Michango closing report,
+  // not guessed from allowed_guests — falling back to allowed_guests only for guests
+  // with no linked pledge (e.g. manually added guests outside the contributor sync).
+  const cardTypeStats = useMemo(() => {
+    const classificationByGuestId = new Map<number, "single" | "double">();
+    if (guestEligibilitySettings) {
+      for (const pledge of pledges) {
+        if (pledge.calculated_status === "cancelled" || pledge.guest_id === null) continue;
+        const classification = classifyContribution(pledge, guestEligibilitySettings);
+        if (classification === "single" || classification === "double") {
+          classificationByGuestId.set(pledge.guest_id, classification);
+        }
+      }
+    }
+    let singleTotal = 0, singleChecked = 0, doubleTotal = 0, doubleChecked = 0;
+    for (const guest of guests) {
+      const type = classificationByGuestId.get(guest.id)
+        ?? (guest.allowed_guests === 1 ? "single" : guest.allowed_guests === 2 ? "double" : null);
+      if (!type) continue;
+      const isCheckedIn = guest.status === "checked_in" || Boolean(guest.checked_in_at);
+      if (type === "single") { singleTotal += 1; if (isCheckedIn) singleChecked += 1; }
+      else { doubleTotal += 1; if (isCheckedIn) doubleChecked += 1; }
+    }
+    return { singleTotal, singleChecked, doubleTotal, doubleChecked };
+  }, [guests, pledges, guestEligibilitySettings]);
+
   const metrics = useMemo<AttendanceMetrics>(() => {
     const invitedGuests = guests.reduce((sum, guest) => sum + guest.allowed_guests, 0);
     const checkedInGuests = checkedGuests.reduce((sum, guest) => sum + guest.allowed_guests, 0);
     return {
       invitations: invitations.length,
       invitedGuests,
-      singlePasses: guests.filter((guest) => guest.allowed_guests === 1).length,
-      doublePasses: guests.filter((guest) => guest.allowed_guests === 2).length,
+      singlePasses: cardTypeStats.singleTotal,
+      doublePasses: cardTypeStats.doubleTotal,
       checkedInGuests,
       remainingGuests: Math.max(invitedGuests - checkedInGuests, 0),
     };
-  }, [guests, invitations, checkedGuests]);
+  }, [guests, invitations, checkedGuests, cardTypeStats]);
   const today = new Date().toDateString();
   const successfulToday = checkedGuests.filter((guest) => guest.checked_in_at && new Date(guest.checked_in_at).toDateString() === today).length;
-  const singleChecked = checkedGuests.filter((guest) => guest.allowed_guests === 1).length;
-  const doubleChecked = checkedGuests.filter((guest) => guest.allowed_guests === 2).length;
+  const singleChecked = cardTypeStats.singleChecked;
+  const doubleChecked = cardTypeStats.doubleChecked;
   const attendancePercentage = metrics.invitedGuests ? (metrics.checkedInGuests / metrics.invitedGuests) * 100 : 0;
 
   const activityEntries = useMemo<ActivityEntry[]>(() => {
@@ -302,39 +340,51 @@ export default function CheckInPage() {
       <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
     ) : (
       <>
-        <StatStrip checkedIn={metrics.checkedInGuests} invited={metrics.invitedGuests} remaining={metrics.remainingGuests} attendancePercentage={attendancePercentage} />
+        <StatStrip
+          checkedIn={metrics.checkedInGuests}
+          invited={metrics.invitedGuests}
+          remaining={metrics.remainingGuests}
+          attendancePercentage={attendancePercentage}
+          totalGuests={guests.length}
+          single={{ total: cardTypeStats.singleTotal, checkedIn: cardTypeStats.singleChecked }}
+          double={{ total: cardTypeStats.doubleTotal, checkedIn: cardTypeStats.doubleChecked }}
+        />
 
         <section aria-labelledby="check-in-tools-title">
           <div className="mb-4">
             <h2 id="check-in-tools-title" className="sep-section-title">Check-In Tools</h2>
             <p className="sep-secondary mt-1">Use the scanner for the fastest entry, with manual verification as a fallback.</p>
           </div>
-          <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1.3fr)_minmax(300px,1fr)]">
-            <div className="flex min-w-0 flex-col gap-4">
-              <ScannerPanel scannerReady={scannerReady} checking={isChecking && checkInMethod === "qr"} cameraError={cameraError} onRetry={handleRetryCamera} />
+          <div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-4">
+            <ScannerPanel
+              scannerReady={scannerReady}
+              checking={isChecking}
+              cameraError={cameraError}
+              onRetry={handleRetryCamera}
+              result={result}
+              errorMessage={errorMessage}
+              onNext={handleNextGuest}
+            />
 
-              <button
-                type="button"
-                onClick={() => setShowManualEntry((value) => !value)}
-                aria-expanded={showManualEntry}
-                aria-controls="manual-entry-panel"
-                className="sep-card flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-stone-50 sm:p-5"
-              >
-                <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                  <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
-                  {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
-                </span>
-                <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-              </button>
+            <button
+              type="button"
+              onClick={() => setShowManualEntry((value) => !value)}
+              aria-expanded={showManualEntry}
+              aria-controls="manual-entry-panel"
+              className="sep-card flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-stone-50 sm:p-5"
+            >
+              <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+                <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
+                {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
+              </span>
+              <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
 
-              {showManualEntry && (
-                <div id="manual-entry-panel">
-                  <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
-                </div>
-              )}
-            </div>
-
-            <ValidationPanel result={result} errorMessage={errorMessage} checking={isChecking} onNext={handleNextGuest} />
+            {showManualEntry && (
+              <div id="manual-entry-panel">
+                <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
+              </div>
+            )}
           </div>
         </section>
 
