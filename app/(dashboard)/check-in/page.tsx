@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AttendanceCards, { type AttendanceMetrics } from "@/components/check-in/AttendanceCards";
+import CardTypeBreakdown from "@/components/check-in/CardTypeBreakdown";
 import ManualEntryPanel from "@/components/check-in/ManualEntryPanel";
 import ProgressCards from "@/components/check-in/ProgressCards";
 import RecentActivity, { passLabel, type ActivityEntry, type ActivityStatus } from "@/components/check-in/RecentActivity";
@@ -310,7 +311,15 @@ export default function CheckInPage() {
   }, [guests, invitations, cardTypeStats]);
   const today = new Date().toDateString();
   const successfulToday = checkedGuests.filter((guest) => guest.checked_in_at && new Date(guest.checked_in_at).toDateString() === today).length;
-  const attendancePercentage = metrics.invitedGuests ? (metrics.checkedInGuests / metrics.invitedGuests) * 100 : 0;
+
+  // The top Event Overview strip is deliberately scoped to guests classified as
+  // Single or Double (cardTypeStats), not the full guest list, so "Total Guests"
+  // always reconciles exactly with the Single/Double cards shown right below it —
+  // single.capacity + double.capacity, never a separately-computed record count.
+  const classifiedTotalGuests = cardTypeStats.single.capacity + cardTypeStats.double.capacity;
+  const classifiedCheckedIn = cardTypeStats.single.checkedIn + cardTypeStats.double.checkedIn;
+  const classifiedRemaining = Math.max(classifiedTotalGuests - classifiedCheckedIn, 0);
+  const classifiedAttendancePercentage = classifiedTotalGuests ? (classifiedCheckedIn / classifiedTotalGuests) * 100 : 0;
 
   const activityEntries = useMemo<ActivityEntry[]>(() => {
     const successEntries: ActivityEntry[] = recentCheckins.map((guest) => ({
@@ -346,14 +355,13 @@ export default function CheckInPage() {
     ) : (
       <>
         <StatStrip
-          checkedIn={metrics.checkedInGuests}
-          invited={metrics.invitedGuests}
-          remaining={metrics.remainingGuests}
-          attendancePercentage={attendancePercentage}
-          totalGuests={guests.length}
-          single={{ total: cardTypeStats.single.capacity, checkedIn: cardTypeStats.single.checkedIn }}
-          double={{ total: cardTypeStats.double.capacity, checkedIn: cardTypeStats.double.checkedIn }}
+          totalGuests={classifiedTotalGuests}
+          checkedIn={classifiedCheckedIn}
+          remaining={classifiedRemaining}
+          attendancePercentage={classifiedAttendancePercentage}
         />
+
+        <CardTypeBreakdown single={cardTypeStats.single} double={cardTypeStats.double} />
 
         <section aria-labelledby="check-in-tools-title">
           <div className="mb-4">
