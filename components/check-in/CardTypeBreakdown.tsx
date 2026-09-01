@@ -15,7 +15,7 @@ function CardTypeRow({
 
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-2 text-xs">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="font-bold uppercase tracking-wide text-slate-500">
           {label}
           <span className="ml-1.5 font-semibold normal-case tracking-normal text-slate-700">
@@ -35,7 +35,7 @@ function CardTypeRow({
         >
           <div className="h-full rounded-full bg-emerald-600 transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${percentage}%` }} />
         </div>
-        <span className="shrink-0 whitespace-nowrap text-[11px] text-slate-500">
+        <span className="shrink-0 whitespace-nowrap text-xs text-slate-500">
           {bucket.checkedIn.toLocaleString()} of {bucket.capacity.toLocaleString()} {unit} checked in
         </span>
       </div>

@@ -21,8 +21,8 @@ export default function StatStrip({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         {items.map(([label, value]) => (
           <div key={label} className="flex min-w-[5rem] items-baseline gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-            <p className="text-sm font-bold tabular-nums text-slate-900">{value}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+            <p className="text-base font-bold tabular-nums text-slate-900">{value}</p>
           </div>
         ))}
         <div className="ml-auto hidden items-center gap-2 text-xs font-semibold text-emerald-700 sm:flex">
