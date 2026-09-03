@@ -80,8 +80,8 @@ const ROSE_CORNER_TL = {
 };
 const ROSE_CORNER_TR = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "tr.png")).toString("base64")}`,
-  width: 260,
-  height: 765,
+  width: 220,
+  height: 1021,
 };
 const ROSE_CORNER_BL = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "bl.png")).toString("base64")}`,
@@ -90,8 +90,8 @@ const ROSE_CORNER_BL = {
 };
 const ROSE_CORNER_BR = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "br.png")).toString("base64")}`,
-  width: 180,
-  height: 806,
+  width: 210,
+  height: 772,
 };
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;

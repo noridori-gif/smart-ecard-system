@@ -15,17 +15,23 @@ const src = "public/invitation-assets/rose-garden-reference.png";
 const outDir = "public/invitation-assets/rose-garden";
 
 // Source crop boxes (verified clean of any card text/photo/icons).
+// tr/br were widened after the first pass looked visibly weaker than tl/bl
+// on the actual ivory card: the original 300px-tall tr crop cut off a much
+// richer floral cascade that (per public/invitation-assets/README.md)
+// actually continues text-free down to ~y:700, and br's left edge (430)
+// was cropping into the ribbon's paler, lower-saturation fold instead of
+// its fuller body. Both were re-verified clean of text/UI before widening.
 const crops = {
   tl: { left: 0, top: 0, width: 85, height: 340 },
-  tr: { left: 395, top: 0, width: 102, height: 300 },
+  tr: { left: 385, top: 0, width: 112, height: 520 },
   bl: { left: 0, top: 460, width: 85, height: 210 },
-  br: { left: 430, top: 410, width: 67, height: 300 },
+  br: { left: 410, top: 410, width: 87, height: 320 },
 };
 
 // Final on-card display width (CSS px, at CARD_WIDTH=1080 in
 // lib/whatsappInvitationCard.tsx -- keep these two in sync). Assets are
 // baked at 2x this for a crisp downscale through the JPEG re-encode.
-const displayWidth = { tl: 220, tr: 260, bl: 220, br: 180 };
+const displayWidth = { tl: 220, tr: 220, bl: 220, br: 210 };
 const SCALE = 2;
 
 // Each tile is anchored to one canvas corner and should fade to transparent
