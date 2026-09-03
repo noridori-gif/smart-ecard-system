@@ -14,6 +14,7 @@ export const EVENT_TEMPLATE_OPTIONS: EventTemplateOption[] = [
   { value: "botanical_romance", name: "Botanical Romance", icon: "BR", category: "Modern", description: { en: "Floral corner ornaments, cream background and a romantic script signature.", sw: "Mapambo ya maua pembeni, background ya cream na jina la kimapenzi la script." } },
   { value: "modern_minimal_photo", name: "Modern Minimal Photo", icon: "MP", category: "Minimal", description: { en: "A clean single portrait with generous whitespace and minimal ornamentation.", sw: "Picha safi moja yenye nafasi nyingi na mapambo machache." } },
   { value: "heritage_pattern", name: "Heritage Pattern", icon: "HP", category: "Classic", description: { en: "A bold cultural design with a geometric border pattern.", sw: "Design ya kitamaduni yenye mpaka wa geometric pattern." } },
+  { value: "garden_elegance", name: "Garden Elegance", icon: "GA", category: "Modern", description: { en: "Forest green leaf sprays, deep red berries and blush pink blooms in an ivory frame.", sw: "Matawi ya kijani ya msituni, matunda mekundu na maua ya waridi ndani ya mpaka wa ivory." } },
   { value: "custom", name: "Custom Design", icon: "CD", category: "Custom", description: { en: "Upload your own fully-designed invitation image and position guest name, venue, date/time and QR code on it.", sw: "Pakia muundo wako mwenyewe wa mwaliko na weka jina la mgeni, eneo, tarehe/muda na QR code juu yake." } },
 ];
 

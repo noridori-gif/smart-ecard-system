@@ -18,6 +18,7 @@ export type WhatsAppCardTemplate =
   | "botanical_romance"
   | "modern_minimal_photo"
   | "heritage_pattern"
+  | "garden_elegance"
   | "custom";
 
 export type WhatsAppCardData = {
@@ -180,6 +181,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "botanical_romance" ||
     template === "modern_minimal_photo" ||
     template === "heritage_pattern" ||
+    template === "garden_elegance" ||
     template === "custom"
   ) {
     return template;

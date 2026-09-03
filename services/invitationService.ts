@@ -272,6 +272,7 @@ function normalizeInvitationTemplate(
     template === "botanical_romance" ||
     template === "modern_minimal_photo" ||
     template === "heritage_pattern" ||
+    template === "garden_elegance" ||
     template === "custom"
   ) {
     return template;

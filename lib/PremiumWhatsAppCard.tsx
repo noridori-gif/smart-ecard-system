@@ -7,7 +7,8 @@ export type PremiumWhatsAppTemplate =
   | "golden_elegance"
   | "botanical_romance"
   | "modern_minimal_photo"
-  | "heritage_pattern";
+  | "heritage_pattern"
+  | "garden_elegance";
 
 export type PremiumWhatsAppCardData = {
   title: string;
@@ -41,6 +42,7 @@ type Skin =
   | "classic"
   | "envelope"
   | "floral"
+  | "garden"
   | "gold"
   | "heritage"
   | "letterpress"
@@ -66,6 +68,7 @@ const SKIN_BY_TEMPLATE: Record<PremiumWhatsAppTemplate, Skin> = {
   botanical_romance: "botanical",
   modern_minimal_photo: "minimal",
   heritage_pattern: "heritage",
+  garden_elegance: "garden",
 };
 
 const FALLBACK_COLORS = {
@@ -335,10 +338,59 @@ function AfricanBands({ theme }: { theme: Theme }) {
   );
 }
 
+// Garden Elegance's fixed decorative palette (deep forest green leaves, deep
+// red berry accents, blush pink blooms) -- independent of the organizer's
+// chosen theme.primary/secondary/accent, same as BotanicalLeaves/FloralCorners
+// hardcode their own decorative shades regardless of theme.
+const GARDEN_FOREST_DARK = "#1B4332";
+const GARDEN_FOREST_MID = "#2D6A4F";
+const GARDEN_FOREST_LIGHT = "#74C69D";
+const GARDEN_BERRY = "#7A0C0C";
+const GARDEN_BLUSH_DEEP = "#E8B4B8";
+
+// Satori bug discovered while building this motif, out of scope to fix at
+// the shared-code level here (flagged separately to the user): inside this
+// card's nested position:relative structure (PhotoBanner -> content, both
+// relative, content is a flexDirection:column/alignItems:center flex child),
+// an absolutely-positioned element's horizontal (left/right) offset is
+// silently ignored -- it always renders flex-centered regardless of the
+// value given, while its vertical (top) offset IS respected. Confirmed via
+// isolated rendering that this ALSO already breaks BotanicalLeaves (used by
+// the live botanical_romance template) whenever it has no cover photo of a
+// height that pushes leaves out of the affected region -- not something new
+// introduced here. Corner-anchored asymmetric shapes (leaf sprays, off-center
+// blooms) are therefore not reliably achievable via position:absolute in
+// this container, so this motif uses only: (a) centered position:absolute
+// frames via the single-number `inset` shorthand, which IS reliably
+// respected (proven by every other skin's border frames), and (b) a normal
+// document-flow sprig row, which needs no absolute positioning at all.
+function GardenSprig() {
+  return (
+    <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 22 }}>
+      <div style={{ width: 46, height: 20, display: "flex", borderRadius: "100% 0% 100% 0%", backgroundColor: GARDEN_FOREST_LIGHT, border: `1px solid ${GARDEN_FOREST_DARK}` }} />
+      <div style={{ width: 30, height: 26, display: "flex", margin: "0 6px", borderRadius: "0% 100% 0% 100%", backgroundColor: GARDEN_FOREST_MID, border: `1px solid ${GARDEN_FOREST_DARK}` }} />
+      <div style={{ width: 12, height: 12, display: "flex", margin: "0 8px", borderRadius: 999, backgroundColor: GARDEN_BERRY }} />
+      <div style={{ width: 30, height: 26, display: "flex", margin: "0 6px", borderRadius: "100% 0% 100% 0%", backgroundColor: GARDEN_FOREST_MID, border: `1px solid ${GARDEN_FOREST_DARK}` }} />
+      <div style={{ width: 46, height: 20, display: "flex", borderRadius: "0% 100% 0% 100%", backgroundColor: GARDEN_FOREST_LIGHT, border: `1px solid ${GARDEN_FOREST_DARK}` }} />
+    </div>
+  );
+}
+
+function GardenMotif() {
+  return (
+    <>
+      <div style={{ position: "absolute", inset: 26, display: "flex", border: `2px solid ${GARDEN_FOREST_DARK}` }} />
+      <div style={{ position: "absolute", inset: 38, display: "flex", border: `1px solid ${GARDEN_BLUSH_DEEP}` }} />
+      <GardenSprig />
+    </>
+  );
+}
+
 function TemplateAtmosphere({ theme, title, hasBanner = true }: { theme: Theme; title: string; hasBanner?: boolean }) {
   if (theme.skin === "botanical") return <BotanicalLeaves theme={theme} />;
   if (theme.skin === "floral") return <FloralCorners theme={theme} />;
   if (theme.skin === "african") return <AfricanBands theme={theme} />;
+  if (theme.skin === "garden") return <GardenMotif />;
 
   if (theme.skin === "envelope") {
     return (

@@ -129,6 +129,26 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
       accentColor:
         "#C7A35A",
     },
+
+    {
+      id:
+        "forest-berry-blush",
+
+      name:
+        "Forest, Berry & Blush",
+
+      dressCode:
+        "Deep forest green, deep red, blush pink",
+
+      primaryColor:
+        "#1B4332",
+
+      secondaryColor:
+        "#FDF6F0",
+
+      accentColor:
+        "#7A0C0C",
+    },
   ];
 
 type ThemePalettePickerProps = {
