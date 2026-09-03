@@ -29,5 +29,9 @@ export const TEMPLATE_COMPONENTS: Record<InvitationTemplate, ComponentType<Invit
   // user; a dedicated web template can follow if they want the web page to
   // match too.
   garden_elegance: BotanicalRomance,
+  // Same situation as garden_elegance above: rose_garden's photographic
+  // corner assets (silk/roses/ribbon) only exist in the WhatsApp card
+  // renderer today. Reusing the closest match for the public web page.
+  rose_garden: BotanicalRomance,
   custom: Custom,
 };

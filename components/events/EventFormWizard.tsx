@@ -5,7 +5,7 @@ import Image from "next/image";
 import EventPreviewSwitcher, { type EventPreviewData } from "./EventPreviewSwitcher";
 import LiveInvitationPreview from "./LiveInvitationPreview";
 import TemplateThumbnail from "./TemplateThumbnail";
-import ThemePalettePicker, { type EventThemePalette } from "./ThemePalettePicker";
+import ThemePalettePicker, { EVENT_THEME_PALETTES, type EventThemePalette } from "./ThemePalettePicker";
 import CustomInvitationLayoutEditor from "./CustomInvitationLayoutEditor";
 import { EVENT_TEMPLATE_OPTIONS, EVENT_WIZARD_STEP_COUNT } from "./eventFormConfig";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
@@ -23,6 +23,16 @@ export type EventFormValues = {
   event_date:string; event_time:string; venue:string; reception_map_url:string; dress_code:string;
   theme_primary_color:string; theme_secondary_color:string; theme_accent_color:string;
   custom_layout_elements:CustomLayoutElement[];
+};
+
+// Template (decorative skin) and colour palette are independent selections
+// everywhere else in this form -- picking a template alone never changes
+// theme_primary/secondary/accent. That's an intentional trap for a template
+// like garden_elegance whose look depends on landing on its matching palette
+// too, so pick it automatically here for the templates that have one. Other
+// templates keep the existing behaviour (colours untouched on template pick).
+const RECOMMENDED_PALETTE_ID_BY_TEMPLATE: Partial<Record<InvitationTemplate, string>> = {
+  garden_elegance: "forest-berry-blush",
 };
 
 const PHOTO_LAYOUT_OPTIONS: Array<{ value: PhotoLayout; icon: string }> = [
@@ -175,7 +185,7 @@ export default function EventFormWizard(props:Props) {
       <DialogHeader titleId="event-theme-dialog-title" title={copy.chooseStyle} description={copy.themeHint} onClose={()=>setThemeOpen(false)}/>
       <div className="mt-4 flex gap-2 overflow-x-auto">{(["All","Classic","Luxury","Modern","Minimal","Premium","Custom"] as const).map(item=><button key={item} type="button" aria-pressed={category===item} onClick={()=>setCategory(item)} className={`min-h-11 rounded-full px-4 text-sm font-bold ${category===item?"bg-slate-900 text-white":"bg-stone-100"}`}>{appLanguage==="sw"?({All:"Zote",Classic:"Kawaida",Luxury:"Kifahari",Modern:"Kisasa",Minimal:"Safi",Premium:"Premium",Custom:"Binafsi"} as const)[item]:item}</button>)}</div>
       <div className="mt-5"><ThemePalettePicker primaryColor={props.values.theme_primary_color} secondaryColor={props.values.theme_secondary_color} accentColor={props.values.theme_accent_color} disabled={props.isSaving} onSelect={selectPalette}/></div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{EVENT_TEMPLATE_OPTIONS.filter(item=>category==="All"||item.category===category).map(item=><button key={item.value} type="button" onClick={()=>{set({invitation_template:item.value});setThemeOpen(false);}} className={`rounded-2xl border-2 p-3 text-left focus:ring-4 focus:ring-emerald-100 ${item.value===props.values.invitation_template?"border-emerald-600 bg-emerald-50":"border-[#e7e1d7]"}`}><div className="overflow-hidden rounded-xl border border-[#e7e1d7] shadow-sm"><TemplateThumbnail template={item.value} photoLayout={props.values.photo_layout} language={props.values.language} primaryColor={props.values.theme_primary_color} secondaryColor={props.values.theme_secondary_color} accentColor={props.values.theme_accent_color} eventTitle={props.values.title} eventType={props.values.event_type} brideName={props.values.bride_name} groomName={props.values.groom_name} invitationMessage={props.values.invitation_message} ceremonyTitle={props.values.ceremony_title} ceremonyDate={props.values.ceremony_date} ceremonyTime={props.values.ceremony_time} ceremonyVenue={props.values.ceremony_venue} eventDate={props.values.event_date} eventTime={props.values.event_time} venue={props.values.venue} dressCode={props.values.dress_code} coverImageUrl={shownCover||null}/></div><h3 className="sep-card-title mt-3">{item.name}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{item.description[appLanguage]}</p></button>)}</div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{EVENT_TEMPLATE_OPTIONS.filter(item=>category==="All"||item.category===category).map(item=><button key={item.value} type="button" onClick={()=>{const paletteId=RECOMMENDED_PALETTE_ID_BY_TEMPLATE[item.value];const palette=paletteId?EVENT_THEME_PALETTES.find(entry=>entry.id===paletteId):undefined;set({invitation_template:item.value,...(palette?{theme_primary_color:palette.primaryColor,theme_secondary_color:palette.secondaryColor,theme_accent_color:palette.accentColor}:{})});setThemeOpen(false);}} className={`rounded-2xl border-2 p-3 text-left focus:ring-4 focus:ring-emerald-100 ${item.value===props.values.invitation_template?"border-emerald-600 bg-emerald-50":"border-[#e7e1d7]"}`}><div className="overflow-hidden rounded-xl border border-[#e7e1d7] shadow-sm"><TemplateThumbnail template={item.value} photoLayout={props.values.photo_layout} language={props.values.language} primaryColor={props.values.theme_primary_color} secondaryColor={props.values.theme_secondary_color} accentColor={props.values.theme_accent_color} eventTitle={props.values.title} eventType={props.values.event_type} brideName={props.values.bride_name} groomName={props.values.groom_name} invitationMessage={props.values.invitation_message} ceremonyTitle={props.values.ceremony_title} ceremonyDate={props.values.ceremony_date} ceremonyTime={props.values.ceremony_time} ceremonyVenue={props.values.ceremony_venue} eventDate={props.values.event_date} eventTime={props.values.event_time} venue={props.values.venue} dressCode={props.values.dress_code} coverImageUrl={shownCover||null}/></div><h3 className="sep-card-title mt-3">{item.name}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{item.description[appLanguage]}</p></button>)}</div>
     </Dialog>}
     {mobilePreview&&<Dialog titleId="event-preview-dialog-title" onClose={()=>setMobilePreview(false)} className="max-w-5xl">
       <DialogHeader titleId="event-preview-dialog-title" title={copy.preview} onClose={()=>setMobilePreview(false)}/>

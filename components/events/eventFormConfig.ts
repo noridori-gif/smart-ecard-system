@@ -15,6 +15,12 @@ export const EVENT_TEMPLATE_OPTIONS: EventTemplateOption[] = [
   { value: "modern_minimal_photo", name: "Modern Minimal Photo", icon: "MP", category: "Minimal", description: { en: "A clean single portrait with generous whitespace and minimal ornamentation.", sw: "Picha safi moja yenye nafasi nyingi na mapambo machache." } },
   { value: "heritage_pattern", name: "Heritage Pattern", icon: "HP", category: "Classic", description: { en: "A bold cultural design with a geometric border pattern.", sw: "Design ya kitamaduni yenye mpaka wa geometric pattern." } },
   { value: "garden_elegance", name: "Garden Elegance", icon: "GA", category: "Modern", description: { en: "Forest green leaf sprays, deep red berries and blush pink blooms in an ivory frame.", sw: "Matawi ya kijani ya msituni, matunda mekundu na maua ya waridi ndani ya mpaka wa ivory." } },
+  // rose_garden intentionally NOT listed here yet -- it renders correctly
+  // (see app/api/whatsapp-card-preview/[template]/route.ts and the pushed
+  // branch) but isn't wired into the organizer-facing picker until the
+  // preview is reviewed and the migration adding it to
+  // events_invitation_template_check is applied, per the user's explicit
+  // "preview before wiring into the picker/send flow" request.
   { value: "custom", name: "Custom Design", icon: "CD", category: "Custom", description: { en: "Upload your own fully-designed invitation image and position guest name, venue, date/time and QR code on it.", sw: "Pakia muundo wako mwenyewe wa mwaliko na weka jina la mgeni, eneo, tarehe/muda na QR code juu yake." } },
 ];
 

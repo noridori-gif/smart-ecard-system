@@ -18,6 +18,7 @@ const previewTemplates = new Set<WhatsAppCardTemplate>([
   "modern_minimal_photo",
   "heritage_pattern",
   "garden_elegance",
+  "rose_garden",
 ]);
 
 type RouteContext = {
