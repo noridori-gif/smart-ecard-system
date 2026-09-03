@@ -23,5 +23,11 @@ export const TEMPLATE_COMPONENTS: Record<InvitationTemplate, ComponentType<Invit
   botanical_romance: BotanicalRomance,
   modern_minimal_photo: ModernMinimalPhoto,
   heritage_pattern: HeritagePattern,
+  // No bespoke web template built yet for this WhatsApp-card-only design --
+  // reusing the closest thematic match (botanical/floral) so the public
+  // /invite/[token] page and gallery thumbnail don't break. Flagged for the
+  // user; a dedicated web template can follow if they want the web page to
+  // match too.
+  garden_elegance: BotanicalRomance,
   custom: Custom,
 };

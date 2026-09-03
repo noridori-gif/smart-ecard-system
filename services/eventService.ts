@@ -12,6 +12,7 @@ export type InvitationTemplate =
   | "botanical_romance"
   | "modern_minimal_photo"
   | "heritage_pattern"
+  | "garden_elegance"
   | "custom";
 
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
@@ -193,6 +194,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "botanical_romance",
   "modern_minimal_photo",
   "heritage_pattern",
+  "garden_elegance",
   "custom",
 ];
 
