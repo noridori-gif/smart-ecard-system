@@ -128,7 +128,7 @@ function buildTheme(data: PremiumWhatsAppCardData, template: PremiumWhatsAppTemp
   };
 }
 
-function copy(language: "sw" | "en") {
+export function copy(language: "sw" | "en") {
   return language === "en"
     ? {
         heading: "WEDDING INVITATION",

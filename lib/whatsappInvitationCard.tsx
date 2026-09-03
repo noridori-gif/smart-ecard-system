@@ -1,11 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
 import sharp from "sharp";
 import PremiumWhatsAppCard, {
   CompactHorizontalCard,
+  copy,
   whatsAppCardTotalHeight,
 } from "./PremiumWhatsAppCard";
+import { formatPassIdForDisplay } from "./passId";
 import { DEFAULT_CUSTOM_LAYOUT } from "@/services/invitationLayoutService";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -19,6 +23,7 @@ export type WhatsAppCardTemplate =
   | "modern_minimal_photo"
   | "heritage_pattern"
   | "garden_elegance"
+  | "rose_garden"
   | "custom";
 
 export type WhatsAppCardData = {
@@ -59,6 +64,35 @@ type RenderData = WhatsAppCardData & {
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1800;
+const ROSE_GARDEN_CARD_HEIGHT = 2080;
+
+// Rose Garden's four corner motifs (green silk, red/pink roses, ribbon) are
+// cropped once from a bundled reference photo -- see
+// public/invitation-assets/README.md for the source and crop provenance --
+// and read at module load, same pattern as app/opengraph-image.tsx's logo.
+// Fixed display size in CSS px at CARD_WIDTH=1080; files are baked at 2x
+// that for a crisp downscale through the JPEG re-encode.
+const ROSE_GARDEN_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "rose-garden");
+const ROSE_CORNER_TL = {
+  dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "tl.png")).toString("base64")}`,
+  width: 220,
+  height: 880,
+};
+const ROSE_CORNER_TR = {
+  dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "tr.png")).toString("base64")}`,
+  width: 260,
+  height: 765,
+};
+const ROSE_CORNER_BL = {
+  dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "bl.png")).toString("base64")}`,
+  width: 220,
+  height: 544,
+};
+const ROSE_CORNER_BR = {
+  dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "br.png")).toString("base64")}`,
+  width: 180,
+  height: 806,
+};
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
 // Capped well below the photo's true aspect ratio for very tall portrait
@@ -182,6 +216,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "modern_minimal_photo" ||
     template === "heritage_pattern" ||
     template === "garden_elegance" ||
+    template === "rose_garden" ||
     template === "custom"
   ) {
     return template;
@@ -458,6 +493,10 @@ export async function createWhatsAppInvitationCard(
     return createCustomInvitationCard(data);
   }
 
+  if (template === "rose_garden") {
+    return createRoseGardenInvitationCard(data);
+  }
+
   const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
   const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
   let normalizedData = renderData(
@@ -641,6 +680,276 @@ function CustomInvitationCard({ data }: { data: RenderData }) {
   );
 }
 
+const ROSE_FOREST = "#1B4332";
+const ROSE_BERRY = "#7A0C0C";
+const ROSE_BLUSH = "#E8B4B8";
+const ROSE_IVORY = "#FDF6F0";
+
+/**
+ * Derives a couple-initials monogram ("S & D") from the display title, and
+ * a trailing 4-digit year from the already-formatted date string, for the
+ * header monogram. Falls back gracefully when the title/date don't have the
+ * expected shape (e.g. a non-wedding event title, or an unparsable date).
+ */
+function roseMonogram(title: string) {
+  const ampersandParts = title.split(/\s*&\s*/).filter(Boolean);
+
+  if (ampersandParts.length >= 2) {
+    const first = ampersandParts[0].trim().split(/\s+/)[0]?.[0];
+    const second = ampersandParts[1].trim().split(/\s+/)[0]?.[0];
+
+    if (first && second) {
+      return `${first.toUpperCase()} & ${second.toUpperCase()}`;
+    }
+  }
+
+  const words = title.split(/\s+/).filter(Boolean);
+
+  if (words.length >= 2) {
+    return `${words[0][0]?.toUpperCase() ?? ""} & ${words[1][0]?.toUpperCase() ?? ""}`;
+  }
+
+  return title.slice(0, 2).toUpperCase();
+}
+
+function roseYear(dateText: string) {
+  return dateText.match(/\d{4}/)?.[0] ?? "";
+}
+
+function RoseCorner({
+  corner,
+  horizontal,
+  vertical,
+}: {
+  corner: typeof ROSE_CORNER_TL;
+  horizontal: "left" | "right";
+  vertical: "top" | "bottom";
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={corner.dataUrl}
+      alt=""
+      width={corner.width}
+      height={corner.height}
+      style={{
+        position: "absolute",
+        [horizontal]: 0,
+        [vertical]: 0,
+        width: corner.width,
+        height: corner.height,
+      }}
+    />
+  );
+}
+
+function DressChips({ dressCode }: { dressCode: string }) {
+  const parts = dressCode
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (parts.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, maxWidth: 820 }}>
+      {parts.map((part, index) => (
+        <div
+          key={`${part}-${index}`}
+          style={{
+            display: "flex",
+            padding: "10px 24px",
+            borderRadius: 999,
+            backgroundColor: index % 2 === 0 ? ROSE_FOREST : ROSE_BERRY,
+            color: "#FFFFFF",
+            fontFamily: "Arial, sans-serif",
+            fontSize: 19,
+            fontWeight: 700,
+          }}
+        >
+          {part}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * "Rose Garden": reproduces the client's photographic reference design
+ * (green silk drape, red/pink roses, pink ribbon in the four corners, on an
+ * ivory card) using four bundled corner photo crops instead of the CSS/SVG
+ * motifs the other 6 templates use -- see the ROSE_CORNER_* constants above.
+ * Deliberately does NOT use data.primary/secondary/accent: those colours are
+ * the organizer's free pick and would clash unpredictably against a fixed
+ * photographic rose/silk backdrop (this is the same class of bug fixed for
+ * garden_elegance, avoided here by never wiring the theme in for ink colour
+ * in the first place). Flagged to the user as a deliberate scoping choice.
+ */
+function RoseGardenCard({ data }: { data: RenderData }) {
+  const text = copy(data.language);
+  const monogram = roseMonogram(data.title);
+  const year = roseYear(data.date);
+  const passId = data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—";
+  const qrSize = 300;
+  const dateTime = [data.date, data.eventTime].filter(Boolean).join(" · ");
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        overflow: "hidden",
+        backgroundColor: ROSE_IVORY,
+        color: ROSE_FOREST,
+      }}
+    >
+      <RoseCorner corner={ROSE_CORNER_TL} horizontal="left" vertical="top" />
+      <RoseCorner corner={ROSE_CORNER_TR} horizontal="right" vertical="top" />
+      <RoseCorner corner={ROSE_CORNER_BL} horizontal="left" vertical="bottom" />
+      <RoseCorner corner={ROSE_CORNER_BR} horizontal="right" vertical="bottom" />
+
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", padding: "56px 60px 44px" }}>
+        <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 40, fontStyle: "italic", letterSpacing: 2, color: ROSE_BERRY }}>
+          {monogram}
+        </div>
+        {year ? (
+          <div style={{ display: "flex", marginTop: 4, fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 800, letterSpacing: 6, color: ROSE_FOREST }}>
+            {year}
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            width: 720,
+            height: 620,
+            position: "relative",
+            display: "flex",
+            marginTop: 34,
+            overflow: "hidden",
+            borderRadius: "360px 360px 24px 24px",
+            border: `6px solid ${ROSE_FOREST}`,
+            boxShadow: "0 20px 45px rgba(27,67,50,0.22)",
+            backgroundColor: ROSE_BLUSH,
+          }}
+        >
+          {data.coverImageDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.coverImageDataUrl}
+              alt=""
+              width={720}
+              height={620}
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            />
+          ) : (
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: 90, fontStyle: "italic", color: ROSE_FOREST }}>
+              {monogram}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", marginTop: 40, maxWidth: 900, fontFamily: "Georgia, serif", fontSize: Math.min(56, data.titleSize), lineHeight: 1.08, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+          {data.title}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", marginTop: 14 }}>
+          <div style={{ width: 40, height: 1, display: "flex", marginRight: 14, backgroundColor: ROSE_BERRY }} />
+          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 800, letterSpacing: 5, color: ROSE_BERRY }}>{text.heading}</div>
+          <div style={{ width: 40, height: 1, display: "flex", marginLeft: 14, backgroundColor: ROSE_BERRY }} />
+        </div>
+
+        <div style={{ display: "flex", marginTop: 30, padding: "14px 34px", borderRadius: 999, backgroundColor: "#FFFFFF", border: `2px solid ${ROSE_FOREST}`, fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 700, color: ROSE_FOREST }}>
+          {dateTime}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 24 }}>
+          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 3, color: ROSE_BERRY }}>{text.reception}</div>
+          <div style={{ display: "flex", marginTop: 6, maxWidth: 700, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+            {data.venue}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 34, padding: "18px 40px", borderTop: `1px solid ${ROSE_BLUSH}`, borderBottom: `1px solid ${ROSE_BLUSH}` }}>
+          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: ROSE_BERRY }}>{text.weddingOf}</div>
+          <div style={{ display: "flex", marginTop: 8, maxWidth: 820, fontFamily: "Georgia, serif", fontSize: 40, fontStyle: "italic", fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+            {data.guestName}
+          </div>
+        </div>
+
+        {data.dressCode ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 30 }}>
+            <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: ROSE_BERRY, marginBottom: 14 }}>{text.dress}</div>
+            <DressChips dressCode={data.dressCode} />
+          </div>
+        ) : null}
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 44 }}>
+          <div
+            style={{
+              width: qrSize + 40,
+              height: qrSize + 40,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+              borderRadius: 28,
+              backgroundColor: "#FFFFFF",
+              border: `3px solid ${ROSE_FOREST}`,
+              boxShadow: "0 16px 34px rgba(27,67,50,0.2)",
+            }}
+          >
+            {data.qrCodeDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={data.qrCodeDataUrl} alt="" width={qrSize} height={qrSize} style={{ width: qrSize, height: qrSize, objectFit: "contain" }} />
+            ) : (
+              <div style={{ width: qrSize - 30, height: qrSize - 30, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${ROSE_FOREST}`, fontFamily: "Arial, sans-serif", fontSize: 26, fontWeight: 900, color: ROSE_FOREST }}>
+                QR
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", marginTop: 20, fontFamily: "Georgia, serif", fontSize: 34, fontWeight: 700, letterSpacing: 1, color: ROSE_FOREST }}>{passId}</div>
+          <div style={{ display: "flex", marginTop: 6, maxWidth: 480, fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", lineHeight: 1.25, color: ROSE_BERRY, textAlign: "center" }}>
+            {text.instruction}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 40, padding: "16px 34px", borderRadius: 16, border: `1px dashed ${ROSE_BERRY}`, maxWidth: 640 }}>
+          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 18, fontStyle: "italic", lineHeight: 1.3, color: ROSE_FOREST, textAlign: "center" }}>
+            {text.closing}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function createRoseGardenInvitationCard(data: WhatsAppCardData) {
+  const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  const normalizedData = renderData(
+    data,
+    cover?.dataUrl ?? null,
+    cover?.bannerHeight ?? DEFAULT_BANNER_HEIGHT,
+    qrCodeDataUrl
+  );
+
+  try {
+    return jpegResponse(
+      await materializeJpeg(<RoseGardenCard data={normalizedData} />, CARD_WIDTH, ROSE_GARDEN_CARD_HEIGHT)
+    );
+  } catch (error) {
+    console.error("Rose Garden card render failed:", error);
+
+    return jpegResponse(
+      await materializeJpeg(<SafeFallbackCard data={normalizedData} />)
+    );
+  }
+}
+
 export async function createCompactWhatsAppInvitationCard(
   data: WhatsAppCardData
 ) {
@@ -657,7 +966,7 @@ export async function createCompactWhatsAppInvitationCard(
 }
 
 function renderWhatsAppCard(
-  template: Exclude<WhatsAppCardTemplate, "custom">,
+  template: Exclude<WhatsAppCardTemplate, "custom" | "rose_garden">,
   data: RenderData
 ): ReactElement {
   return <PremiumWhatsAppCard data={data} template={template} />;
