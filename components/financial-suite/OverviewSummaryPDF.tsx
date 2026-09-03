@@ -2,7 +2,7 @@ import { Circle, Defs, Document, Image, LinearGradient, Page, Rect, Stop, StyleS
 import { formatTzs } from "@/services/pledgeMessageService";
 
 const PAGE_WIDTH = 600;
-const PAGE_HEIGHT = 800;
+const PAGE_HEIGHT = 890;
 const RING_SIZE = 240;
 const RING_RADIUS = 100;
 const RING_STROKE = 18;
@@ -59,9 +59,13 @@ export type OverviewSummaryPDFProps = {
     outstanding: number;
     percentage: number;
   };
+  cardBreakdown: {
+    single: number;
+    double: number;
+  };
 };
 
-export default function OverviewSummaryPDF({ eventTitle, eventDate, financial }: OverviewSummaryPDFProps) {
+export default function OverviewSummaryPDF({ eventTitle, eventDate, financial, cardBreakdown }: OverviewSummaryPDFProps) {
   const clampedPercentage = Math.min(100, Math.max(0, financial.percentage));
   const progressLength = RING_CIRCUMFERENCE * (clampedPercentage / 100);
   const collectedPct =
@@ -73,6 +77,8 @@ export default function OverviewSummaryPDF({ eventTitle, eventDate, financial }:
     ["Total Pledged", formatTzs(financial.totalPledged)],
     ["Total Collected", formatTzs(financial.totalCollected)],
     ["Remaining Balance", formatTzs(financial.outstanding)],
+    ["Single Contributors", cardBreakdown.single],
+    ["Double Contributors", cardBreakdown.double],
   ];
 
   return (
