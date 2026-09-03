@@ -22,6 +22,8 @@ export type SampleInvitationInput = {
   venue?: string;
   dressCode?: string;
   coverImageUrl?: string | null;
+  customBackgroundUrl?: string | null;
+  customLayoutElements?: PublicInvitation["custom_layout_elements"];
 };
 
 const SAMPLE_COPY = {
@@ -93,6 +95,8 @@ export function buildSampleInvitation(input: SampleInvitationInput): PublicInvit
     theme_secondary_color: input.secondaryColor,
     theme_accent_color: input.accentColor,
     invitation_message: input.invitationMessage?.trim() || copy.invitationMessage,
+    custom_invitation_background_url: input.customBackgroundUrl || null,
+    custom_layout_elements: input.customLayoutElements ?? null,
   };
 }
 

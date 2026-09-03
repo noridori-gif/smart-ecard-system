@@ -6,10 +6,12 @@ import EventPreviewSwitcher, { type EventPreviewData } from "./EventPreviewSwitc
 import LiveInvitationPreview from "./LiveInvitationPreview";
 import TemplateThumbnail from "./TemplateThumbnail";
 import ThemePalettePicker, { type EventThemePalette } from "./ThemePalettePicker";
+import CustomInvitationLayoutEditor from "./CustomInvitationLayoutEditor";
 import { EVENT_TEMPLATE_OPTIONS, EVENT_WIZARD_STEP_COUNT } from "./eventFormConfig";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { EventLanguage, InvitationTemplate, PhotoLayout } from "@/services/eventService";
+import { DEFAULT_CUSTOM_LAYOUT, type CustomLayoutElement } from "@/services/invitationLayoutService";
 import Dialog from "@/components/ui/Dialog";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
@@ -20,6 +22,7 @@ export type EventFormValues = {
   ceremony_date:string; ceremony_time:string; ceremony_venue:string; ceremony_map_url:string;
   event_date:string; event_time:string; venue:string; reception_map_url:string; dress_code:string;
   theme_primary_color:string; theme_secondary_color:string; theme_accent_color:string;
+  custom_layout_elements:CustomLayoutElement[];
 };
 
 const PHOTO_LAYOUT_OPTIONS: Array<{ value: PhotoLayout; icon: string }> = [
@@ -41,6 +44,7 @@ const COPY = {
       side_by_side:{name:"Side by Side",desc:"Photo on the left, details on the right."},
       text_only:{name:"Text Only",desc:"A decorative typographic design, no photo."},
     },
+    customDesign:"Custom Design", customDesignHint:"Upload your own invitation image and position the guest name, venue, date/time and QR code on it.",
   },
   sw: {
     createTitle:"Tengeneza Event", editTitle:"Hariri Event", createDescription:"Tengeneza invitation yenye muonekano bora kwa hatua chache.", editDescription:"Badilisha taarifa na muonekano wa event yako kwa hatua chache.",
@@ -53,6 +57,7 @@ const COPY = {
       side_by_side:{name:"Kando kwa Kando",desc:"Picha kushoto, taarifa kulia."},
       text_only:{name:"Maandishi Pekee",desc:"Muundo wa kifahari wa maandishi, bila picha."},
     },
+    customDesign:"Muundo Binafsi", customDesignHint:"Pakia picha yako ya mwaliko na weka jina la mgeni, eneo, tarehe/muda na QR code juu yake.",
   },
 } satisfies Record<"en"|"sw",Record<string,unknown>>;
 
@@ -60,6 +65,8 @@ type Props = {
   mode:"create"|"edit"; values:EventFormValues; onValuesChange:(values:EventFormValues)=>void;
   currentCoverUrl?:string|null; coverFile:File|null; coverPreviewUrl:string; coverRemoved:boolean;
   onCoverFile:(file:File|null,previewUrl:string)=>void; onCoverRemoved:(removed:boolean)=>void;
+  currentBackgroundUrl?:string|null; backgroundFile:File|null; backgroundPreviewUrl:string; backgroundRemoved:boolean;
+  onBackgroundFile:(file:File|null,previewUrl:string)=>void; onBackgroundRemoved:(removed:boolean)=>void;
   isSaving:boolean; isDirty?:boolean; errorMessage?:string; successMessage?:string;
   onSubmit:(event:FormEvent<HTMLFormElement>)=>void; onCancel:()=>void;
 };
@@ -70,6 +77,7 @@ export default function EventFormWizard(props:Props) {
   const fileRef=useRef<HTMLInputElement>(null);
   const selectedTemplate=EVENT_TEMPLATE_OPTIONS.find(item=>item.value===props.values.invitation_template)??EVENT_TEMPLATE_OPTIONS[0];
   const shownCover=props.coverPreviewUrl||(!props.coverRemoved?props.currentCoverUrl??"":"");
+  const shownBackground=props.backgroundPreviewUrl||(!props.backgroundRemoved?props.currentBackgroundUrl??"":"");
   const previewData:EventPreviewData={title:props.values.title,eventType:props.values.event_type,brideName:props.values.bride_name,groomName:props.values.groom_name,language:props.values.language,template:props.values.invitation_template,photoLayout:props.values.photo_layout,invitationMessage:props.values.invitation_message,coverImageUrl:shownCover||null,eventDate:props.values.event_date,eventTime:props.values.event_time,venue:props.values.venue,ceremonyTitle:props.values.ceremony_title,ceremonyDate:props.values.ceremony_date,ceremonyTime:props.values.ceremony_time,ceremonyVenue:props.values.ceremony_venue,ceremonyMapUrl:props.values.ceremony_map_url,receptionMapUrl:props.values.reception_map_url,dressCode:props.values.dress_code,primary:props.values.theme_primary_color,secondary:props.values.theme_secondary_color,accent:props.values.theme_accent_color};
   const set=(patch:Partial<EventFormValues>)=>props.onValuesChange({...props.values,...patch});
   const openStep=(index:number)=>{setActive(index);requestAnimationFrame(()=>document.getElementById(`event-step-${index}`)?.scrollIntoView({behavior:"smooth",block:"start"}));};
@@ -81,6 +89,7 @@ export default function EventFormWizard(props:Props) {
 
   const debouncedPreviewValues=useDebouncedValue(props.values,300);
   const debouncedShownCover=useDebouncedValue(shownCover,300);
+  const debouncedShownBackground=useDebouncedValue(shownBackground,300);
   const invitationPreview=<div>
     <div className="mb-4 flex items-center justify-between"><div><p className="text-xs font-black uppercase text-slate-400">Live Preview</p><p className="font-bold">{selectedTemplate.name}</p></div><Dots colors={[props.values.theme_primary_color,props.values.theme_secondary_color,props.values.theme_accent_color]}/></div>
     <LiveInvitationPreview
@@ -104,6 +113,8 @@ export default function EventFormWizard(props:Props) {
     venue={debouncedPreviewValues.venue}
     dressCode={debouncedPreviewValues.dress_code}
     coverImageUrl={debouncedShownCover||null}
+    customBackgroundUrl={debouncedShownBackground||null}
+    customLayoutElements={debouncedPreviewValues.custom_layout_elements}
     />
   </div>;
   const review:Array<[string,string,number]>=[[copy.eventTitle,props.values.title||copy.notSet,0],[copy.eventType,props.values.event_type||copy.notSet,0],[copy.hosts,[props.values.bride_name,props.values.groom_name].filter(Boolean).join(" & ")||copy.notSet,0],[copy.language,props.values.language==="sw"?"Kiswahili":"English",0],[copy.theme,selectedTemplate.name,1],[copy.dressCode,props.values.dress_code||copy.notSet,1],[copy.cover,props.coverFile?copy.newCover:shownCover?copy.currentCover:copy.noCover,0],[copy.ceremony,[props.values.ceremony_date,props.values.ceremony_time,props.values.ceremony_venue].filter(Boolean).join(" · ")||copy.notSet,2],[copy.reception,[props.values.event_date,props.values.event_time,props.values.venue].filter(Boolean).join(" · ")||copy.notSet,3]];
@@ -117,7 +128,7 @@ export default function EventFormWizard(props:Props) {
       </Step>
       <Step index={1} title={copy.steps[1]} description={copy.descriptions[1]} active={active===1} complete onOpen={openStep}>
         <div className="rounded-2xl border border-[#e7e1d7] bg-stone-50 p-4 sm:flex sm:items-center sm:justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-slate-400">{copy.selectedTheme}</p><div className="mt-2 flex items-center gap-3"><Dots colors={[props.values.theme_primary_color,props.values.theme_secondary_color,props.values.theme_accent_color]}/><div><p className="font-black">{props.values.dress_code||selectedTemplate.name}</p><p className="text-sm text-slate-500">{selectedTemplate.name}</p></div></div></div><Button type="button" variant="secondary" className="mt-4 sm:mt-0" onClick={()=>setThemeOpen(true)}>{copy.changeTheme}</Button></div>
-        <div className="mt-4 rounded-2xl border border-[#e7e1d7] bg-stone-50 p-4">
+        {props.values.invitation_template!=="custom"&&<div className="mt-4 rounded-2xl border border-[#e7e1d7] bg-stone-50 p-4">
           <p className="text-xs font-black uppercase tracking-wide text-slate-400">{copy.photoLayout}</p>
           <p className="mt-1 text-xs text-slate-500">{copy.photoLayoutHint}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -130,7 +141,26 @@ export default function EventFormWizard(props:Props) {
               </button>;
             })}
           </div>
-        </div>
+        </div>}
+        {props.values.invitation_template==="custom"&&<div className="mt-4 rounded-2xl border border-[#e7e1d7] bg-stone-50 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-400">{copy.customDesign}</p>
+          <p className="mt-1 text-xs text-slate-500">{copy.customDesignHint}</p>
+          <CustomInvitationLayoutEditor
+            language={appLanguage}
+            disabled={props.isSaving}
+            shownBackgroundUrl={shownBackground}
+            backgroundFile={props.backgroundFile}
+            backgroundRemoved={props.backgroundRemoved}
+            currentBackgroundUrl={props.currentBackgroundUrl}
+            onBackgroundFile={props.onBackgroundFile}
+            onBackgroundRemoved={props.onBackgroundRemoved}
+            elements={props.values.custom_layout_elements}
+            onElementsChange={elements=>set({custom_layout_elements:elements})}
+            guestNameSample={appLanguage==="sw"?"Jina la Mgeni":"Guest Name"}
+            venueSample={props.values.venue||(appLanguage==="sw"?"Eneo la Tukio":"Event Venue")}
+            datetimeSample={[props.values.event_date,props.values.event_time].filter(Boolean).join(" · ")||(appLanguage==="sw"?"Tarehe · Muda":"Date · Time")}
+          />
+        </div>}
       </Step>
       <Step index={2} title={copy.steps[2]} description={copy.descriptions[2]} active={active===2} complete={Boolean(props.values.ceremony_date||props.values.ceremony_venue)} onOpen={openStep}><div className="grid gap-4 md:grid-cols-2"><Field label={copy.ceremonyTitle} name="ceremony_title" value={props.values.ceremony_title} onChange={change}/><Field label={copy.date} name="ceremony_date" type="date" value={props.values.ceremony_date} onChange={change}/><Field label={copy.time} name="ceremony_time" type="time" value={props.values.ceremony_time} onChange={change}/><Field label={copy.venue} name="ceremony_venue" value={props.values.ceremony_venue} onChange={change}/><div className="md:col-span-2"><Field label={copy.mapLink} name="ceremony_map_url" type="url" value={props.values.ceremony_map_url} onChange={change}/></div></div></Step>
       <Step index={3} title={copy.steps[3]} description={copy.descriptions[3]} active={active===3} complete={Boolean(props.values.event_date&&props.values.event_time&&props.values.venue)} onOpen={openStep}><div className="grid gap-4 md:grid-cols-2"><Field label={copy.receptionDate} name="event_date" type="date" value={props.values.event_date} required onChange={change}/><Field label={copy.receptionTime} name="event_time" type="time" value={props.values.event_time} required onChange={change}/><Field label={copy.receptionVenue} name="venue" value={props.values.venue} required onChange={change}/><Field label={copy.mapLink} name="reception_map_url" type="url" value={props.values.reception_map_url} onChange={change}/></div></Step>
@@ -143,7 +173,7 @@ export default function EventFormWizard(props:Props) {
     <Button type="button" variant="secondary" className="xl:hidden" onClick={()=>setMobilePreview(true)}>{copy.preview}</Button>
     {themeOpen&&<Dialog titleId="event-theme-dialog-title" onClose={()=>setThemeOpen(false)} className="max-w-5xl">
       <DialogHeader titleId="event-theme-dialog-title" title={copy.chooseStyle} description={copy.themeHint} onClose={()=>setThemeOpen(false)}/>
-      <div className="mt-4 flex gap-2 overflow-x-auto">{(["All","Classic","Luxury","Modern","Minimal","Premium"] as const).map(item=><button key={item} type="button" aria-pressed={category===item} onClick={()=>setCategory(item)} className={`min-h-11 rounded-full px-4 text-sm font-bold ${category===item?"bg-slate-900 text-white":"bg-stone-100"}`}>{appLanguage==="sw"?({All:"Zote",Classic:"Kawaida",Luxury:"Kifahari",Modern:"Kisasa",Minimal:"Safi",Premium:"Premium"} as const)[item]:item}</button>)}</div>
+      <div className="mt-4 flex gap-2 overflow-x-auto">{(["All","Classic","Luxury","Modern","Minimal","Premium","Custom"] as const).map(item=><button key={item} type="button" aria-pressed={category===item} onClick={()=>setCategory(item)} className={`min-h-11 rounded-full px-4 text-sm font-bold ${category===item?"bg-slate-900 text-white":"bg-stone-100"}`}>{appLanguage==="sw"?({All:"Zote",Classic:"Kawaida",Luxury:"Kifahari",Modern:"Kisasa",Minimal:"Safi",Premium:"Premium",Custom:"Binafsi"} as const)[item]:item}</button>)}</div>
       <div className="mt-5"><ThemePalettePicker primaryColor={props.values.theme_primary_color} secondaryColor={props.values.theme_secondary_color} accentColor={props.values.theme_accent_color} disabled={props.isSaving} onSelect={selectPalette}/></div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{EVENT_TEMPLATE_OPTIONS.filter(item=>category==="All"||item.category===category).map(item=><button key={item.value} type="button" onClick={()=>{set({invitation_template:item.value});setThemeOpen(false);}} className={`rounded-2xl border-2 p-3 text-left focus:ring-4 focus:ring-emerald-100 ${item.value===props.values.invitation_template?"border-emerald-600 bg-emerald-50":"border-[#e7e1d7]"}`}><div className="overflow-hidden rounded-xl border border-[#e7e1d7] shadow-sm"><TemplateThumbnail template={item.value} photoLayout={props.values.photo_layout} language={props.values.language} primaryColor={props.values.theme_primary_color} secondaryColor={props.values.theme_secondary_color} accentColor={props.values.theme_accent_color} eventTitle={props.values.title} eventType={props.values.event_type} brideName={props.values.bride_name} groomName={props.values.groom_name} invitationMessage={props.values.invitation_message} ceremonyTitle={props.values.ceremony_title} ceremonyDate={props.values.ceremony_date} ceremonyTime={props.values.ceremony_time} ceremonyVenue={props.values.ceremony_venue} eventDate={props.values.event_date} eventTime={props.values.event_time} venue={props.values.venue} dressCode={props.values.dress_code} coverImageUrl={shownCover||null}/></div><h3 className="sep-card-title mt-3">{item.name}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{item.description[appLanguage]}</p></button>)}</div>
     </Dialog>}

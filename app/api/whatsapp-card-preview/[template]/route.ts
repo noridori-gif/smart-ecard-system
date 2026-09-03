@@ -75,6 +75,8 @@ function previewData(
     invitationTemplate: template,
     photoLayout,
     coverImageUrl: null,
+    customBackgroundUrl: null,
+    customLayoutElements: null,
     primary: "#145A46",
     secondary: "#FFF8EC",
     accent: "#C9A962",

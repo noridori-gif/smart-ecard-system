@@ -11,7 +11,8 @@ export type InvitationTemplate =
   | "golden_elegance"
   | "botanical_romance"
   | "modern_minimal_photo"
-  | "heritage_pattern";
+  | "heritage_pattern"
+  | "custom";
 
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
   "royal_portrait";
@@ -84,6 +85,10 @@ export type Event = {
     | string
     | null;
 
+  custom_invitation_background_url?:
+    | string
+    | null;
+
   invitation_message?:
     | string
     | null;
@@ -125,6 +130,10 @@ export type NewEvent = {
     | string
     | null;
 
+  custom_invitation_background_url?:
+    | string
+    | null;
+
   invitation_message?: string;
 
   theme_primary_color?: string;
@@ -161,6 +170,10 @@ export type UpdateEvent = {
     | string
     | null;
 
+  custom_invitation_background_url?:
+    | string
+    | null;
+
   invitation_message?: string;
 
   theme_primary_color?: string;
@@ -180,6 +193,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "botanical_romance",
   "modern_minimal_photo",
   "heritage_pattern",
+  "custom",
 ];
 
 function normalizeInvitationTemplate(
@@ -417,6 +431,72 @@ export async function uploadEventCover(
   return data.publicUrl;
 }
 
+export async function uploadInvitationBackground(
+  imageFile: File
+): Promise<string> {
+  if (
+    !imageFile.type.startsWith(
+      "image/"
+    )
+  ) {
+    throw new Error(
+      "File lililochaguliwa si picha."
+    );
+  }
+
+  const fileExtension =
+    imageFile.name
+      .split(".")
+      .pop()
+      ?.toLowerCase() ??
+    "jpg";
+
+  const fileName =
+    `${crypto.randomUUID()}.` +
+    fileExtension;
+
+  const filePath =
+    `backgrounds/${fileName}`;
+
+  const {
+    error: uploadError,
+  } = await supabase.storage
+    .from("invitation-backgrounds")
+    .upload(
+      filePath,
+      imageFile,
+      {
+        cacheControl:
+          "3600",
+
+        upsert: false,
+
+        contentType:
+          imageFile.type,
+      }
+    );
+
+  if (uploadError) {
+    throw new Error(
+      `Picha haikuweza kupakiwa: ${uploadError.message}`
+    );
+  }
+
+  const {
+    data,
+  } = supabase.storage
+    .from("invitation-backgrounds")
+    .getPublicUrl(filePath);
+
+  if (!data.publicUrl) {
+    throw new Error(
+      "Public URL ya picha haikuweza kupatikana."
+    );
+  }
+
+  return data.publicUrl;
+}
+
 async function getAuthenticatedUserId(): Promise<string> {
   const {
     data: { user },
@@ -547,6 +627,10 @@ export async function createEvent(
 
       cover_image_url:
         event.cover_image_url ??
+        null,
+
+      custom_invitation_background_url:
+        event.custom_invitation_background_url ??
         null,
 
       invitation_message:
@@ -791,6 +875,10 @@ export async function updateEvent(
 
       cover_image_url:
         event.cover_image_url ??
+        null,
+
+      custom_invitation_background_url:
+        event.custom_invitation_background_url ??
         null,
 
       invitation_message:

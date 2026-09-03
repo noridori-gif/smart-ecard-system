@@ -6,16 +6,19 @@ import PremiumWhatsAppCard, {
   CompactHorizontalCard,
   whatsAppCardTotalHeight,
 } from "./PremiumWhatsAppCard";
+import { DEFAULT_CUSTOM_LAYOUT } from "@/services/invitationLayoutService";
 
 import type { PublicInvitation } from "@/services/invitationService";
 import type { PhotoLayout } from "@/services/eventService";
+import type { CustomLayoutElement } from "@/services/invitationLayoutService";
 
 export type WhatsAppCardTemplate =
   | "royal_portrait"
   | "golden_elegance"
   | "botanical_romance"
   | "modern_minimal_photo"
-  | "heritage_pattern";
+  | "heritage_pattern"
+  | "custom";
 
 export type WhatsAppCardData = {
   title: string;
@@ -36,6 +39,8 @@ export type WhatsAppCardData = {
   invitationTemplate: WhatsAppCardTemplate;
   photoLayout: PhotoLayout;
   coverImageUrl: string | null;
+  customBackgroundUrl: string | null;
+  customLayoutElements: CustomLayoutElement[] | null;
   primary: string;
   secondary: string;
   accent: string;
@@ -174,7 +179,8 @@ export function normalizeWhatsAppCardTemplate(
     template === "golden_elegance" ||
     template === "botanical_romance" ||
     template === "modern_minimal_photo" ||
-    template === "heritage_pattern"
+    template === "heritage_pattern" ||
+    template === "custom"
   ) {
     return template;
   }
@@ -212,6 +218,8 @@ export function getWhatsAppCardData(
     invitationTemplate,
     photoLayout: normalizeWhatsAppCardPhotoLayout(invitation.photo_layout),
     coverImageUrl: invitation.cover_image_url?.trim() || null,
+    customBackgroundUrl: invitation.custom_invitation_background_url?.trim() || null,
+    customLayoutElements: invitation.custom_layout_elements ?? null,
     primary: safeColor(invitation.theme_primary_color, "#145A46"),
     secondary: safeColor(invitation.theme_secondary_color, "#FFF8EC"),
     accent: safeColor(invitation.theme_accent_color, "#C9A962"),
@@ -444,6 +452,10 @@ export async function createWhatsAppInvitationCard(
   template: WhatsAppCardTemplate,
   data: WhatsAppCardData
 ) {
+  if (template === "custom") {
+    return createCustomInvitationCard(data);
+  }
+
   const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
   const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
   let normalizedData = renderData(
@@ -487,6 +499,146 @@ export async function createWhatsAppInvitationCard(
   }
 }
 
+/**
+ * The "custom" template: the organizer's own uploaded design is the entire
+ * card (not a banner within a fixed layout), with guest name / venue /
+ * date-time / QR composited on top at the saved percentage positions.
+ * Reuses fetchCoverImageDataUrl()'s existing fetch/resize/re-encode guardrails
+ * (size cap, timeout, CARD_WIDTH resize) so this path inherits the same
+ * protection against the 131053 media-timeout failure mode as the 5 preset
+ * templates -- it's just resizing the background instead of a cover photo.
+ */
+async function createCustomInvitationCard(data: WhatsAppCardData) {
+  const background = await fetchCoverImageDataUrl(data.customBackgroundUrl);
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  const normalizedData = renderData(
+    data,
+    background?.dataUrl ?? null,
+    background?.bannerHeight ?? DEFAULT_BANNER_HEIGHT,
+    qrCodeDataUrl
+  );
+
+  if (!normalizedData.coverImageDataUrl) {
+    console.warn("Custom invitation card missing a usable background image, using fallback card.");
+    return jpegResponse(
+      await materializeJpeg(<SafeFallbackCard data={normalizedData} />)
+    );
+  }
+
+  try {
+    return jpegResponse(
+      await materializeJpeg(
+        <CustomInvitationCard data={normalizedData} />,
+        CARD_WIDTH,
+        normalizedData.coverImageBannerHeight
+      )
+    );
+  } catch (error) {
+    console.error("Custom invitation card render failed:", error);
+
+    return jpegResponse(
+      await materializeJpeg(<SafeFallbackCard data={normalizedData} />)
+    );
+  }
+}
+
+const ELEMENT_ALIGN_STYLE: Record<"left" | "center" | "right", { justifyContent: "flex-start" | "center" | "flex-end"; textAlign: "left" | "center" | "right" }> = {
+  left: { justifyContent: "flex-start", textAlign: "left" },
+  center: { justifyContent: "center", textAlign: "center" },
+  right: { justifyContent: "flex-end", textAlign: "right" },
+};
+
+function customLayoutElement(data: RenderData, key: CustomLayoutElement["key"]): CustomLayoutElement {
+  return (
+    data.customLayoutElements?.find((item) => item.key === key) ??
+    DEFAULT_CUSTOM_LAYOUT.find((item) => item.key === key)!
+  );
+}
+
+function customElementText(data: RenderData, key: "guest_name" | "venue" | "datetime") {
+  if (key === "guest_name") return data.guestName;
+  if (key === "venue") return data.venue;
+  return [data.date, data.eventTime].filter(Boolean).join(" · ");
+}
+
+function CustomInvitationCard({ data }: { data: RenderData }) {
+  const width = CARD_WIDTH;
+  const height = data.coverImageBannerHeight;
+
+  const textKeys: Array<"guest_name" | "venue" | "datetime"> = ["guest_name", "venue", "datetime"];
+
+  return (
+    <div style={{ position: "relative", width, height, display: "flex", overflow: "hidden" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={data.coverImageDataUrl ?? undefined}
+        alt=""
+        width={width}
+        height={height}
+        style={{ position: "absolute", top: 0, left: 0, width, height, objectFit: "cover" }}
+      />
+
+      {textKeys.map((key) => {
+        const element = customLayoutElement(data, key);
+        const align = ELEMENT_ALIGN_STYLE[element.align ?? "left"];
+
+        return (
+          <div
+            key={key}
+            style={{
+              position: "absolute",
+              left: (element.xPct / 100) * width,
+              top: (element.yPct / 100) * height,
+              width: (element.widthPct / 100) * width,
+              height: (element.heightPct / 100) * height,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: align.justifyContent,
+              textAlign: align.textAlign,
+              fontFamily: "Arial, sans-serif",
+              fontSize: element.fontSize ?? 32,
+              fontWeight: 700,
+              color: element.color ?? "#FFFFFF",
+              overflow: "hidden",
+            }}
+          >
+            {customElementText(data, key)}
+          </div>
+        );
+      })}
+
+      {data.qrCodeDataUrl && (() => {
+        const qrElement = customLayoutElement(data, "qr");
+
+        return (
+          <div
+            style={{
+              position: "absolute",
+              left: (qrElement.xPct / 100) * width,
+              top: (qrElement.yPct / 100) * height,
+              width: (qrElement.widthPct / 100) * width,
+              height: (qrElement.heightPct / 100) * height,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#FFFFFF",
+              borderRadius: 8,
+              padding: 6,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.qrCodeDataUrl}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 export async function createCompactWhatsAppInvitationCard(
   data: WhatsAppCardData
 ) {
@@ -503,7 +655,7 @@ export async function createCompactWhatsAppInvitationCard(
 }
 
 function renderWhatsAppCard(
-  template: WhatsAppCardTemplate,
+  template: Exclude<WhatsAppCardTemplate, "custom">,
   data: RenderData
 ): ReactElement {
   return <PremiumWhatsAppCard data={data} template={template} />;
