@@ -4,6 +4,7 @@ import type { InvitationTemplate } from "@/services/eventService";
 import type { PublicInvitation } from "@/services/invitationService";
 
 import BotanicalRomance from "./BotanicalRomance";
+import Custom from "./Custom";
 import GoldenElegance from "./GoldenElegance";
 import HeritagePattern from "./HeritagePattern";
 import ModernMinimalPhoto from "./ModernMinimalPhoto";
@@ -22,4 +23,5 @@ export const TEMPLATE_COMPONENTS: Record<InvitationTemplate, ComponentType<Invit
   botanical_romance: BotanicalRomance,
   modern_minimal_photo: ModernMinimalPhoto,
   heritage_pattern: HeritagePattern,
+  custom: Custom,
 };

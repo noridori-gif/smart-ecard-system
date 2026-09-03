@@ -12,6 +12,10 @@ import type {
   PhotoLayout,
 } from "@/services/eventService";
 
+import type {
+  CustomLayoutElement,
+} from "@/services/invitationLayoutService";
+
 export type EventLanguage =
   | "sw"
   | "en";
@@ -203,6 +207,14 @@ export type PublicInvitation = {
   invitation_message:
     | string
     | null;
+
+  custom_invitation_background_url:
+    | string
+    | null;
+
+  custom_layout_elements:
+    | CustomLayoutElement[]
+    | null;
 };
 
 type RawInvitationWithDetails =
@@ -259,7 +271,8 @@ function normalizeInvitationTemplate(
     template === "golden_elegance" ||
     template === "botanical_romance" ||
     template === "modern_minimal_photo" ||
-    template === "heritage_pattern"
+    template === "heritage_pattern" ||
+    template === "custom"
   ) {
     return template;
   }
