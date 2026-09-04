@@ -75,24 +75,52 @@ const ROSE_GARDEN_CARD_HEIGHT = 2080;
 const ROSE_GARDEN_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "rose-garden");
 const ROSE_CORNER_TL = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "tl.png")).toString("base64")}`,
-  width: 220,
-  height: 880,
+  width: 236,
+  height: 1019,
 };
 const ROSE_CORNER_TR = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "tr.png")).toString("base64")}`,
-  width: 220,
-  height: 1021,
+  width: 236,
+  height: 1160,
 };
 const ROSE_CORNER_BL = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "bl.png")).toString("base64")}`,
-  width: 220,
-  height: 544,
+  width: 236,
+  height: 939,
 };
 const ROSE_CORNER_BR = {
   dataUrl: `data:image/png;base64,${readFileSync(join(ROSE_GARDEN_ASSET_DIR, "br.png")).toString("base64")}`,
-  width: 210,
-  height: 772,
+  width: 226,
+  height: 842,
 };
+
+// Rose Garden's typography relies on real serif/script contrast (Playfair
+// Display + Great Vibes) against the photographic corners -- without fonts
+// registered here, next/og's ImageResponse silently falls back to Satori's
+// generic default sans for every fontFamily in this file (Georgia, Arial,
+// etc. are not embedded and Satori does not read system fonts), which is
+// most of why the un-registered render reads as "text on a background"
+// rather than a designed invitation. Bundled as local WOFF files (same
+// load-once-at-module-load pattern as the corner PNGs above) rather than
+// fetched from Google Fonts at request time, to keep this off the network
+// path that caused the Meta 131053 timeout regression before.
+const ROSE_GARDEN_FONT_DIR = join(process.cwd(), "public", "invitation-assets", "fonts");
+function loadRoseGardenFont(file: string) {
+  return readFileSync(join(ROSE_GARDEN_FONT_DIR, file));
+}
+type EmbeddedFont = {
+  name: string;
+  data: Buffer;
+  weight: 400 | 700;
+  style: "normal" | "italic";
+};
+const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
+  { name: "Playfair Display", data: loadRoseGardenFont("PlayfairDisplay-Regular.woff"), weight: 400, style: "normal" },
+  { name: "Playfair Display", data: loadRoseGardenFont("PlayfairDisplay-Bold.woff"), weight: 700, style: "normal" },
+  { name: "Playfair Display", data: loadRoseGardenFont("PlayfairDisplay-Italic.woff"), weight: 400, style: "italic" },
+  { name: "Great Vibes", data: loadRoseGardenFont("GreatVibes-Regular.woff"), weight: 400, style: "normal" },
+  { name: "Inter", data: loadRoseGardenFont("Inter-Bold.woff"), weight: 700, style: "normal" },
+];
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
 // Capped well below the photo's true aspect ratio for very tall portrait
@@ -415,11 +443,13 @@ function renderData(
 async function materializePng(
   element: ReactElement,
   width = CARD_WIDTH,
-  height = CARD_HEIGHT
+  height = CARD_HEIGHT,
+  fonts?: EmbeddedFont[]
 ) {
   const imageResponse = new ImageResponse(element, {
     width,
     height,
+    ...(fonts ? { fonts } : {}),
   });
   const buffer = await imageResponse.arrayBuffer();
   const bytes = new Uint8Array(buffer);
@@ -442,9 +472,10 @@ async function materializePng(
 async function materializeJpeg(
   element: ReactElement,
   width = CARD_WIDTH,
-  height = CARD_HEIGHT
+  height = CARD_HEIGHT,
+  fonts?: EmbeddedFont[]
 ) {
-  const pngBuffer = await materializePng(element, width, height);
+  const pngBuffer = await materializePng(element, width, height, fonts);
 
   return sharp(Buffer.from(pngBuffer))
     .flatten({ background: "#ffffff" })
@@ -684,32 +715,63 @@ const ROSE_FOREST = "#1B4332";
 const ROSE_BERRY = "#7A0C0C";
 const ROSE_BLUSH = "#E8B4B8";
 const ROSE_IVORY = "#FDF6F0";
+const ROSE_SERIF = "Playfair Display";
+const ROSE_SCRIPT = "Great Vibes";
+const ROSE_SANS = "Inter";
+
+// Common titles/honorifics to skip when picking out a "meaningful" name word
+// -- same idea as pledgeMessageService.ts's NAME_TITLES, kept separate since
+// this file doesn't otherwise depend on that module. Matters here because
+// production event titles aren't always "Bride & Groom": a title with no
+// "&" (e.g. a single organizer-entered name) must not have its honorific
+// mistaken for one half of a couple.
+const ROSE_NAME_HONORIFICS = new Set([
+  "dr", "mr", "mrs", "ms", "miss", "prof", "rev", "hon", "sheikh", "imam", "pastor", "bwana", "bibi",
+]);
+function roseSignificantWord(word: string) {
+  return !ROSE_NAME_HONORIFICS.has(word.replace(/\.$/, "").toLowerCase());
+}
+function roseFirstMeaningfulWord(part: string) {
+  const words = part.trim().split(/\s+/).filter(Boolean);
+  return words.find(roseSignificantWord) ?? words[0] ?? "";
+}
 
 /**
- * Derives a couple-initials monogram ("S & D") from the display title, and
- * a trailing 4-digit year from the already-formatted date string, for the
- * header monogram. Falls back gracefully when the title/date don't have the
- * expected shape (e.g. a non-wedding event title, or an unparsable date).
+ * Full first names for the script hero line ("Samwel & Dionista") when the
+ * title has a clear "X & Y" shape, otherwise just the one meaningful name
+ * present -- deliberately does NOT invent a second name from a single
+ * person's own middle/last name when there's no "&" in the title.
  */
+function roseHeroNames(title: string) {
+  const ampersandParts = title.split(/\s*&\s*/).filter(Boolean);
+
+  if (ampersandParts.length >= 2) {
+    const first = roseFirstMeaningfulWord(ampersandParts[0]);
+    const second = roseFirstMeaningfulWord(ampersandParts[1]);
+
+    if (first && second) {
+      return `${first} & ${second}`;
+    }
+  }
+
+  return roseFirstMeaningfulWord(title) || title;
+}
+
+/** Same shape as roseHeroNames, but single letters, for the no-photo monogram. */
 function roseMonogram(title: string) {
   const ampersandParts = title.split(/\s*&\s*/).filter(Boolean);
 
   if (ampersandParts.length >= 2) {
-    const first = ampersandParts[0].trim().split(/\s+/)[0]?.[0];
-    const second = ampersandParts[1].trim().split(/\s+/)[0]?.[0];
+    const first = roseFirstMeaningfulWord(ampersandParts[0])[0];
+    const second = roseFirstMeaningfulWord(ampersandParts[1])[0];
 
     if (first && second) {
       return `${first.toUpperCase()} & ${second.toUpperCase()}`;
     }
   }
 
-  const words = title.split(/\s+/).filter(Boolean);
-
-  if (words.length >= 2) {
-    return `${words[0][0]?.toUpperCase() ?? ""} & ${words[1][0]?.toUpperCase() ?? ""}`;
-  }
-
-  return title.slice(0, 2).toUpperCase();
+  const letter = roseFirstMeaningfulWord(title)[0] ?? title[0] ?? "";
+  return letter.toUpperCase();
 }
 
 function roseYear(dateText: string) {
@@ -743,6 +805,22 @@ function RoseCorner({
   );
 }
 
+/** Small letterspaced label with flanking hairlines, reused for every
+ * section heading so the card has one consistent label treatment instead
+ * of the mix of bare labels / bordered boxes / side-rules the first pass
+ * had (part of what read as "competing for attention"). */
+function RoseEyebrow({ children }: { children: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 28, height: 1, display: "flex", backgroundColor: ROSE_BLUSH }} />
+      <div style={{ display: "flex", fontFamily: ROSE_SANS, fontSize: 15, fontWeight: 700, letterSpacing: 4, color: ROSE_BERRY, whiteSpace: "pre" }}>
+        {children}
+      </div>
+      <div style={{ width: 28, height: 1, display: "flex", backgroundColor: ROSE_BLUSH }} />
+    </div>
+  );
+}
+
 function DressChips({ dressCode }: { dressCode: string }) {
   const parts = dressCode
     .split(",")
@@ -753,18 +831,18 @@ function DressChips({ dressCode }: { dressCode: string }) {
   if (parts.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, maxWidth: 820 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 10, maxWidth: 600 }}>
       {parts.map((part, index) => (
         <div
           key={`${part}-${index}`}
           style={{
             display: "flex",
-            padding: "10px 24px",
+            padding: "10px 22px",
             borderRadius: 999,
             backgroundColor: index % 2 === 0 ? ROSE_FOREST : ROSE_BERRY,
             color: "#FFFFFF",
-            fontFamily: "Arial, sans-serif",
-            fontSize: 19,
+            fontFamily: ROSE_SANS,
+            fontSize: 17,
             fontWeight: 700,
           }}
         >
@@ -785,14 +863,28 @@ function DressChips({ dressCode }: { dressCode: string }) {
  * photographic rose/silk backdrop (this is the same class of bug fixed for
  * garden_elegance, avoided here by never wiring the theme in for ink colour
  * in the first place). Flagged to the user as a deliberate scoping choice.
+ *
+ * Visual-quality revision: the first pass never registered any fonts with
+ * ImageResponse, so every fontFamily here (Georgia, Arial, ...) was silently
+ * ignored by Satori in favour of its generic default sans -- see
+ * ROSE_GARDEN_FONTS above. That, more than any single layout number, is why
+ * it read as "text on a background" instead of a designed invitation. This
+ * pass also: rebalances the frame to a true tall arch instead of a wide
+ * dome, drops the redundant second "Title" block (the script hero already
+ * names the couple), and merges the date/time + venue into one bordered
+ * details card instead of two separately-floating pieces.
  */
 function RoseGardenCard({ data }: { data: RenderData }) {
   const text = copy(data.language);
+  const heroNames = roseHeroNames(data.title);
   const monogram = roseMonogram(data.title);
   const year = roseYear(data.date);
   const passId = data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—";
-  const qrSize = 300;
+  const qrSize = 268;
   const dateTime = [data.date, data.eventTime].filter(Boolean).join(" · ");
+  const frameWidth = 540;
+  const frameHeight = 660;
+  const frameRadius = frameWidth / 2;
 
   return (
     <div
@@ -813,90 +905,124 @@ function RoseGardenCard({ data }: { data: RenderData }) {
       <RoseCorner corner={ROSE_CORNER_BL} horizontal="left" vertical="bottom" />
       <RoseCorner corner={ROSE_CORNER_BR} horizontal="right" vertical="bottom" />
 
-      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", padding: "56px 60px 44px" }}>
-        <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 40, fontStyle: "italic", letterSpacing: 2, color: ROSE_BERRY }}>
-          {monogram}
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", padding: "64px 96px 52px" }}>
+        <RoseEyebrow>{text.heading}</RoseEyebrow>
+
+        <div style={{ display: "flex", marginTop: 22, maxWidth: 600, fontFamily: ROSE_SCRIPT, fontSize: 86, lineHeight: 1, color: ROSE_FOREST, textAlign: "center" }}>
+          {heroNames}
         </div>
         {year ? (
-          <div style={{ display: "flex", marginTop: 4, fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 800, letterSpacing: 6, color: ROSE_FOREST }}>
+          <div style={{ display: "flex", marginTop: 16, fontFamily: ROSE_SANS, fontSize: 15, fontWeight: 700, letterSpacing: 7, color: ROSE_BERRY }}>
             {year}
           </div>
         ) : null}
 
         <div
           style={{
-            width: 720,
-            height: 620,
+            width: frameWidth,
+            height: frameHeight,
             position: "relative",
             display: "flex",
-            marginTop: 34,
-            overflow: "hidden",
-            borderRadius: "360px 360px 24px 24px",
-            border: `6px solid ${ROSE_FOREST}`,
-            boxShadow: "0 20px 45px rgba(27,67,50,0.22)",
-            backgroundColor: ROSE_BLUSH,
+            marginTop: 40,
+            padding: 7,
+            boxSizing: "border-box",
+            borderRadius: `${frameRadius + 7}px ${frameRadius + 7}px 22px 22px`,
+            border: `7px solid ${ROSE_FOREST}`,
+            boxShadow: "0 22px 48px rgba(27,67,50,0.24)",
+            backgroundColor: ROSE_IVORY,
           }}
         >
-          {data.coverImageDataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.coverImageDataUrl}
-              alt=""
-              width={720}
-              height={620}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-            />
-          ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia, serif", fontSize: 90, fontStyle: "italic", color: ROSE_FOREST }}>
-              {monogram}
-            </div>
-          )}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: `${frameRadius}px ${frameRadius}px 16px 16px`,
+              backgroundColor: ROSE_BLUSH,
+            }}
+          >
+            {data.coverImageDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.coverImageDataUrl}
+                alt=""
+                width={frameWidth}
+                height={frameHeight}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundImage: `linear-gradient(165deg, ${ROSE_BLUSH} 0%, ${ROSE_IVORY} 78%)`,
+                }}
+              >
+                <div style={{ display: "flex", fontFamily: ROSE_SCRIPT, fontSize: 96, color: ROSE_FOREST }}>{monogram}</div>
+                <div style={{ width: 64, height: 2, display: "flex", marginTop: 18, backgroundColor: ROSE_BERRY }} />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div style={{ display: "flex", marginTop: 40, maxWidth: 900, fontFamily: "Georgia, serif", fontSize: Math.min(56, data.titleSize), lineHeight: 1.08, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
-          {data.title}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", marginTop: 14 }}>
-          <div style={{ width: 40, height: 1, display: "flex", marginRight: 14, backgroundColor: ROSE_BERRY }} />
-          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 16, fontWeight: 800, letterSpacing: 5, color: ROSE_BERRY }}>{text.heading}</div>
-          <div style={{ width: 40, height: 1, display: "flex", marginLeft: 14, backgroundColor: ROSE_BERRY }} />
-        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: 46,
+            width: 620,
+            padding: "30px 40px",
+            borderRadius: 26,
+            border: `2px solid ${ROSE_FOREST}`,
+            backgroundColor: "#FFFFFF",
+            boxShadow: "0 14px 30px rgba(27,67,50,0.1)",
+          }}
+        >
+          <div style={{ display: "flex", fontFamily: ROSE_SERIF, fontSize: 30, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+            {dateTime}
+          </div>
 
-        <div style={{ display: "flex", marginTop: 30, padding: "14px 34px", borderRadius: 999, backgroundColor: "#FFFFFF", border: `2px solid ${ROSE_FOREST}`, fontFamily: "Georgia, serif", fontSize: 28, fontWeight: 700, color: ROSE_FOREST }}>
-          {dateTime}
-        </div>
+          <div style={{ width: 72, height: 1, display: "flex", marginTop: 20, marginBottom: 20, backgroundColor: ROSE_BLUSH }} />
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 24 }}>
-          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 3, color: ROSE_BERRY }}>{text.reception}</div>
-          <div style={{ display: "flex", marginTop: 6, maxWidth: 700, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+          <div style={{ display: "flex", fontFamily: ROSE_SANS, fontSize: 13, fontWeight: 700, letterSpacing: 3, color: ROSE_BERRY }}>{text.reception}</div>
+          <div style={{ display: "flex", marginTop: 8, maxWidth: 520, whiteSpace: "pre-wrap", fontFamily: ROSE_SERIF, fontSize: 23, lineHeight: 1.25, fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
             {data.venue}
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 34, padding: "18px 40px", borderTop: `1px solid ${ROSE_BLUSH}`, borderBottom: `1px solid ${ROSE_BLUSH}` }}>
-          <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: ROSE_BERRY }}>{text.weddingOf}</div>
-          <div style={{ display: "flex", marginTop: 8, maxWidth: 820, fontFamily: "Georgia, serif", fontSize: 40, fontStyle: "italic", fontWeight: 700, color: ROSE_FOREST, textAlign: "center" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 48 }}>
+          <RoseEyebrow>{text.weddingOf}</RoseEyebrow>
+          <div style={{ display: "flex", marginTop: 16, maxWidth: 620, fontFamily: ROSE_SERIF, fontSize: 42, fontStyle: "italic", color: ROSE_FOREST, textAlign: "center" }}>
             {data.guestName}
           </div>
         </div>
 
         {data.dressCode ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 30 }}>
-            <div style={{ display: "flex", fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 4, color: ROSE_BERRY, marginBottom: 14 }}>{text.dress}</div>
-            <DressChips dressCode={data.dressCode} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 48 }}>
+            <RoseEyebrow>{text.dress}</RoseEyebrow>
+            <div style={{ display: "flex", marginTop: 20 }}>
+              <DressChips dressCode={data.dressCode} />
+            </div>
           </div>
         ) : null}
 
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 44 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 52 }}>
           <div
             style={{
-              width: qrSize + 40,
-              height: qrSize + 40,
+              width: qrSize + 36,
+              height: qrSize + 36,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: 20,
-              borderRadius: 28,
+              padding: 18,
+              borderRadius: 26,
               backgroundColor: "#FFFFFF",
               border: `3px solid ${ROSE_FOREST}`,
               boxShadow: "0 16px 34px rgba(27,67,50,0.2)",
@@ -906,19 +1032,19 @@ function RoseGardenCard({ data }: { data: RenderData }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={data.qrCodeDataUrl} alt="" width={qrSize} height={qrSize} style={{ width: qrSize, height: qrSize, objectFit: "contain" }} />
             ) : (
-              <div style={{ width: qrSize - 30, height: qrSize - 30, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${ROSE_FOREST}`, fontFamily: "Arial, sans-serif", fontSize: 26, fontWeight: 900, color: ROSE_FOREST }}>
+              <div style={{ width: qrSize - 30, height: qrSize - 30, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${ROSE_FOREST}`, fontFamily: ROSE_SANS, fontSize: 24, fontWeight: 700, color: ROSE_FOREST }}>
                 QR
               </div>
             )}
           </div>
-          <div style={{ display: "flex", marginTop: 20, fontFamily: "Georgia, serif", fontSize: 34, fontWeight: 700, letterSpacing: 1, color: ROSE_FOREST }}>{passId}</div>
-          <div style={{ display: "flex", marginTop: 6, maxWidth: 480, fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", lineHeight: 1.25, color: ROSE_BERRY, textAlign: "center" }}>
+          <div style={{ display: "flex", marginTop: 22, fontFamily: ROSE_SANS, fontSize: 26, fontWeight: 700, letterSpacing: 3, color: ROSE_FOREST }}>{passId}</div>
+          <div style={{ display: "flex", marginTop: 8, maxWidth: 460, fontFamily: ROSE_SERIF, fontSize: 16, fontStyle: "italic", lineHeight: 1.3, color: ROSE_BERRY, textAlign: "center" }}>
             {text.instruction}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 40, padding: "16px 34px", borderRadius: 16, border: `1px dashed ${ROSE_BERRY}`, maxWidth: 640 }}>
-          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 18, fontStyle: "italic", lineHeight: 1.3, color: ROSE_FOREST, textAlign: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 46, padding: "18px 36px", borderRadius: 16, border: `1.5px dashed ${ROSE_BLUSH}`, maxWidth: 600 }}>
+          <div style={{ display: "flex", fontFamily: ROSE_SERIF, fontSize: 18, fontStyle: "italic", lineHeight: 1.3, color: ROSE_FOREST, textAlign: "center" }}>
             {text.closing}
           </div>
         </div>
@@ -939,7 +1065,7 @@ async function createRoseGardenInvitationCard(data: WhatsAppCardData) {
 
   try {
     return jpegResponse(
-      await materializeJpeg(<RoseGardenCard data={normalizedData} />, CARD_WIDTH, ROSE_GARDEN_CARD_HEIGHT)
+      await materializeJpeg(<RoseGardenCard data={normalizedData} />, CARD_WIDTH, ROSE_GARDEN_CARD_HEIGHT, ROSE_GARDEN_FONTS)
     );
   } catch (error) {
     console.error("Rose Garden card render failed:", error);
