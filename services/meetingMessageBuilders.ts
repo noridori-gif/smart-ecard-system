@@ -3,6 +3,8 @@
 // builder the real send path uses, without pulling in that file's "server-only"
 // Supabase/provider-sending dependencies.
 import { renderCustomSmsTemplate, type PledgeMessageValues } from "@/services/pledgeMessageService";
+import { analyzeSms } from "@/services/smsAnalysis";
+export { analyzeSms, type SmsAnalysis } from "@/services/smsAnalysis";
 
 export type MeetingRow = {
   id: number;
@@ -35,15 +37,6 @@ export function meetingDateLabel(date:string){return new Intl.DateTimeFormat("sw
 // English-month variant for the approved WhatsApp meeting invitation template's {{4}} date
 // placeholder specifically -- meetingDateLabel above stays Swahili for the SMS/preview text.
 export function meetingDateLabelEn(date:string){return new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"long",year:"numeric",timeZone:"Africa/Dar_es_Salaam"}).format(new Date(`${date}T12:00:00Z`))}
-const GSM_BASIC=new Set(Array.from("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà"));
-const GSM_EXTENSION=new Set(Array.from("^{}\\[~]|€"));
-export type SmsAnalysis={encoding:"GSM-7"|"UCS-2";units:number;segments:number;singleLimit:number;multipartLimit:number};
-export function analyzeSms(message:string):SmsAnalysis{
-  let gsmUnits=0,gsm=true;
-  for(const character of Array.from(message)){if(GSM_BASIC.has(character))gsmUnits+=1;else if(GSM_EXTENSION.has(character))gsmUnits+=2;else{gsm=false;break}}
-  const encoding=gsm?"GSM-7":"UCS-2",units=gsm?gsmUnits:Array.from(message).reduce((total,character)=>total+(character.codePointAt(0)!>0xffff?2:1),0),singleLimit=gsm?160:70,multipartLimit=gsm?153:67;
-  return {encoding,units,segments:units<=singleLimit?1:Math.ceil(units/multipartLimit),singleLimit,multipartLimit};
-}
 export function estimateSmsSegments(message:string){return analyzeSms(message).segments}
 function compactDate(date:string){const [year,month,day]=date.split("-");return `${day}/${month}/${year}`}
 function shortGreetingName(fullName:string){

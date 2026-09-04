@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { sendBeemSms } from "@/services/beemSmsService";
 import { DEFAULT_INVITATION_TEMPLATE } from "@/services/eventService";
-import { buildSmsMessage } from "@/services/invitationMessageService";
+import { resolveInvitationSms } from "@/services/invitationMessageService";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ type ProfileRecord = {
 
 type InvitationRow = {
   id: number;
+  event_id: number;
   invitation_token: string;
   guests:
     | {
@@ -160,6 +161,7 @@ export async function POST(request: Request) {
       .from("invitations")
       .select(`
         id,
+        event_id,
         invitation_token,
         guests!inner (
           full_name,
@@ -204,11 +206,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: smsSettingsData, error: smsSettingsError } = await supabase
+      .from("event_invitation_sms_settings")
+      .select("custom_invitation_sms_message")
+      .eq("event_id", invitationRecord.event_id)
+      .maybeSingle();
+
+    if (smsSettingsError) {
+      return Response.json({ success: false, message: smsSettingsError.message }, { status: 500 });
+    }
+
+    const customInvitationSmsMessage =
+      (smsSettingsData as { custom_invitation_sms_message: string | null } | null)
+        ?.custom_invitation_sms_message ?? null;
+
     const siteOrigin = getSafeSiteOrigin(request);
-    const message = buildSmsMessage(
+    const message = resolveInvitationSms(
       {
         id: invitationRecord.id,
-        event_id: 0,
+        event_id: invitationRecord.event_id,
         guest_id: 0,
         invitation_token: invitationRecord.invitation_token,
         invitation_status: "sent",
@@ -250,7 +266,8 @@ export async function POST(request: Request) {
           allowed_guests: guest.allowed_guests ?? 1,
         },
       },
-      siteOrigin
+      siteOrigin,
+      customInvitationSmsMessage
     );
 
     const result = await sendBeemSms({

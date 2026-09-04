@@ -16,9 +16,10 @@ import {
 } from "@/services/financialAutomationService";
 import type { FinancialPledge } from "@/services/financialSuiteService";
 import {
-  formatTzs, normalizeTanzanianPhone, analyzeSms, buildPledgeMessage, buildCompactFinancialSmsMessage, renderCustomSmsTemplate,
+  formatTzs, normalizeTanzanianPhone, buildPledgeMessage, buildCompactFinancialSmsMessage, renderCustomSmsTemplate,
   CUSTOM_SMS_TEMPLATE_PLACEHOLDERS, type PledgeMessageValues,
 } from "@/services/pledgeMessageService";
+import MessageTemplateEditor from "@/components/ui/MessageTemplateEditor";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import { formatAppDate } from "@/lib/i18n/formatters";
 
@@ -287,35 +288,40 @@ export default function FinancialRemindersTab({ eventId, eventDate, deadline, pl
               label="Reminder SMS"
               value={settings.custom_reminder_message ?? ""}
               onChange={(value) => setSettings({...settings, custom_reminder_message: value || null})}
-              sampleValues={sampleMessageValues}
+              placeholders={CUSTOM_SMS_TEMPLATE_PLACEHOLDERS}
+              renderPreview={(template) => renderCustomSmsTemplate(template, sampleMessageValues)}
               buildDefault={() => buildPledgeMessage("pledge_reminder", language === "en" ? "en" : "sw", sampleMessageValues)}
             />
             <MessageTemplateEditor
               label="Thank You SMS"
               value={settings.custom_thank_you_message ?? ""}
               onChange={(value) => setSettings({...settings, custom_thank_you_message: value || null})}
-              sampleValues={sampleMessageValues}
+              placeholders={CUSTOM_SMS_TEMPLATE_PLACEHOLDERS}
+              renderPreview={(template) => renderCustomSmsTemplate(template, sampleMessageValues)}
               buildDefault={() => buildPledgeMessage("pledge_thank_you", language === "en" ? "en" : "sw", sampleMessageValues)}
             />
             <MessageTemplateEditor
               label="New Pledge Confirmation SMS"
               value={settings.custom_pledge_acknowledgement_message ?? ""}
               onChange={(value) => setSettings({...settings, custom_pledge_acknowledgement_message: value || null})}
-              sampleValues={sampleMessageValues}
+              placeholders={CUSTOM_SMS_TEMPLATE_PLACEHOLDERS}
+              renderPreview={(template) => renderCustomSmsTemplate(template, sampleMessageValues)}
               buildDefault={() => buildCompactFinancialSmsMessage("pledge_acknowledgement", sampleMessageValues).message}
             />
             <MessageTemplateEditor
               label="Payment Received SMS"
               value={settings.custom_payment_received_message ?? ""}
               onChange={(value) => setSettings({...settings, custom_payment_received_message: value || null})}
-              sampleValues={sampleMessageValues}
+              placeholders={CUSTOM_SMS_TEMPLATE_PLACEHOLDERS}
+              renderPreview={(template) => renderCustomSmsTemplate(template, sampleMessageValues)}
               buildDefault={() => buildCompactFinancialSmsMessage("payment_received", sampleMessageValues).message}
             />
             <MessageTemplateEditor
               label="Meeting Invitation SMS"
               value={settings.custom_meeting_invitation_message ?? ""}
               onChange={(value) => setSettings({...settings, custom_meeting_invitation_message: value || null})}
-              sampleValues={sampleMessageValues}
+              placeholders={CUSTOM_SMS_TEMPLATE_PLACEHOLDERS}
+              renderPreview={(template) => renderCustomSmsTemplate(template, sampleMessageValues)}
               buildDefault={() => buildMeetingInvitationSms({ name: sampleMessageValues.guestName, meeting: sampleMeetingRow, eventTitle: sampleMessageValues.eventTitle, eventDate: sampleMessageValues.eventDate ?? "" })}
             />
           </div>
@@ -416,26 +422,5 @@ function WhatsAppTemplatePicker({ label, name, languageCode, defaultLanguageCode
     <p className="sep-caption">{templatesState.error
       ? `Couldn't load your approved templates automatically (${templatesState.error}) — enter the exact template name manually.`
       : "No approved templates found for this language — enter the exact template name manually."}</p>
-  </div>;
-}
-function MessageTemplateEditor({ label, value, onChange, sampleValues, buildDefault }: {
-  label: string; value: string; onChange: (value: string) => void; sampleValues: PledgeMessageValues; buildDefault: () => string;
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  function insertPlaceholder(token: string) {
-    const el = textareaRef.current;
-    const start = el?.selectionStart ?? value.length, end = el?.selectionEnd ?? value.length;
-    const next = `${value.slice(0, start)}{${token}}${value.slice(end)}`;
-    onChange(next);
-    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(start + token.length + 2, start + token.length + 2); });
-  }
-  const previewText = value.trim() ? renderCustomSmsTemplate(value, sampleValues) : buildDefault();
-  const analysis = analyzeSms(previewText);
-  return <div className="rounded-xl border border-[#e7e1d7] bg-white p-3 shadow-sm sm:p-4">
-    <div className="flex items-center justify-between gap-2"><p className="sep-label">{label}</p>{value.trim() && <button type="button" onClick={() => onChange("")} className="text-xs font-bold text-emerald-700 underline underline-offset-2">Reset to default</button>}</div>
-    <textarea ref={textareaRef} value={value} onChange={(event) => onChange(event.target.value)} placeholder="Leave blank to use the default message" rows={5} className="sep-control mt-2 py-2 font-normal" />
-    <div className="mt-2 flex flex-wrap gap-1.5">{CUSTOM_SMS_TEMPLATE_PLACEHOLDERS.map((token) => <button key={token} type="button" onClick={() => insertPlaceholder(token)} className="rounded-full border border-[#e7e1d7] bg-stone-50 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700">{`{${token}}`}</button>)}</div>
-    <p className={`mt-2 text-xs font-semibold ${analysis.segments > 1 ? "text-amber-700" : "text-slate-500"}`}>{analysis.units}/{analysis.singleLimit} characters · {analysis.segments} SMS segment{analysis.segments === 1 ? "" : "s"} ({analysis.encoding})</p>
-    <div className="mt-3 rounded-lg border border-[#e7e1d7] bg-stone-50 p-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Preview{!value.trim() && " (default)"}</p><p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{previewText}</p></div>
   </div>;
 }

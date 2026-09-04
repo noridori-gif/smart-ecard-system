@@ -344,7 +344,7 @@ export function buildWhatsAppMessage(
     .join("\n");
 }
 
-export function buildSmsMessage(
+function getInvitationSmsFields(
   invitation:
     InvitationWithDetails,
 
@@ -404,6 +404,132 @@ export function buildSmsMessage(
       invitation.invitation_token,
       siteOrigin
     );
+
+  return {
+    language,
+    guestName,
+    eventTitle,
+    eventDate,
+    eventTime,
+    venue,
+    eventPassId,
+    allowedGuests,
+    invitationUrl,
+  };
+}
+
+// The organizer-facing SMS wording customization for guest invitations
+// ("Umealikwa kwenye ..."). Mirrors CUSTOM_SMS_TEMPLATE_PLACEHOLDERS in
+// pledgeMessageService.ts, but the invitation SMS has no overlapping
+// fields (no pledge amounts, has a pass ID / invite link instead), so
+// it gets its own placeholder set rather than reusing that one.
+export const INVITATION_SMS_TEMPLATE_PLACEHOLDERS = [
+  "name",
+  "event",
+  "date",
+  "time",
+  "venue",
+  "pass_id",
+  "guest_count",
+  "invite_link",
+] as const;
+
+export type InvitationSmsTemplatePlaceholder =
+  (typeof INVITATION_SMS_TEMPLATE_PLACEHOLDERS)[number];
+
+export type InvitationSmsTemplateValues = Record<
+  InvitationSmsTemplatePlaceholder,
+  string
+>;
+
+export function buildInvitationSmsTemplateValues(
+  invitation:
+    InvitationWithDetails,
+
+  siteOrigin: string
+): InvitationSmsTemplateValues {
+  const fields =
+    getInvitationSmsFields(
+      invitation,
+      siteOrigin
+    );
+
+  return {
+    name: fields.guestName,
+    event: fields.eventTitle,
+    date: fields.eventDate,
+    time: fields.eventTime,
+    venue: fields.venue,
+    pass_id: fields.eventPassId,
+    guest_count:
+      String(fields.allowedGuests),
+    invite_link:
+      fields.invitationUrl,
+  };
+}
+
+export function renderInvitationSmsTemplate(
+  template: string,
+  values: InvitationSmsTemplateValues
+) {
+  return template.replace(
+    /\{(name|event|date|time|venue|pass_id|guest_count|invite_link)\}/g,
+    (
+      _match,
+      key: InvitationSmsTemplatePlaceholder
+    ) => values[key]
+  );
+}
+
+// Uses the organiser's custom SMS wording when set, otherwise falls back to
+// today's hardcoded buildSmsMessage output -- same resolve-then-fallback
+// shape as resolveMeetingInvitationSms in meetingMessageBuilders.ts.
+export function resolveInvitationSms(
+  invitation:
+    InvitationWithDetails,
+
+  siteOrigin: string,
+
+  customTemplate?:
+    | string
+    | null
+) {
+  if (customTemplate?.trim()) {
+    return renderInvitationSmsTemplate(
+      customTemplate,
+      buildInvitationSmsTemplateValues(
+        invitation,
+        siteOrigin
+      )
+    );
+  }
+
+  return buildSmsMessage(
+    invitation,
+    siteOrigin
+  );
+}
+
+export function buildSmsMessage(
+  invitation:
+    InvitationWithDetails,
+
+  siteOrigin: string
+) {
+  const {
+    language,
+    guestName,
+    eventTitle,
+    eventDate,
+    eventTime,
+    venue,
+    eventPassId,
+    allowedGuests,
+    invitationUrl,
+  } = getInvitationSmsFields(
+    invitation,
+    siteOrigin
+  );
 
   if (language === "en") {
     return [

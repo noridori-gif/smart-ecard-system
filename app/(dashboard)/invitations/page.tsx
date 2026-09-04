@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import SendWhatsAppCloudButton from "@/components/invitation/SendWhatsAppCloudButton";
+import InvitationSmsSettingsPanel from "@/components/invitation/InvitationSmsSettingsPanel";
 import Badge from "@/components/ui/Badge";
 import { buttonClassName } from "@/components/ui/Button";
 
@@ -100,6 +101,11 @@ export default function InvitationsPage() {
     sendingInvitationId,
     setSendingInvitationId,
   ] = useState<number | null>(null);
+
+  const [
+    smsSettingsOpen,
+    setSmsSettingsOpen,
+  ] = useState(false);
 
   const showNotification = useCallback((
     message: string,
@@ -283,7 +289,15 @@ export default function InvitationsPage() {
   const eventOptions =
     useMemo(() => {
       const eventMap =
-        new Map<number, string>();
+        new Map<
+          number,
+          {
+            title: string;
+            language:
+              | "sw"
+              | "en";
+          }
+        >();
 
       invitations.forEach(
         (invitation) => {
@@ -293,7 +307,13 @@ export default function InvitationsPage() {
           ) {
             eventMap.set(
               invitation.event_id,
-              invitation.events.title
+              {
+                title:
+                  invitation.events
+                    .title,
+                language:
+                  invitation.language,
+              }
             );
           }
         }
@@ -302,12 +322,26 @@ export default function InvitationsPage() {
       return Array.from(
         eventMap.entries()
       ).map(
-        ([id, title]) => ({
+        ([id, details]) => ({
           id,
-          title,
+          title:
+            details.title,
+          language:
+            details.language,
         })
       );
     }, [invitations]);
+
+  const selectedEventDetails =
+    selectedEventId !== "all"
+      ? eventOptions.find(
+          (eventItem) =>
+            String(
+              eventItem.id
+            ) ===
+            selectedEventId
+        ) ?? null
+      : null;
 
   const filteredInvitations =
     useMemo(() => {
@@ -567,7 +601,56 @@ export default function InvitationsPage() {
             </select>
           </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#e7e1d7] pt-4">
+          <button
+            type="button"
+            disabled={
+              !selectedEventDetails
+            }
+            onClick={() =>
+              setSmsSettingsOpen(
+                true
+              )
+            }
+            className={buttonClassName(
+              {
+                variant:
+                  "secondary",
+                size: "sm",
+              }
+            )}
+          >
+            Customize SMS wording
+          </button>
+
+          <p className="text-xs text-slate-500">
+            {selectedEventDetails
+              ? `Changes the SMS invitation wording for ${selectedEventDetails.title}.`
+              : "Chagua event kwanza ili kubadilisha maandishi ya SMS ya mwaliko."}
+          </p>
+        </div>
       </section>
+
+      {smsSettingsOpen &&
+        selectedEventDetails && (
+          <InvitationSmsSettingsPanel
+            eventId={
+              selectedEventDetails.id
+            }
+            eventTitle={
+              selectedEventDetails.title
+            }
+            language={
+              selectedEventDetails.language
+            }
+            onClose={() =>
+              setSmsSettingsOpen(
+                false
+              )
+            }
+          />
+        )}
 
       {paginatedInvitations.length ===
       0 ? (
