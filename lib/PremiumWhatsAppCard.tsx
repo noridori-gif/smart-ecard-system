@@ -170,18 +170,19 @@ function statusText(data: PremiumWhatsAppCardData) {
   return count === 1 ? "Single · Mtu 1" : count === 2 ? "Double · Watu 2" : `Group · Watu ${count}`;
 }
 
-function responsiveSize(value: string, large: number, medium: number, small: number) {
-  if (value.length > 48) return small;
-  if (value.length > 28) return medium;
-  return large;
+function responsiveSize(value: string, large: number, medium: number, small: number, scale = 1) {
+  const base = value.length > 48 ? small : value.length > 28 ? medium : large;
+  return Math.round(base * scale);
 }
 
-function messageSize(value: string) {
-  if (value.length > 420) return 17;
-  if (value.length > 300) return 20;
-  if (value.length > 200) return 23;
-  if (value.length > 120) return 26;
-  return 29;
+function messageSize(value: string, scale = 1) {
+  const base =
+    value.length > 420 ? 17 :
+    value.length > 300 ? 20 :
+    value.length > 200 ? 23 :
+    value.length > 120 ? 26 :
+    29;
+  return Math.round(base * scale);
 }
 
 function initials(value: string) {
@@ -386,7 +387,7 @@ function GardenMotif() {
   );
 }
 
-function TemplateAtmosphere({ theme, title, hasBanner = true }: { theme: Theme; title: string; hasBanner?: boolean }) {
+function TemplateAtmosphere({ theme, title, hasBanner = true, hasSidePhoto = false }: { theme: Theme; title: string; hasBanner?: boolean; hasSidePhoto?: boolean }) {
   if (theme.skin === "botanical") return <BotanicalLeaves theme={theme} />;
   if (theme.skin === "floral") return <FloralCorners theme={theme} />;
   if (theme.skin === "african") return <AfricanBands theme={theme} />;
@@ -451,6 +452,11 @@ function TemplateAtmosphere({ theme, title, hasBanner = true }: { theme: Theme; 
   }
 
   if (theme.skin === "classic") {
+    // A side photo already separates the photo from this column visually —
+    // the frame's left edge would land right on that boundary and read as
+    // an unintended seam/border between the two, so it's skipped there.
+    if (hasSidePhoto) return null;
+
     return (
       <>
         <div style={{ position: "absolute", inset: 27, display: "flex", border: `3px solid ${theme.accent}` }} />
@@ -471,26 +477,26 @@ function InvitationTop({ data, theme, compact = false }: { data: PremiumWhatsApp
   const text = copy(data.language);
 
   return (
-    <div style={{ width: "100%", minHeight: 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "24px 7% 10px" : "24px 90px 10px", textAlign: "center" }}>
-      <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: 13, fontWeight: 800, letterSpacing: 5, color: theme.muted }}>
+    <div style={{ width: "100%", minHeight: compact ? 260 : 210, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "36px 7% 14px" : "24px 90px 10px", textAlign: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", fontFamily: "Arial, sans-serif", fontSize: compact ? 15 : 13, fontWeight: 800, letterSpacing: 5, color: theme.muted }}>
         <div style={{ width: 34, height: 1, display: "flex", marginRight: 14, backgroundColor: theme.accent }} />
         SMART EVENT PASS
         <div style={{ width: 34, height: 1, display: "flex", marginLeft: 14, backgroundColor: theme.accent }} />
       </div>
-      <div style={{ display: "flex", marginTop: 14 }}>
+      <div style={{ display: "flex", marginTop: 16 }}>
         <DiamondOrnament theme={theme} width={50} />
       </div>
-      <div style={{ display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: 52, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
+      <div style={{ display: "flex", marginTop: 18, fontFamily: "Georgia, serif", fontSize: compact ? 64 : 52, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
         {text.heading}
       </div>
       <div
         style={{
-          maxWidth: 865,
+          maxWidth: compact ? 600 : 865,
           display: "flex",
-          marginTop: 16,
+          marginTop: 20,
           whiteSpace: "pre-wrap",
           fontFamily: "Georgia, serif",
-          fontSize: messageSize(data.invitationMessage),
+          fontSize: messageSize(data.invitationMessage, compact ? 1.25 : 1),
           lineHeight: 1.34,
           fontStyle: "italic",
           color: theme.muted,
@@ -530,15 +536,15 @@ function GuestAndTitle({ data, theme, compact = false }: { data: PremiumWhatsApp
   const text = copy(data.language);
 
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "12px 6% 6px" : "12px 70px 6px", textAlign: "center" }}>
-      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34), lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "18px 6% 10px" : "12px 70px 6px", textAlign: "center" }}>
+      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34, compact ? 1.2 : 1), lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
         {data.guestName}
       </div>
-      <div style={{ width: 180, height: 1, display: "flex", marginTop: 14, backgroundColor: theme.accent }} />
-      <div style={{ display: "flex", marginTop: 14 }}>
+      <div style={{ width: 180, height: 1, display: "flex", marginTop: 16, backgroundColor: theme.accent }} />
+      <div style={{ display: "flex", marginTop: 16 }}>
         <Label theme={theme}>{text.weddingOf}</Label>
       </div>
-      <div style={{ maxWidth: 780, display: "flex", marginTop: 8, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 40, 36, 30), lineHeight: 1.06, fontWeight: 700, fontStyle: "italic", color: theme.ink, textAlign: "center" }}>
+      <div style={{ maxWidth: compact ? 600 : 780, display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 40, 36, 30, compact ? 1.2 : 1), lineHeight: 1.06, fontWeight: 700, fontStyle: "italic", color: theme.ink, textAlign: "center" }}>
         {data.title}
       </div>
     </div>
@@ -551,21 +557,23 @@ function Detail({
   secondary,
   theme,
   featured = false,
+  compact = false,
 }: {
   label: string;
   value: string;
   secondary?: string;
   theme: Theme;
   featured?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px 18px", textAlign: "center" }}>
       <Label theme={theme}>{label}</Label>
-      <div style={{ maxWidth: 420, display: "flex", marginTop: 7, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? 40 : 25, lineHeight: 1.12, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+      <div style={{ maxWidth: 420, display: "flex", marginTop: 7, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? (compact ? 48 : 40) : (compact ? 30 : 25), lineHeight: 1.12, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
         {value || "—"}
       </div>
       {secondary && (
-        <div style={{ maxWidth: 420, display: "flex", marginTop: 4, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: 19, lineHeight: 1.15, color: theme.muted, textAlign: "center" }}>
+        <div style={{ maxWidth: 420, display: "flex", marginTop: 4, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: compact ? 21 : 19, lineHeight: 1.15, color: theme.muted, textAlign: "center" }}>
           {secondary}
         </div>
       )}
@@ -580,24 +588,24 @@ function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppC
   const receptionVenue = data.receptionVenue || data.venue;
 
   return (
-    <div style={{ width: compact ? "94%" : 920, height: compact ? 410 : 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
-      <Detail label={text.date} value={data.date} theme={theme} featured />
+    <div style={{ width: compact ? "94%" : 920, height: compact ? 460 : 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
+      <Detail label={text.date} value={data.date} theme={theme} featured compact={compact} />
       <div style={{ width: "100%", display: "flex", alignItems: "stretch" }}>
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={data.ceremonyTitle || text.ceremony} value={ceremonyTime} secondary={ceremonyVenue} theme={theme} />
+          <Detail label={data.ceremonyTitle || text.ceremony} value={ceremonyTime} secondary={ceremonyVenue} theme={theme} compact={compact} />
         </div>
         <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.reception} value={receptionVenue} theme={theme} />
+          <Detail label={text.reception} value={receptionVenue} theme={theme} compact={compact} />
         </div>
       </div>
       <div style={{ width: "72%", display: "flex", paddingTop: 10, borderTop: `1px solid ${theme.accentSoft}` }}>
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.dress} value={data.dressCode || "—"} theme={theme} />
+          <Detail label={text.dress} value={data.dressCode || "—"} theme={theme} compact={compact} />
         </div>
         <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.status} value={statusText(data)} theme={theme} />
+          <Detail label={text.status} value={statusText(data)} theme={theme} compact={compact} />
         </div>
       </div>
     </div>
@@ -607,7 +615,7 @@ function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppC
 function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
   const passId = data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—";
-  const qrSize = compact ? 175 : 225;
+  const qrSize = compact ? 240 : 225;
 
   return (
     <div style={{ width: compact ? "94%" : 920, display: "flex", alignItems: "center", marginTop: 14, paddingTop: 18, borderTop: `1px solid ${theme.accentSoft}` }}>
@@ -619,14 +627,14 @@ function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCar
         <div style={{ display: "flex", marginTop: 16 }}>
           <Label theme={theme}>{text.passId}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? (compact ? 30 : 38) : (compact ? 38 : 48), lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? (compact ? 42 : 38) : (compact ? 56 : 48), lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
           {passId}
         </div>
         <div style={{ maxWidth: compact ? 320 : 480, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: compact ? 15 : 18, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
           {text.instruction}
         </div>
       </div>
-      <div style={{ width: 1, height: 240, display: "flex", backgroundColor: theme.accentSoft }} />
+      <div style={{ width: 1, height: qrSize + 65, display: "flex", backgroundColor: theme.accentSoft }} />
       <div style={{ width: qrSize + (compact ? 36 : 74), display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: compact ? 18 : 34 }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -691,7 +699,7 @@ export default function PremiumWhatsAppCard({
       <div style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
         <SidePhoto data={data} theme={theme} width={SIDE_PHOTO_WIDTH} />
         <div style={{ width: 1080 - SIDE_PHOTO_WIDTH, height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden" }}>
-          <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} />
+          <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} hasSidePhoto />
           <InvitationTop data={data} theme={theme} compact />
           <GuestAndTitle data={data} theme={theme} compact />
           <EventDetails data={data} theme={theme} compact />
