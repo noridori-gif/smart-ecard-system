@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { ReactElement, ReactNode } from "react";
 
 import { formatPassIdForDisplay } from "./passId";
@@ -34,6 +32,20 @@ export type PremiumWhatsAppCardData = {
   secondary: string;
   accent: string;
   photoLayout?: "top_banner" | "side_by_side" | "text_only";
+
+  // Corner leaf artwork for royal_portrait's side_by_side layout. This
+  // component is imported by both the server-side JPEG renderer and the
+  // client-side EventFormWizard live preview, so it can't `readFileSync`
+  // these itself (Node built-ins aren't bundleable for the browser).
+  // The real send path (lib/whatsappInvitationCard.tsx, server-only)
+  // supplies these as embedded base64 data URLs -- consistent with how
+  // Rose Garden's corner art avoids a live network fetch during render.
+  // The browser preview has no such value to pass, so GoldLeafCorners
+  // falls back to the plain /invitation-assets/... public path, which a
+  // browser resolves fine on its own.
+  leafTopLeftUrl?: string;
+  leafBottomLeftUrl?: string;
+  leafTopRightUrl?: string;
 };
 
 const DEFAULT_BANNER_HEIGHT = 620;
@@ -317,36 +329,32 @@ function FloralCorners({ theme }: { theme: Theme }) {
   );
 }
 
-const ROYAL_PORTRAIT_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "royal-portrait");
-
-function loadRoyalPortraitAsset(file: string) {
-  return `data:image/png;base64,${readFileSync(join(ROYAL_PORTRAIT_ASSET_DIR, file)).toString("base64")}`;
-}
-
-// Real corner artwork (not CSS shapes) -- see leaf_top_left.png etc. in
-// public/invitation-assets/royal-portrait/. bottom-left and the lighter
-// top-right are the same source art mirrored, not independent illustrations.
-const LEAF_TOP_LEFT = loadRoyalPortraitAsset("leaf_top_left.png");
-const LEAF_BOTTOM_LEFT = loadRoyalPortraitAsset("leaf_bottom_left.png");
-const LEAF_TOP_RIGHT_LIGHT = loadRoyalPortraitAsset("leaf_top_right_light.png");
+// Public-path fallbacks (safe in a browser bundle, no fs involved) used
+// when a caller doesn't supply an embedded data URL -- see the comment on
+// leafTopLeftUrl etc. above.
+const LEAF_TOP_LEFT_FALLBACK = "/invitation-assets/royal-portrait/leaf_top_left.png";
+const LEAF_BOTTOM_LEFT_FALLBACK = "/invitation-assets/royal-portrait/leaf_bottom_left.png";
+const LEAF_TOP_RIGHT_LIGHT_FALLBACK = "/invitation-assets/royal-portrait/leaf_top_right_light.png";
 
 /**
  * Gold leaf corner accents for the side-by-side layout, standing in for the
  * classic skin's usual full-perimeter frame (which doesn't work once a
  * side photo removes one edge of that frame -- see hasSidePhoto above).
+ * bottom-left and the lighter top-right are the same source art mirrored,
+ * not independent illustrations.
  */
-function GoldLeafCorners() {
+function GoldLeafCorners({ data }: { data: PremiumWhatsAppCardData }) {
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={LEAF_TOP_LEFT} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 0, width: 300, height: 117 }} />
+      <img src={data.leafTopLeftUrl ?? LEAF_TOP_LEFT_FALLBACK} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 0, width: 300, height: 117 }} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={LEAF_BOTTOM_LEFT} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 1500 - 117, width: 300, height: 117 }} />
+      <img src={data.leafBottomLeftUrl ?? LEAF_BOTTOM_LEFT_FALLBACK} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 1500 - 117, width: 300, height: 117 }} />
       {/* "right" (rather than a computed "left") silently fails to render
           here -- same satori quirk as the top-left/bottom-left images,
           which is why this uses an explicit left offset instead. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={LEAF_TOP_RIGHT_LIGHT} alt="" width={260} height={102} style={{ position: "absolute", left: 1080 - 260, top: 0, width: 260, height: 102, opacity: 0.6 }} />
+      <img src={data.leafTopRightUrl ?? LEAF_TOP_RIGHT_LIGHT_FALLBACK} alt="" width={260} height={102} style={{ position: "absolute", left: 1080 - 260, top: 0, width: 260, height: 102, opacity: 0.6 }} />
     </div>
   );
 }
@@ -753,7 +761,7 @@ export default function PremiumWhatsAppCard({
         {/* Spans the full card (not just the text column) so the corner
             sprigs can reach over the photo, matching a corner-accented
             card rather than a decoration confined to one panel. */}
-        {theme.skin === "classic" && <GoldLeafCorners />}
+        {theme.skin === "classic" && <GoldLeafCorners data={data} />}
       </div>
     );
   }

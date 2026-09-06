@@ -121,6 +121,20 @@ const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
   { name: "Great Vibes", data: loadRoseGardenFont("GreatVibes-Regular.woff"), weight: 400, style: "normal" },
   { name: "Inter", data: loadRoseGardenFont("Inter-Bold.woff"), weight: 700, style: "normal" },
 ];
+// Embedded (not left as a plain public URL) for the same reason as the
+// Rose Garden fonts above -- next/og's ImageResponse renders through this
+// module's server-only path, and embedding avoids a live network fetch
+// during render. lib/PremiumWhatsAppCard.tsx also renders in the browser
+// (EventFormWizard's live preview), where readFileSync isn't available at
+// all, which is why that file takes these as data instead of loading them.
+const ROYAL_PORTRAIT_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "royal-portrait");
+function loadRoyalPortraitAsset(file: string) {
+  return `data:image/png;base64,${readFileSync(join(ROYAL_PORTRAIT_ASSET_DIR, file)).toString("base64")}`;
+}
+const LEAF_TOP_LEFT_URL = loadRoyalPortraitAsset("leaf_top_left.png");
+const LEAF_BOTTOM_LEFT_URL = loadRoyalPortraitAsset("leaf_bottom_left.png");
+const LEAF_TOP_RIGHT_URL = loadRoyalPortraitAsset("leaf_top_right_light.png");
+
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
 // Capped well below the photo's true aspect ratio for very tall portrait
@@ -1098,7 +1112,17 @@ function renderWhatsAppCard(
   template: Exclude<WhatsAppCardTemplate, "custom" | "rose_garden">,
   data: RenderData
 ): ReactElement {
-  return <PremiumWhatsAppCard data={data} template={template} />;
+  return (
+    <PremiumWhatsAppCard
+      data={{
+        ...data,
+        leafTopLeftUrl: LEAF_TOP_LEFT_URL,
+        leafBottomLeftUrl: LEAF_BOTTOM_LEFT_URL,
+        leafTopRightUrl: LEAF_TOP_RIGHT_URL,
+      }}
+      template={template}
+    />
+  );
 }
 
 function CoverImage({
