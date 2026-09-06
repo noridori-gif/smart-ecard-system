@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ReactElement, ReactNode } from "react";
 
 import { formatPassIdForDisplay } from "./passId";
@@ -312,6 +314,40 @@ function FloralCorners({ theme }: { theme: Theme }) {
         />
       ))}
     </>
+  );
+}
+
+const ROYAL_PORTRAIT_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "royal-portrait");
+
+function loadRoyalPortraitAsset(file: string) {
+  return `data:image/png;base64,${readFileSync(join(ROYAL_PORTRAIT_ASSET_DIR, file)).toString("base64")}`;
+}
+
+// Real corner artwork (not CSS shapes) -- see leaf_top_left.png etc. in
+// public/invitation-assets/royal-portrait/. bottom-left and the lighter
+// top-right are the same source art mirrored, not independent illustrations.
+const LEAF_TOP_LEFT = loadRoyalPortraitAsset("leaf_top_left.png");
+const LEAF_BOTTOM_LEFT = loadRoyalPortraitAsset("leaf_bottom_left.png");
+const LEAF_TOP_RIGHT_LIGHT = loadRoyalPortraitAsset("leaf_top_right_light.png");
+
+/**
+ * Gold leaf corner accents for the side-by-side layout, standing in for the
+ * classic skin's usual full-perimeter frame (which doesn't work once a
+ * side photo removes one edge of that frame -- see hasSidePhoto above).
+ */
+function GoldLeafCorners() {
+  return (
+    <div style={{ position: "absolute", inset: 0, display: "flex" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={LEAF_TOP_LEFT} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 0, width: 300, height: 117 }} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={LEAF_BOTTOM_LEFT} alt="" width={300} height={117} style={{ position: "absolute", left: 0, top: 1500 - 117, width: 300, height: 117 }} />
+      {/* "right" (rather than a computed "left") silently fails to render
+          here -- same satori quirk as the top-left/bottom-left images,
+          which is why this uses an explicit left offset instead. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={LEAF_TOP_RIGHT_LIGHT} alt="" width={260} height={102} style={{ position: "absolute", left: 1080 - 260, top: 0, width: 260, height: 102, opacity: 0.6 }} />
+    </div>
   );
 }
 
@@ -675,19 +711,14 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
           <div style={{ width: 90, height: 1, display: "flex", marginTop: 20, backgroundColor: theme.accent }} />
         </div>
       )}
-      {/* Fades the photo into the details panel's own background color so the
-          two read as one continuous card instead of a photo-box + text-box. */}
-      <div
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          width: 130,
-          height: "100%",
-          display: "flex",
-          backgroundImage: `linear-gradient(to right, transparent, ${theme.paper})`,
-        }}
-      />
+      {/* Feathers the photo's top, right, and bottom edges into the panel's
+          own background color -- an organic vignette rather than a hard
+          rectangle -- so the whole card reads as one continuous surface
+          instead of a photo-box stitched to a text-box. The left edge is
+          the card's own outer border and stays crisp. */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to right, transparent 68%, ${theme.paper})` }} />
+      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to bottom, ${theme.paper}, transparent 12%)` }} />
+      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to top, ${theme.paper}, transparent 12%)` }} />
     </div>
   );
 }
@@ -709,7 +740,7 @@ export default function PremiumWhatsAppCard({
 
   if (photoLayout === "side_by_side") {
     return (
-      <div style={{ width: "100%", height: "100%", display: "flex", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
+      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
         <SidePhoto data={data} theme={theme} width={SIDE_PHOTO_WIDTH} />
         <div style={{ width: 1080 - SIDE_PHOTO_WIDTH, height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden" }}>
           <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} hasSidePhoto />
@@ -719,6 +750,10 @@ export default function PremiumWhatsAppCard({
           <PassTicket data={data} theme={theme} compact />
           <ClosingDivider theme={theme} text={text.closing} compact />
         </div>
+        {/* Spans the full card (not just the text column) so the corner
+            sprigs can reach over the photo, matching a corner-accented
+            card rather than a decoration confined to one panel. */}
+        {theme.skin === "classic" && <GoldLeafCorners />}
       </div>
     );
   }

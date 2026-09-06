@@ -27,6 +27,24 @@ export type PhotoLayout =
 export const DEFAULT_PHOTO_LAYOUT: PhotoLayout =
   "top_banner";
 
+/**
+ * royal_portrait's WhatsApp card reads much better inline in a chat thread
+ * as side_by_side than as the tall top_banner default (see the WhatsApp
+ * card investigation this shipped with) -- new events default to that
+ * layout for this one template. Existing events are unaffected: photo_layout
+ * is a NOT NULL column, so every event already has a concrete stored value
+ * and this only changes what a brand-new event starts with.
+ */
+export function getDefaultPhotoLayoutForTemplate(
+  template: InvitationTemplate
+): PhotoLayout {
+  if (template === "royal_portrait") {
+    return "side_by_side";
+  }
+
+  return DEFAULT_PHOTO_LAYOUT;
+}
+
 export const DEFAULT_EVENT_THEME = {
   primaryColor: "#BE123C",
   secondaryColor: "#FFF1F2",

@@ -479,7 +479,10 @@ async function materializeJpeg(
 
   return sharp(Buffer.from(pngBuffer))
     .flatten({ background: "#ffffff" })
-    .jpeg({ quality: 84, mozjpeg: true })
+    // 4:4:4 (no chroma subsampling) keeps small saturated text/hairline
+    // dividers full-color -- default 4:2:0 halves color resolution, which
+    // reads as "washed out" on the small-caps labels and thin rules.
+    .jpeg({ quality: 84, mozjpeg: true, chromaSubsampling: "4:4:4" })
     .toBuffer();
 }
 

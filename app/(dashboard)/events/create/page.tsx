@@ -3,10 +3,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import EventFormWizard, { type EventFormValues } from "@/components/events/EventFormWizard";
-import { createEvent, DEFAULT_EVENT_THEME, DEFAULT_INVITATION_TEMPLATE, DEFAULT_PHOTO_LAYOUT, uploadEventCover, uploadInvitationBackground } from "@/services/eventService";
+import { createEvent, DEFAULT_EVENT_THEME, DEFAULT_INVITATION_TEMPLATE, getDefaultPhotoLayoutForTemplate, uploadEventCover, uploadInvitationBackground } from "@/services/eventService";
 import { DEFAULT_CUSTOM_LAYOUT, saveCustomInvitationLayout } from "@/services/invitationLayoutService";
 
-const INITIAL_VALUES:EventFormValues={title:"",event_type:"",bride_name:"",groom_name:"",language:"sw",invitation_template:DEFAULT_INVITATION_TEMPLATE,photo_layout:DEFAULT_PHOTO_LAYOUT,invitation_message:"",ceremony_title:"Ibada ya Ndoa",ceremony_date:"",ceremony_time:"",ceremony_venue:"",ceremony_map_url:"",event_date:"",event_time:"",venue:"",reception_map_url:"",dress_code:"",theme_primary_color:DEFAULT_EVENT_THEME.primaryColor,theme_secondary_color:DEFAULT_EVENT_THEME.secondaryColor,theme_accent_color:DEFAULT_EVENT_THEME.accentColor,custom_layout_elements:DEFAULT_CUSTOM_LAYOUT};
+const INITIAL_VALUES:EventFormValues={title:"",event_type:"",bride_name:"",groom_name:"",language:"sw",invitation_template:DEFAULT_INVITATION_TEMPLATE,photo_layout:getDefaultPhotoLayoutForTemplate(DEFAULT_INVITATION_TEMPLATE),invitation_message:"",ceremony_title:"Ibada ya Ndoa",ceremony_date:"",ceremony_time:"",ceremony_venue:"",ceremony_map_url:"",event_date:"",event_time:"",venue:"",reception_map_url:"",dress_code:"",theme_primary_color:DEFAULT_EVENT_THEME.primaryColor,theme_secondary_color:DEFAULT_EVENT_THEME.secondaryColor,theme_accent_color:DEFAULT_EVENT_THEME.accentColor,custom_layout_elements:DEFAULT_CUSTOM_LAYOUT};
 
 export default function CreateEventPage(){
   const router=useRouter();const [values,setValues]=useState(INITIAL_VALUES);const [coverFile,setCoverFile]=useState<File|null>(null);const [coverPreview,setCoverPreview]=useState("");const [backgroundFile,setBackgroundFile]=useState<File|null>(null);const [backgroundPreview,setBackgroundPreview]=useState("");const [isSaving,setIsSaving]=useState(false);const [error,setError]=useState("");
