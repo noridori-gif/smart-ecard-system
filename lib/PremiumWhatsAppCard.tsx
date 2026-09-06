@@ -706,6 +706,17 @@ function ClosingDivider({ theme, text, compact = false }: { theme: Theme; text: 
 }
 
 function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; theme: Theme; width: number }) {
+  // Same hex as theme.paper but with an explicit alpha channel, instead of
+  // the CSS "transparent" keyword. "transparent" is rgba(0,0,0,0) -- Satori
+  // interpolates its RGB channels literally, so a gradient from
+  // "transparent" to a light paper color passes through a visibly darker,
+  // muddy band partway through the fade. Keeping the RGB constant (paper's
+  // own color) and only animating alpha avoids that, which matters far more
+  // once the fade zone below is widened: a short 32%-wide mud band was easy
+  // to miss, a wide one would not have been.
+  const paperTransparent = `${theme.paper}00`;
+  const paperWash = `${theme.paper}40`;
+
   return (
     <div style={{ width, height: "100%", position: "relative", display: "flex", overflow: "hidden" }}>
       {data.coverImageDataUrl ? (
@@ -719,14 +730,35 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
           <div style={{ width: 90, height: 1, display: "flex", marginTop: 20, backgroundColor: theme.accent }} />
         </div>
       )}
+      {/* Full-bleed overlay layers use explicit top/right/bottom/left rather
+          than the `inset: 0` shorthand: in this Satori build, an absolutely
+          positioned element sized via `inset: 0` silently renders nothing at
+          all once it carries a backgroundColor/backgroundImage (confirmed in
+          isolation -- a filled div with `inset: 0` is invisible, the same
+          div with `top: 0, right: 0, bottom: 0, left: 0` renders correctly).
+          That's why every gradient below previously had zero visible effect
+          on any photo -- the "seam" wasn't a too-narrow feather, it was no
+          feather at all, just coincidentally unnoticeable on a photo whose
+          background already happened to be cream-toned. */}
+      {/* A faint cream wash across the *entire* photo, strongest at the
+          inner (right) edge and fading to nothing by the photo's outer
+          (left) edge. This nudges the photo's overall tone toward the
+          panel's paper color well before the hard fade below begins, which
+          is what a plain white/gray studio backdrop needs -- a fade at the
+          edge alone still has a "photo-toned" region butting up against it. */}
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, display: "flex", backgroundImage: `linear-gradient(to right, ${paperTransparent}, ${paperWash})` }} />
       {/* Feathers the photo's top, right, and bottom edges into the panel's
           own background color -- an organic vignette rather than a hard
           rectangle -- so the whole card reads as one continuous surface
           instead of a photo-box stitched to a text-box. The left edge is
-          the card's own outer border and stays crisp. */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to right, transparent 68%, ${theme.paper})` }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to bottom, ${theme.paper}, transparent 12%)` }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to top, ${theme.paper}, transparent 12%)` }} />
+          the card's own outer border and stays crisp. The right-edge fade
+          is widened to span most of the photo's width (was a thin 32%
+          sliver right at the seam) so a white/gray backdrop has enough room
+          to gradually reach the panel's cream tone instead of jumping
+          straight from photo to paper. */}
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, display: "flex", backgroundImage: `linear-gradient(to right, ${paperTransparent} 22%, ${theme.paper})` }} />
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, display: "flex", backgroundImage: `linear-gradient(to bottom, ${theme.paper}, ${paperTransparent} 16%)` }} />
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, display: "flex", backgroundImage: `linear-gradient(to top, ${theme.paper}, ${paperTransparent} 16%)` }} />
     </div>
   );
 }
