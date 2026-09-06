@@ -6,8 +6,6 @@ import CardShell from "./shared/CardShell";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import SideBySidePhoto from "./shared/SideBySidePhoto";
-import TextOnlyHero from "./shared/TextOnlyHero";
 import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -64,11 +62,10 @@ export default function BotanicalRomance({ invitation, heroTitle, displayedMessa
     },
   ];
 
-  const layout = invitation.photo_layout;
   const monogramText = coupleInitials(invitation.bride_name, invitation.groom_name, "SEP");
 
   const heroTextBlock = (
-    <div className={layout === "side_by_side" ? "text-center sm:text-left" : "text-center"}>
+    <div className="text-center">
       <p className="text-[10px] font-black uppercase tracking-[0.4em]" style={{ color: "var(--theme-accent)" }}>
         {t.eyebrow}
       </p>
@@ -146,50 +143,6 @@ export default function BotanicalRomance({ invitation, heroTitle, displayedMessa
       <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.3em] text-white/60">Smart Event Pass</p>
     </footer>
   );
-
-  if (layout === "side_by_side") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <SideBySidePhoto
-          coverImageUrl={invitation.cover_image_url}
-          alt={heroTitle}
-          ornament="botanical"
-          primaryColor="var(--theme-primary)"
-          accentColor="var(--theme-accent)"
-          blendColor="var(--theme-secondary)"
-          monogramText={monogramText}
-        >
-          <div className="px-6 py-10 text-center sm:px-9 sm:py-12">
-            {heroTextBlock}
-            {contentBody}
-          </div>
-        </SideBySidePhoto>
-        {footer}
-      </CardShell>
-    );
-  }
-
-  if (layout === "text_only") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <TextOnlyHero
-          eyebrow={t.eyebrow}
-          heroTitle={heroTitle}
-          titleClassName="font-script"
-          titleStyle={{ color: "var(--theme-primary)", fontSize: heroNameFontSize(heroTitle) }}
-          monogramText={monogramText}
-          primaryColor="var(--theme-primary)"
-          secondaryColor="var(--theme-secondary)"
-          accentColor="var(--theme-accent)"
-          ornament="botanical"
-        />
-
-        <section className="px-5 pb-9 pt-2 text-center sm:px-10 sm:pb-12">{contentBody}</section>
-
-        {footer}
-      </CardShell>
-    );
-  }
 
   return (
     <CardShell backgroundColor="var(--theme-secondary)">

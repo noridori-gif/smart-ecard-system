@@ -7,8 +7,6 @@ import DateBadge from "./shared/DateBadge";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import SideBySidePhoto from "./shared/SideBySidePhoto";
-import TextOnlyHero from "./shared/TextOnlyHero";
 import { coupleInitials, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -65,7 +63,6 @@ export default function ModernMinimalPhoto({ invitation, heroTitle, displayedMes
     },
   ];
 
-  const layout = invitation.photo_layout;
   const monogramText = coupleInitials(invitation.bride_name, invitation.groom_name, "SEP");
 
   const heroTextBlock = (
@@ -150,59 +147,6 @@ export default function ModernMinimalPhoto({ invitation, heroTitle, displayedMes
       <p className="mt-2 text-[9px] font-medium uppercase tracking-[0.3em] text-slate-300">Smart Event Pass</p>
     </footer>
   );
-
-  if (layout === "side_by_side") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <SideBySidePhoto
-          coverImageUrl={invitation.cover_image_url}
-          alt={heroTitle}
-          primaryColor="var(--theme-primary)"
-          accentColor="var(--theme-accent)"
-          blendColor="var(--theme-secondary)"
-          monogramText={monogramText}
-        >
-          <div className="px-7 py-10 text-center sm:px-9 sm:py-14">
-            {heroTextBlock}
-            {contentBody}
-          </div>
-        </SideBySidePhoto>
-        {footer}
-      </CardShell>
-    );
-  }
-
-  if (layout === "text_only") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <TextOnlyHero
-          eyebrow={t.eyebrow}
-          heroTitle={heroTitle}
-          titleClassName="font-serif font-light text-slate-950"
-          titleStyle={{ fontSize: heroNameFontSize(heroTitle) }}
-          monogramText={monogramText}
-          primaryColor="var(--theme-primary)"
-          secondaryColor="var(--theme-secondary)"
-          accentColor="var(--theme-accent)"
-          ornament="none"
-        >
-          <div className="mt-8 flex justify-center">
-            <DateBadge
-              date={invitation.event_date}
-              language={language}
-              shape="square"
-              primaryColor="var(--theme-primary)"
-              accentColor="var(--theme-accent)"
-            />
-          </div>
-        </TextOnlyHero>
-
-        <section className="px-6 pb-10 pt-2 text-center sm:px-14 sm:pb-14">{contentBody}</section>
-
-        {footer}
-      </CardShell>
-    );
-  }
 
   return (
     <CardShell backgroundColor="var(--theme-secondary)">

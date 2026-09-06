@@ -6,8 +6,6 @@ import CardShell from "./shared/CardShell";
 import DressCodeSwatches from "./shared/DressCodeSwatches";
 import PhotoHero from "./shared/PhotoHero";
 import ScheduleGrid, { type ScheduleEntry } from "./shared/ScheduleGrid";
-import SideBySidePhoto from "./shared/SideBySidePhoto";
-import TextOnlyHero from "./shared/TextOnlyHero";
 import { coupleInitials, formatEventDate, heroNameFontSize } from "./shared/formatters";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -64,7 +62,6 @@ export default function GoldenElegance({ invitation, heroTitle, displayedMessage
     },
   ];
 
-  const layout = invitation.photo_layout;
   const monogramText = coupleInitials(invitation.bride_name, invitation.groom_name, "SEP");
 
   const heroTextBlockDark = (
@@ -149,48 +146,6 @@ export default function GoldenElegance({ invitation, heroTitle, displayedMessage
       <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.3em] text-white/60">Smart Event Pass</p>
     </footer>
   );
-
-  if (layout === "side_by_side") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <SideBySidePhoto
-          coverImageUrl={invitation.cover_image_url}
-          alt={heroTitle}
-          primaryColor="var(--theme-primary)"
-          accentColor="var(--theme-accent)"
-          blendColor="var(--theme-secondary)"
-          monogramText={monogramText}
-        >
-          <div className="px-6 py-10 sm:px-9 sm:py-12">
-            {heroTextBlockDark}
-            <div className="mt-8">{contentBody}</div>
-          </div>
-        </SideBySidePhoto>
-        {footer}
-      </CardShell>
-    );
-  }
-
-  if (layout === "text_only") {
-    return (
-      <CardShell backgroundColor="var(--theme-secondary)">
-        <TextOnlyHero
-          eyebrow={t.heading}
-          heroTitle={heroTitle}
-          titleClassName="font-serif text-slate-950"
-          titleStyle={{ fontSize: heroNameFontSize(heroTitle) }}
-          monogramText={monogramText}
-          primaryColor="var(--theme-primary)"
-          secondaryColor="var(--theme-secondary)"
-          accentColor="var(--theme-accent)"
-        />
-
-        <section className="px-5 pb-9 pt-2 sm:px-10 sm:pb-12">{contentBody}</section>
-
-        {footer}
-      </CardShell>
-    );
-  }
 
   return (
     <CardShell backgroundColor="var(--theme-secondary)">

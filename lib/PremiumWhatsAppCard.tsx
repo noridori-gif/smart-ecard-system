@@ -675,6 +675,19 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
           <div style={{ width: 90, height: 1, display: "flex", marginTop: 20, backgroundColor: theme.accent }} />
         </div>
       )}
+      {/* Fades the photo into the details panel's own background color so the
+          two read as one continuous card instead of a photo-box + text-box. */}
+      <div
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          width: 130,
+          height: "100%",
+          display: "flex",
+          backgroundImage: `linear-gradient(to right, transparent, ${theme.paper})`,
+        }}
+      />
     </div>
   );
 }
