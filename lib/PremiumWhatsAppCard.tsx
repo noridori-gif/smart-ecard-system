@@ -101,6 +101,13 @@ type Theme = {
   accentSoft: string;
   ticket: string;
   shadow: string;
+  // Small all-caps captions (Label) and the invitation intro line read too
+  // faint at theme.muted/theme.textAccent's contrast on a light background --
+  // this is a near-black (a strong blend toward black, not the organizer's
+  // own colors) reserved for that caption/label text specifically, so the
+  // rest of the card's color design (borders, ornaments, decorative accents)
+  // is untouched.
+  labelDark: string;
 };
 
 const SKIN_BY_TEMPLATE: Record<PremiumWhatsAppTemplate, Skin> = {
@@ -173,6 +180,7 @@ function buildTheme(data: PremiumWhatsAppCardData, template: PremiumWhatsAppTemp
     accentSoft: mixHex(accent, secondary, 0.55),
     ticket: mixHex(secondary, primary, 0.05),
     shadow: "rgba(15,23,42,0.18)",
+    labelDark: darken(primary, 0.82),
   };
 }
 
@@ -206,16 +214,21 @@ export function copy(language: "sw" | "en") {
       };
 }
 
+/**
+ * Single/Double already say the count in the word itself -- appending
+ * "1 Person"/"2 People" (or the Swahili equivalent) was redundant. Group
+ * keeps its count since "Group" alone doesn't say how many.
+ */
 function statusText(data: PremiumWhatsAppCardData) {
   const count = Number.isFinite(data.allowedGuests)
     ? Math.max(1, Math.floor(data.allowedGuests))
     : 1;
 
   if (data.language === "en") {
-    return count === 1 ? "Single · 1 Person" : count === 2 ? "Double · 2 People" : `Group · ${count} People`;
+    return count === 1 ? "Single" : count === 2 ? "Double" : `Group · ${count} People`;
   }
 
-  return count === 1 ? "Single · Mtu 1" : count === 2 ? "Double · Watu 2" : `Group · Watu ${count}`;
+  return count === 1 ? "Single" : count === 2 ? "Double" : `Group · Watu ${count}`;
 }
 
 function responsiveSize(value: string, large: number, medium: number, small: number, scale = 1) {
@@ -242,6 +255,63 @@ function initials(value: string) {
     .join(" & ");
 }
 
+/**
+ * Dress code is free-text the organizer types in (any wording, English or
+ * Swahili) -- there's no structured color picker behind it. This maps
+ * common color words to a representative swatch hex so each dress-code
+ * item can get a colored dot; an unmatched word (a brand name, "smart
+ * casual", etc.) falls back to a neutral gray dot rather than guessing.
+ * Ordered so more specific words ("forest", "blush") are tried before the
+ * generic ones they qualify ("green", "pink").
+ */
+const DRESS_COLOR_KEYWORDS: Array<[RegExp, string]> = [
+  [/\bblack\b|\bnyeusi\b/i, "#161616"],
+  [/\bwhite\b|\bnyeupe\b/i, "#FFFFFF"],
+  [/\bivory\b/i, "#FFFFF2"],
+  [/\bchampagne\b/i, "#F0E2B6"],
+  [/\bcream\b/i, "#F3EAD3"],
+  [/\bgold(en)?\b/i, "#C9A227"],
+  [/\bsilver\b/i, "#C0C0C0"],
+  [/\bnavy\b/i, "#1B2A4A"],
+  [/\bblue\b|\bbluu\b|\bsamawati\b/i, "#2A5CAA"],
+  [/\bteal\b/i, "#1F7A72"],
+  [/\bturquoise\b/i, "#30BFBF"],
+  [/\bemerald\b/i, "#0F6B3C"],
+  [/\bforest\b/i, "#1B4332"],
+  [/\bolive\b/i, "#6B6B2A"],
+  [/\bgreen\b|\bkijani\b/i, "#2E7D4F"],
+  [/\bmaroon\b/i, "#5C1A22"],
+  [/\bburgundy\b/i, "#6E1423"],
+  [/\bwine\b/i, "#5B1A2B"],
+  [/\bcrimson\b/i, "#A31C2A"],
+  [/\bred\b|\bnyekundu\b/i, "#B3181F"],
+  [/\bcoral\b/i, "#E8674B"],
+  [/\bpeach\b/i, "#F2B79A"],
+  [/\bblush\b/i, "#EBB6B9"],
+  [/\brose\b/i, "#C9788A"],
+  [/\bpink\b|\bwaridi\b/i, "#E58FA6"],
+  [/\blavender\b/i, "#B7A6D9"],
+  [/\blilac\b/i, "#C6A6D9"],
+  [/\bviolet\b/i, "#7C4DA6"],
+  [/\bpurple\b/i, "#6A3E9B"],
+  [/\bmustard\b/i, "#C9A22B"],
+  [/\byellow\b|\bmanjano\b/i, "#E8C93A"],
+  [/\borange\b/i, "#E07A2C"],
+  [/\bchocolate\b/i, "#4A2A1D"],
+  [/\bbrown\b/i, "#6B4226"],
+  [/\btan\b/i, "#C8A57A"],
+  [/\bbeige\b/i, "#D8CBB0"],
+  [/\bcharcoal\b/i, "#3A3A3A"],
+  [/\bgr[ae]y\b/i, "#8A8A8A"],
+];
+
+function dressCodeSwatch(segment: string): string {
+  for (const [pattern, hex] of DRESS_COLOR_KEYWORDS) {
+    if (pattern.test(segment)) return hex;
+  }
+  return "#9CA3AF";
+}
+
 function Label({ children, theme }: { children: ReactNode; theme: Theme }) {
   return (
     <div
@@ -249,9 +319,9 @@ function Label({ children, theme }: { children: ReactNode; theme: Theme }) {
         display: "flex",
         fontFamily: "Arial, sans-serif",
         fontSize: 15,
-        fontWeight: 800,
+        fontWeight: 900,
         letterSpacing: 4,
-        color: theme.textAccent,
+        color: theme.labelDark,
         textAlign: "center",
       }}
     >
@@ -577,7 +647,8 @@ function InvitationTop({ data, theme, compact = false }: { data: PremiumWhatsApp
           fontSize: messageSize(data.invitationMessage, compact ? 1.25 : 1),
           lineHeight: 1.34,
           fontStyle: "italic",
-          color: theme.muted,
+          fontWeight: 700,
+          color: theme.labelDark,
           textAlign: "center",
         }}
       >
@@ -659,6 +730,42 @@ function Detail({
   );
 }
 
+/** Same label/shell as Detail, but for the dress-code field specifically: splits the organizer's comma-separated color list into one row per color, each with a small dot swatch (see dressCodeSwatch) instead of a single wrapped line of plain text. */
+function DressColorList({ label, dressCode, theme, compact = false }: { label: string; dressCode: string; theme: Theme; compact?: boolean }) {
+  const parts = dressCode.split(",").map((part) => part.trim()).filter(Boolean);
+  const valueFontSize = compact ? 30 : 25;
+
+  return (
+    <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px 18px", textAlign: "center" }}>
+      <Label theme={theme}>{label}</Label>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 8, gap: 6 }}>
+        {parts.length > 0 ? (
+          parts.map((part, index) => (
+            <div key={`${part}-${index}`} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                style={{
+                  width: 15,
+                  height: 15,
+                  display: "flex",
+                  marginRight: 9,
+                  borderRadius: 999,
+                  backgroundColor: dressCodeSwatch(part),
+                  border: `1px solid ${theme.accentSoft}`,
+                }}
+              />
+              <div style={{ maxWidth: 380, display: "flex", fontFamily: "Georgia, serif", fontSize: valueFontSize, lineHeight: 1.12, fontWeight: 700, color: theme.textInk, textAlign: "center" }}>
+                {part}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: valueFontSize, lineHeight: 1.12, fontWeight: 700, color: theme.textInk }}>—</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppCardData; theme: Theme; compact?: boolean }) {
   const text = copy(data.language);
   const ceremonyTime = data.ceremonyTime || data.eventTime;
@@ -674,12 +781,12 @@ function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppC
         </div>
         <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.reception} value={receptionVenue} theme={theme} compact={compact} />
+          <Detail label={text.reception} value={receptionVenue} secondary={data.eventTime} theme={theme} compact={compact} />
         </div>
       </div>
       <div style={{ width: "72%", display: "flex", paddingTop: 10, borderTop: `1px solid ${theme.accentSoft}` }}>
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.dress} value={data.dressCode || "—"} theme={theme} compact={compact} />
+          <DressColorList label={text.dress} dressCode={data.dressCode} theme={theme} compact={compact} />
         </div>
         <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         <div style={{ width: "50%", display: "flex" }}>
