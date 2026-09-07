@@ -151,13 +151,7 @@ export default function SendWhatsAppCloudButton({
         : "Send via API";
 
   return (
-    <div
-      className={
-        compact
-          ? "relative"
-          : "col-span-2"
-      }
-    >
+    <div className="relative">
       <button
         type="button"
         disabled={

@@ -22,10 +22,7 @@ import {
 } from "@/services/invitationService";
 import { formatPassIdForDisplay } from "@/lib/passId";
 
-import {
-  buildWhatsAppMessage,
-  formatGuestPhoneNumber,
-} from "@/services/invitationMessageService";
+import { formatGuestPhoneNumber } from "@/services/invitationMessageService";
 import { sendSmsInvitation } from "@/services/smsService";
 import {
   getMessageStatusByInvitationIds,
@@ -45,11 +42,6 @@ type NotificationState = {
 
 type InvitationActionHandlers = {
   onSMS: (
-    invitation:
-      InvitationWithDetails
-  ) => void;
-
-  onCopy: (
     invitation:
       InvitationWithDetails
   ) => void;
@@ -293,78 +285,6 @@ export default function InvitationsPage() {
     void refreshMessageStatus([
       invitation.id,
     ]);
-  }
-
-  async function handleCopyMessage(
-    invitation:
-      InvitationWithDetails
-  ) {
-    const message =
-      buildWhatsAppMessage(
-        invitation,
-        window.location.origin
-      );
-
-    try {
-      if (
-        navigator.clipboard &&
-        window.isSecureContext
-      ) {
-        await navigator.clipboard.writeText(
-          message
-        );
-      } else {
-        const textArea =
-          document.createElement(
-            "textarea"
-          );
-
-        textArea.value = message;
-
-        textArea.style.position =
-          "fixed";
-
-        textArea.style.left =
-          "-9999px";
-
-        document.body.appendChild(
-          textArea
-        );
-
-        textArea.focus();
-        textArea.select();
-
-        const copied =
-          document.execCommand(
-            "copy"
-          );
-
-        document.body.removeChild(
-          textArea
-        );
-
-        if (!copied) {
-          throw new Error(
-            "Copy failed."
-          );
-        }
-      }
-
-      showNotification(
-        "Ujumbe umenakiliwa vizuri.",
-        "success"
-      );
-    } catch (error) {
-      console.error(
-        "Copy message error:",
-        error
-      );
-
-      showNotification(
-        "Imeshindikana kunakili ujumbe.",
-        "error"
-      );
-    }
   }
 
   const eventOptions =
@@ -925,9 +845,6 @@ export default function InvitationsPage() {
               paginatedInvitations
             }
             onSMS={handleSMS}
-            onCopy={
-              handleCopyMessage
-            }
             onWhatsAppSent={handleWhatsAppSent}
             sendingInvitationId={sendingInvitationId}
             messageStatusMap={messageStatusMap}
@@ -938,9 +855,6 @@ export default function InvitationsPage() {
               paginatedInvitations
             }
             onSMS={handleSMS}
-            onCopy={
-              handleCopyMessage
-            }
             onWhatsAppSent={handleWhatsAppSent}
             sendingInvitationId={sendingInvitationId}
             messageStatusMap={messageStatusMap}
@@ -992,7 +906,6 @@ export default function InvitationsPage() {
 function DesktopInvitationsTable({
   invitations,
   onSMS,
-  onCopy,
   onWhatsAppSent,
   sendingInvitationId,
   messageStatusMap,
@@ -1102,7 +1015,6 @@ function DesktopInvitationsTable({
                         invitation
                       }
                       onSMS={onSMS}
-                      onCopy={onCopy}
                       onWhatsAppSent={onWhatsAppSent}
                       compact
                       sendingInvitationId={sendingInvitationId}
@@ -1121,7 +1033,6 @@ function DesktopInvitationsTable({
 function MobileInvitationsList({
   invitations,
   onSMS,
-  onCopy,
   onWhatsAppSent,
   sendingInvitationId,
   messageStatusMap,
@@ -1230,7 +1141,6 @@ function MobileInvitationsList({
             <InvitationActions
               invitation={invitation}
               onSMS={onSMS}
-              onCopy={onCopy}
               onWhatsAppSent={onWhatsAppSent}
               sendingInvitationId={sendingInvitationId}
             />
@@ -1245,7 +1155,6 @@ function MobileInvitationsList({
 function InvitationActions({
   invitation,
   onSMS,
-  onCopy,
   onWhatsAppSent,
   compact = false,
   sendingInvitationId,
@@ -1258,8 +1167,8 @@ function InvitationActions({
     <div
       className={
         compact
-          ? "grid grid-cols-2 gap-1.5"
-          : "mt-4 grid grid-cols-2 gap-2"
+          ? "grid grid-cols-3 gap-1.5"
+          : "mt-4 grid grid-cols-3 gap-2"
       }
     >
       <Link
@@ -1283,16 +1192,6 @@ function InvitationActions({
         className={buttonClassName({ variant: "info", size: buttonSize })}
       >
         {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
-      </button>
-
-      <button
-        type="button"
-        onClick={() =>
-          onCopy(invitation)
-        }
-        className={buttonClassName({ variant: "secondary", size: buttonSize })}
-      >
-        Copy
       </button>
 
       <SendWhatsAppCloudButton
