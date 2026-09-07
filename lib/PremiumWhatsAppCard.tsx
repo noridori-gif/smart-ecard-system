@@ -887,7 +887,15 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
   );
 }
 
-const SIDE_PHOTO_WIDTH = 400;
+// Widened from 400: the old width left a visually "wasted" strip right at
+// the seam -- the seam-blend fade itself already turns roughly the outer
+// 15% of the photo into flat panel color, and the text column's own
+// children start with their own left padding on top of that, so the two
+// stacked up into a bigger gap than either alone would suggest. The text
+// column's padding is percentage-based (not fixed px), so a narrower
+// column automatically pulls its content over rather than needing every
+// child's padding touched individually.
+const SIDE_PHOTO_WIDTH = 430;
 const SIDE_BY_SIDE_HEIGHT = 1500;
 const TEXT_ONLY_HEIGHT = 1180;
 

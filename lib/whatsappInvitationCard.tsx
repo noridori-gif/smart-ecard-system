@@ -136,7 +136,7 @@ const LEAF_BOTTOM_LEFT_URL = loadRoyalPortraitAsset("leaf_bottom_left.png");
 const LEAF_TOP_RIGHT_URL = loadRoyalPortraitAsset("leaf_top_right_light.png");
 
 // Matches SIDE_PHOTO_WIDTH / SIDE_BY_SIDE_HEIGHT in PremiumWhatsAppCard.tsx.
-const SIDE_PHOTO_OVERLAY_WIDTH = 400;
+const SIDE_PHOTO_OVERLAY_WIDTH = 430;
 const SIDE_PHOTO_OVERLAY_HEIGHT = 1500;
 
 // Matches SIDE_BY_SIDE_PANEL_BACKGROUND_FALLBACK in PremiumWhatsAppCard.tsx --
