@@ -12,7 +12,7 @@ export type ButtonVariant =
   | "destructive"
   | "success"
   | "ghost";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-emerald-700 text-white hover:bg-emerald-800",
@@ -33,6 +33,7 @@ const variants: Record<ButtonVariant, string> = {
 };
 
 const sizes: Record<ButtonSize, string> = {
+  xs: "min-h-8 px-2.5 text-xs",
   sm: "min-h-11 px-3 text-sm",
   md: "min-h-11 px-4 text-[15px]",
   lg: "min-h-12 px-5 text-base",

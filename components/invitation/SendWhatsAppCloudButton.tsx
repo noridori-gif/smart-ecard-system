@@ -146,7 +146,9 @@ export default function SendWhatsAppCloudButton({
   const buttonText =
     isSending
       ? "Sending..."
-      : "Send via API";
+      : compact
+        ? "Send"
+        : "Send via API";
 
   return (
     <div
@@ -163,7 +165,11 @@ export default function SendWhatsAppCloudButton({
           isSending
         }
         onClick={handleSend}
-        className="min-h-11 w-full rounded-xl bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+        className={`w-full rounded-xl bg-emerald-700 font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 ${
+          compact
+            ? "min-h-8 px-2.5 text-xs"
+            : "min-h-11 px-3 text-xs"
+        }`}
       >
         {buttonText}
       </button>

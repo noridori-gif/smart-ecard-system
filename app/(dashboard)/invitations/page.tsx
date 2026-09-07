@@ -1192,11 +1192,13 @@ function InvitationActions({
 }: InvitationActionsProps & {
   compact?: boolean;
 }) {
+  const buttonSize = compact ? "xs" : "sm";
+
   return (
     <div
       className={
         compact
-          ? "flex flex-wrap justify-end gap-2"
+          ? "grid grid-cols-2 gap-1.5"
           : "mt-4 grid grid-cols-2 gap-2"
       }
     >
@@ -1204,7 +1206,7 @@ function InvitationActions({
         href={`/invite/${invitation.invitation_token}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={buttonClassName({ variant: "dark", size: "sm" })}
+        className={buttonClassName({ variant: "dark", size: buttonSize })}
       >
         View
       </Link>
@@ -1218,7 +1220,7 @@ function InvitationActions({
         onClick={() =>
           onSMS(invitation)
         }
-        className={buttonClassName({ variant: "info", size: "sm" })}
+        className={buttonClassName({ variant: "info", size: buttonSize })}
       >
         {sendingInvitationId === invitation.id ? "Sending..." : "SMS"}
       </button>
@@ -1228,7 +1230,7 @@ function InvitationActions({
         onClick={() =>
           onCopy(invitation)
         }
-        className={buttonClassName({ variant: "secondary", size: "sm" })}
+        className={buttonClassName({ variant: "secondary", size: buttonSize })}
       >
         Copy
       </button>
