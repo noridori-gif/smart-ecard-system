@@ -4,9 +4,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import GuestImportPanel from "@/components/guest-import/GuestImportPanel";
+import MessageChannelBadges from "@/components/guests/MessageChannelBadges";
 import { supabase } from "@/lib/supabase";
 import { formatPassIdForDisplay } from "@/lib/passId";
 import { checkInGuest, checkInGuestByEventPassId } from "@/services/guestService";
+import {
+  getGuestMessageStatusMap,
+  matchesMessageFilter,
+  type GuestMessageStatus,
+  type MessageFilter,
+} from "@/services/guestMessageStatusService";
 
 type GuestStatus = "pending" | "partially_checked_in" | "checked_in";
 
@@ -120,6 +127,12 @@ export default function GuestsPage() {
   const [selectedStatus, setSelectedStatus] =
     useState("all");
 
+  const [selectedMessageFilter, setSelectedMessageFilter] =
+    useState<MessageFilter>("all");
+
+  const [messageStatusMap, setMessageStatusMap] =
+    useState<Map<number, GuestMessageStatus>>(new Map());
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const [notification, setNotification] =
@@ -177,13 +190,27 @@ export default function GuestsPage() {
         );
       }
 
-      setGuests(
-        (guestsResult.data ?? []) as unknown as Guest[]
-      );
+      const loadedGuests =
+        (guestsResult.data ?? []) as unknown as Guest[];
+
+      setGuests(loadedGuests);
 
       setEvents(
         (eventsResult.data ?? []) as EventOption[]
       );
+
+      try {
+        const statusMap = await getGuestMessageStatusMap(
+          loadedGuests.map((guest) => guest.id)
+        );
+        setMessageStatusMap(statusMap);
+      } catch (statusError) {
+        // Non-fatal: the guest list itself still works without the
+        // WhatsApp/SMS status badges (e.g. sms_message_logs migration not
+        // applied yet on this database).
+        console.warn("Guest message status lookup failed:", statusError);
+        setMessageStatusMap(new Map());
+      }
     } catch (error) {
       console.error(
         "Error loading guests:",
@@ -230,6 +257,7 @@ export default function GuestsPage() {
 
     setSelectedEventId("all");
     setSelectedStatus("all");
+    setSelectedMessageFilter("all");
     setSearchTerm("");
     setCurrentPage(1);
   }
@@ -423,10 +451,16 @@ export default function GuestsPage() {
         selectedStatus === "all" ||
         guest.status === selectedStatus;
 
+      const matchesMessage = matchesMessageFilter(
+        messageStatusMap.get(guest.id),
+        selectedMessageFilter
+      );
+
       return (
         matchesSearch &&
         matchesEvent &&
-        matchesStatus
+        matchesStatus &&
+        matchesMessage
       );
     });
   }, [
@@ -434,6 +468,8 @@ export default function GuestsPage() {
     searchTerm,
     selectedEventId,
     selectedStatus,
+    selectedMessageFilter,
+    messageStatusMap,
   ]);
 
   const totalPages = Math.max(
@@ -555,7 +591,7 @@ export default function GuestsPage() {
       />
 
       <div className="rounded-2xl border border-[#e7e1d7] bg-white p-4 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-4">
           <div>
             <label
               htmlFor="guest-search"
@@ -645,6 +681,30 @@ export default function GuestsPage() {
               </option>
             </select>
           </div>
+
+          <div>
+            <label
+              htmlFor="message-filter"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Ujumbe
+            </label>
+
+            <select
+              id="message-filter"
+              value={selectedMessageFilter}
+              onChange={(event) => {
+                setSelectedMessageFilter(event.target.value as MessageFilter);
+                setCurrentPage(1);
+              }}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+            >
+              <option value="all">Wote</option>
+              <option value="not_whatsapp">Hawajatumiwa WhatsApp</option>
+              <option value="not_sms">Hawajatumiwa SMS</option>
+              <option value="not_either">Hawajatumiwa yoyote</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -684,6 +744,10 @@ export default function GuestsPage() {
 
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Status
+                    </th>
+
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Ujumbe
                     </th>
 
                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -758,6 +822,10 @@ export default function GuestsPage() {
                                 {statusBadge(guest).label}
                               </span>
                             )}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <MessageChannelBadges status={messageStatusMap.get(guest.id)} />
                           </td>
 
                           <td className="px-5 py-4">
@@ -844,6 +912,10 @@ export default function GuestsPage() {
                     >
                       {statusBadge(guest).label}
                     </span>
+                  </div>
+
+                  <div className="mt-3">
+                    <MessageChannelBadges status={messageStatusMap.get(guest.id)} />
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

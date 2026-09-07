@@ -5,10 +5,12 @@ import {
   FormEvent,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { useParams } from "next/navigation";
 import Button from "@/components/ui/Button";
+import MessageChannelBadges from "@/components/guests/MessageChannelBadges";
 import {
   getEventById,
   type Event,
@@ -21,6 +23,12 @@ import {
   type Guest,
   type NewGuest,
 } from "@/services/guestService";
+import {
+  getGuestMessageStatusMap,
+  matchesMessageFilter,
+  type GuestMessageStatus,
+  type MessageFilter,
+} from "@/services/guestMessageStatusService";
 
 const initialForm = {
   full_name: "",
@@ -51,6 +59,11 @@ export default function EventGuestsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const [messageStatusMap, setMessageStatusMap] =
+    useState<Map<number, GuestMessageStatus>>(new Map());
+  const [messageFilter, setMessageFilter] =
+    useState<MessageFilter>("all");
+
   const loadGuests = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -72,6 +85,19 @@ export default function EventGuestsPage() {
 
       const data = await getGuestsByEvent(eventId);
       setGuests(data);
+
+      try {
+        const statusMap = await getGuestMessageStatusMap(
+          data.map((guest) => guest.id)
+        );
+        setMessageStatusMap(statusMap);
+      } catch (statusError) {
+        // Non-fatal: the guest list itself still works without the
+        // WhatsApp/SMS status badges (e.g. sms_message_logs migration not
+        // applied yet on this database).
+        console.warn("Guest message status lookup failed:", statusError);
+        setMessageStatusMap(new Map());
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -218,6 +244,14 @@ export default function EventGuestsPage() {
     }
   }
 
+  const filteredGuests = useMemo(
+    () =>
+      guests.filter((guest) =>
+        matchesMessageFilter(messageStatusMap.get(guest.id), messageFilter)
+      ),
+    [guests, messageStatusMap, messageFilter]
+  );
+
   if (isLoading) {
     return (
       <section>
@@ -339,10 +373,30 @@ export default function EventGuestsPage() {
       </div>
 
       <div className="mt-8 sep-table-shell">
-        <div className="border-b border-stone-200 p-6">
+        <div className="flex flex-col gap-4 border-b border-stone-200 p-6 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="sep-section-title">
             Guest List
           </h2>
+
+          <div className="w-full sm:w-72">
+            <label htmlFor="message-filter" className="sep-label block">
+              Ujumbe
+            </label>
+
+            <select
+              id="message-filter"
+              value={messageFilter}
+              onChange={(event) =>
+                setMessageFilter(event.target.value as MessageFilter)
+              }
+              className="sep-control"
+            >
+              <option value="all">Wote</option>
+              <option value="not_whatsapp">Hawajatumiwa WhatsApp</option>
+              <option value="not_sms">Hawajatumiwa SMS</option>
+              <option value="not_either">Hawajatumiwa yoyote</option>
+            </select>
+          </div>
         </div>
 
         {guests.length === 0 && (
@@ -351,9 +405,15 @@ export default function EventGuestsPage() {
           </p>
         )}
 
-        {guests.length > 0 && (
+        {guests.length > 0 && filteredGuests.length === 0 && (
+          <p className="p-8 text-center text-sm text-slate-500">
+            Hakuna mgeni anayelingana na filter hii.
+          </p>
+        )}
+
+        {filteredGuests.length > 0 && (
           <div className="space-y-3 p-4 md:hidden">
-            {guests.map((guest) => (
+            {filteredGuests.map((guest) => (
               <article
                 key={guest.id}
                 className={`rounded-2xl border p-4 shadow-sm ${
@@ -382,6 +442,10 @@ export default function EventGuestsPage() {
                   >
                     {guest.status}
                   </span>
+                </div>
+
+                <div className="mt-3">
+                  <MessageChannelBadges status={messageStatusMap.get(guest.id)} />
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -439,9 +503,9 @@ export default function EventGuestsPage() {
           </div>
         )}
 
-        {guests.length > 0 && (
+        {filteredGuests.length > 0 && (
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[950px] text-left">
+            <table className="w-full min-w-[1050px] text-left">
               <thead className="bg-stone-100 text-sm uppercase text-slate-600">
                 <tr>
                   <th className="px-6 py-4">Name</th>
@@ -449,12 +513,13 @@ export default function EventGuestsPage() {
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Allowed</th>
                   <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Ujumbe</th>
                   <th className="px-6 py-4">Actions</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-stone-200">
-                {guests.map((guest) => (
+                {filteredGuests.map((guest) => (
                   <tr
                     key={guest.id}
                     className={
@@ -489,6 +554,10 @@ export default function EventGuestsPage() {
                       >
                         {guest.status}
                       </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <MessageChannelBadges status={messageStatusMap.get(guest.id)} />
                     </td>
 
                     <td className="px-6 py-4">

@@ -270,6 +270,34 @@ export async function POST(request: Request) {
       customInvitationSmsMessage
     );
 
+    // Logged the same way whatsapp_message_logs is: insert a "queued" row
+    // before calling the provider (so even an uncaught crash mid-send still
+    // leaves a paper trail), then update it with the outcome. Beem's API
+    // response is an immediate accept/reject with no async delivery
+    // webhook, so unlike WhatsApp this goes straight to a final status
+    // rather than staying "queued" for a later webhook to resolve.
+    //
+    // Best-effort, not a hard requirement: sms_message_logs is a new table
+    // added alongside this change but applied to the database as a separate
+    // manual migration step, so a deployment can briefly have this code live
+    // before that migration has run. If the insert fails (table doesn't
+    // exist yet, or any other reason), the SMS still gets sent -- only the
+    // guest-list status badge loses this one send's record, not the actual
+    // invitation delivery.
+    const { data: smsLogData, error: smsLogError } = await supabase
+      .from("sms_message_logs")
+      .insert({
+        invitation_id: invitationRecord.id,
+        recipient_phone: guest.phone,
+        status: "queued",
+      })
+      .select("id")
+      .single();
+
+    if (smsLogError) {
+      console.warn("SMS log insert failed (send will continue without logging):", smsLogError.message);
+    }
+
     const result = await sendBeemSms({
       phoneNumber: guest.phone,
       message,
@@ -282,6 +310,21 @@ export async function POST(request: Request) {
         errorType: result.errorDetails?.type,
         message: result.message,
       });
+
+      if (smsLogData) {
+        const { error: failedLogError } = await supabase
+          .from("sms_message_logs")
+          .update({
+            status: "failed",
+            error_message: result.message || "SMS send failed.",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", smsLogData.id);
+
+        if (failedLogError) {
+          console.error("SMS failed log update error:", failedLogError);
+        }
+      }
 
       return Response.json(
         {
@@ -304,6 +347,25 @@ export async function POST(request: Request) {
       userId: userData.user.id,
       providerMessageId: result.providerMessageId,
     });
+
+    if (smsLogData) {
+      const acceptedAt = new Date().toISOString();
+
+      const { error: sentLogError } = await supabase
+        .from("sms_message_logs")
+        .update({
+          status: "sent",
+          provider_message_id: result.providerMessageId ?? null,
+          sent_at: acceptedAt,
+          updated_at: acceptedAt,
+          error_message: null,
+        })
+        .eq("id", smsLogData.id);
+
+      if (sentLogError) {
+        console.error("SMS sent log update error:", sentLogError);
+      }
+    }
 
     return Response.json(
       {
