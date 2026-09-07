@@ -139,10 +139,12 @@ const LEAF_TOP_RIGHT_URL = loadRoyalPortraitAsset("leaf_top_right_light.png");
 const SIDE_PHOTO_OVERLAY_WIDTH = 400;
 const SIDE_PHOTO_OVERLAY_HEIGHT = 1500;
 
-function safeHexColor(value: string | null | undefined, fallback: string) {
-  const normalized = value?.trim();
-  return normalized && /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : fallback;
-}
+// Matches SIDE_BY_SIDE_PANEL_BACKGROUND_FALLBACK in PremiumWhatsAppCard.tsx --
+// side_by_side's panel fill is a fixed near-white/light-gray (matching a
+// typical studio photo backdrop) instead of the organizer's own secondary
+// color, so the seam blend below must fade toward this same value or the
+// photo would blend into a color the panel no longer actually uses.
+const SIDE_BY_SIDE_PANEL_BACKGROUND = "#E7E5E8";
 
 /**
  * Blends the side_by_side layout's photo into the panel's own background
@@ -624,7 +626,7 @@ export async function createWhatsAppInvitationCard(
 
   const sidePhotoBlendOverlayUrl =
     normalizedData.photoLayout === "side_by_side"
-      ? await buildSidePhotoBlendOverlayUrl(safeHexColor(normalizedData.secondary, "#FFF8EC"))
+      ? await buildSidePhotoBlendOverlayUrl(SIDE_BY_SIDE_PANEL_BACKGROUND)
       : undefined;
 
   try {
@@ -1194,6 +1196,7 @@ function renderWhatsAppCard(
         leafBottomLeftUrl: LEAF_BOTTOM_LEFT_URL,
         leafTopRightUrl: LEAF_TOP_RIGHT_URL,
         sidePhotoBlendOverlayUrl,
+        sideBySidePanelBackground: SIDE_BY_SIDE_PANEL_BACKGROUND,
       }}
       template={template}
     />

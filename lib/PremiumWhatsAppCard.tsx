@@ -56,7 +56,22 @@ export type PremiumWhatsAppCardData = {
   // browser preview has no such value, so it falls back to plain CSS
   // gradients, which work fine in an actual browser.
   sidePhotoBlendOverlayUrl?: string;
+
+  // side_by_side's panel background used to be theme.paper (the
+  // organizer's own secondary color, e.g. a warm cream) -- but that color
+  // is unrelated to the photo, so it visibly mismatched the photo's own
+  // background against event 14's white/light-gray studio backdrop. This
+  // overrides the panel fill (side_by_side only) to a neutral near-white
+  // matching that kind of backdrop; the fallback constant below is used
+  // when this isn't supplied (the browser preview case, same pattern as
+  // the fields above). buildSidePhotoBlendOverlayUrl in
+  // whatsappInvitationCard.tsx must fade toward this SAME color, not
+  // theme.paper, or the seam would blend into a color the panel itself
+  // no longer uses.
+  sideBySidePanelBackground?: string;
 };
+
+const SIDE_BY_SIDE_PANEL_BACKGROUND_FALLBACK = "#E7E5E8";
 
 const DEFAULT_BANNER_HEIGHT = 620;
 
@@ -780,7 +795,7 @@ export default function PremiumWhatsAppCard({
 
   if (photoLayout === "side_by_side") {
     return (
-      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", overflow: "hidden", backgroundColor: theme.paper, color: theme.ink }}>
+      <div style={{ width: "100%", height: "100%", position: "relative", display: "flex", overflow: "hidden", backgroundColor: data.sideBySidePanelBackground ?? SIDE_BY_SIDE_PANEL_BACKGROUND_FALLBACK, color: theme.ink }}>
         <SidePhoto data={data} theme={theme} width={SIDE_PHOTO_WIDTH} />
         <div style={{ width: 1080 - SIDE_PHOTO_WIDTH, height: "100%", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", overflow: "hidden" }}>
           <TemplateAtmosphere theme={theme} title={data.title} hasBanner={false} hasSidePhoto />
