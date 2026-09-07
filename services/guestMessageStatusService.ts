@@ -20,7 +20,13 @@ export type GuestMessageStatus = {
   sms: MessageChannelStatus;
 };
 
-export type MessageFilter = "all" | "not_whatsapp" | "not_sms" | "not_either";
+export type MessageFilter =
+  | "all"
+  | "not_whatsapp"
+  | "not_sms"
+  | "not_either"
+  | "sent_whatsapp"
+  | "sent_sms";
 
 /** Shared by both guest-list pages so the filter semantics can't drift between them. "Not sent" for filtering purposes includes "failed" -- a failed send still means the guest hasn't actually received it, which is exactly who the organizer wants this filter to surface. */
 export function matchesMessageFilter(
@@ -40,6 +46,14 @@ export function matchesMessageFilter(
 
   if (filter === "not_sms") {
     return !smsSent;
+  }
+
+  if (filter === "sent_whatsapp") {
+    return whatsappSent;
+  }
+
+  if (filter === "sent_sms") {
+    return smsSent;
   }
 
   return !whatsappSent && !smsSent;

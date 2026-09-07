@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -128,6 +129,14 @@ export default function InvitationsPage() {
     smsSettingsOpen,
     setSmsSettingsOpen,
   ] = useState(false);
+
+  const [
+    filterHighlighted,
+    setFilterHighlighted,
+  ] = useState(false);
+
+  const filterSectionRef =
+    useRef<HTMLElement>(null);
 
   const showNotification = useCallback((
     message: string,
@@ -560,6 +569,28 @@ export default function InvitationsPage() {
       messageStatusMap,
     ]);
 
+  function handleSummaryFilterClick(
+    filter: MessageFilter
+  ) {
+    setSelectedMessageFilter(
+      filter
+    );
+    setCurrentPage(1);
+
+    filterSectionRef.current?.scrollIntoView(
+      {
+        behavior: "smooth",
+        block: "start",
+      }
+    );
+
+    setFilterHighlighted(true);
+
+    window.setTimeout(() => {
+      setFilterHighlighted(false);
+    }, 1500);
+  }
+
   const totalPages = Math.max(
     1,
     Math.ceil(
@@ -646,6 +677,14 @@ export default function InvitationsPage() {
           summary={
             messageSummary.whatsapp
           }
+          sentFilter="sent_whatsapp"
+          remainingFilter="not_whatsapp"
+          activeFilter={
+            selectedMessageFilter
+          }
+          onFilterSelect={
+            handleSummaryFilterClick
+          }
         />
 
         <ChannelSummaryCard
@@ -653,10 +692,25 @@ export default function InvitationsPage() {
           summary={
             messageSummary.sms
           }
+          sentFilter="sent_sms"
+          remainingFilter="not_sms"
+          activeFilter={
+            selectedMessageFilter
+          }
+          onFilterSelect={
+            handleSummaryFilterClick
+          }
         />
       </div>
 
-      <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
+      <section
+        ref={filterSectionRef}
+        className={`rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)] transition-shadow duration-300 ${
+          filterHighlighted
+            ? "ring-4 ring-emerald-300 ring-offset-2"
+            : ""
+        }`}
+      >
         <div className="grid gap-4 lg:grid-cols-4">
           <div>
             <label
@@ -781,8 +835,14 @@ export default function InvitationsPage() {
               className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] text-slate-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 [color-scheme:light]"
             >
               <option value="all">Wote</option>
+              <option value="sent_whatsapp">
+                Waliotumiwa WhatsApp
+              </option>
               <option value="not_whatsapp">
                 Hawajatumiwa WhatsApp
+              </option>
+              <option value="sent_sms">
+                Waliotumiwa SMS
               </option>
               <option value="not_sms">
                 Hawajatumiwa SMS
@@ -1254,6 +1314,10 @@ function InvitationActions({
 function ChannelSummaryCard({
   label,
   summary,
+  sentFilter,
+  remainingFilter,
+  activeFilter,
+  onFilterSelect,
 }: {
   label: string;
   summary: {
@@ -1261,6 +1325,12 @@ function ChannelSummaryCard({
     sent: number;
     remaining: number;
   };
+  sentFilter: MessageFilter;
+  remainingFilter: MessageFilter;
+  activeFilter: MessageFilter;
+  onFilterSelect: (
+    filter: MessageFilter
+  ) => void;
 }) {
   return (
     <div className="rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
@@ -1276,19 +1346,45 @@ function ChannelSummaryCard({
           </span>
         </span>
 
-        <span>
+        <button
+          type="button"
+          onClick={() =>
+            onFilterSelect(
+              sentFilter
+            )
+          }
+          className={`rounded-lg px-1.5 py-0.5 transition hover:bg-emerald-50 hover:underline ${
+            activeFilter ===
+            sentFilter
+              ? "bg-emerald-100"
+              : ""
+          }`}
+        >
           Imetumwa:{" "}
           <span className="font-bold tabular-nums text-emerald-700">
             {summary.sent}
           </span>
-        </span>
+        </button>
 
-        <span>
+        <button
+          type="button"
+          onClick={() =>
+            onFilterSelect(
+              remainingFilter
+            )
+          }
+          className={`rounded-lg px-1.5 py-0.5 transition hover:bg-slate-100 hover:underline ${
+            activeFilter ===
+            remainingFilter
+              ? "bg-slate-200"
+              : ""
+          }`}
+        >
           Bado:{" "}
           <span className="font-bold tabular-nums text-slate-800">
             {summary.remaining}
           </span>
-        </span>
+        </button>
       </div>
     </div>
   );
