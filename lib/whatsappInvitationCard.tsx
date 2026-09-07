@@ -153,21 +153,26 @@ function safeHexColor(value: string | null | undefined, fallback: string) {
  * all, vs. a real difference once the same overlay was rendered as an
  * <img>). The right-edge gradient and the top/bottom feathers are each
  * zero everywhere except their own edge zone, so most of the photo is
- * left untouched.
+ * left untouched. There is no blur filter anywhere in this pipeline --
+ * this is a plain alpha-composited color layer (checked: no
+ * feGaussianBlur, no CSS blur()). What reads as "haze" on a subject is
+ * the gradient's own alpha reaching a moderately high value well before
+ * 100%, which looks like a foggy/washed-out photo wherever it overlaps
+ * real detail, even though it's a per-pixel color mix, not a spatial blur.
  *
  * There used to also be a blanket low-opacity wash rect covering 100% of
- * the photo (first at 0.22, then tuned to 0.12) meant to survive WhatsApp's
- * own heavy downscaling of the header image for its inline chat thumbnail
- * -- a narrow edge gradient that looks smooth at full 1080px resolution can
- * collapse to a few real pixels post-downscale and read as a hard cut
- * again. But on event 14's actual photo (a genuinely white/light studio
- * backdrop), ANY uniform tint away from the seam is visible as a cream
- * cast across the whole background, plus a flattened/desaturated look --
- * confirmed by looking at the rendered output directly, not just a pixel
- * sample. The blanket rect is removed entirely; the right-edge gradient's
- * own ramp zone (still ~38% of the photo width, unchanged) is wide enough
- * on its own to survive the downscale without needing a second, untargeted
- * layer over the rest of the photo.
+ * the photo (removed already -- see below) plus a wider ~38%-of-width
+ * right-edge ramp (62% -> 100%). On event 14's actual photo, the subject
+ * standing on the side nearer the panel has her face positioned right in
+ * the middle of that ramp (roughly 55-90% of the photo width), so a wide
+ * ramp doesn't just blend an empty background strip -- it visibly fades
+ * her face too. Narrowed to the last 15% of the width (85% -> 100%): the
+ * ramp still needs enough width to survive WhatsApp's own heavy
+ * downscaling of the header image for its inline chat thumbnail (a
+ * too-narrow gradient can alias into a hard cut once scaled down for a
+ * small inline thumbnail), but 15% of 400px (60px) is still a real
+ * multi-pixel ramp post-downscale, and keeps it clear of a subject who
+ * isn't standing in the outermost sliver of the frame.
  */
 async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
   const width = SIDE_PHOTO_OVERLAY_WIDTH;
@@ -178,9 +183,9 @@ async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
       <defs>
         <linearGradient id="rightFade" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="${paperColor}" stop-opacity="0" />
-          <stop offset="62%" stop-color="${paperColor}" stop-opacity="0" />
-          <stop offset="78%" stop-color="${paperColor}" stop-opacity="0.15" />
-          <stop offset="90%" stop-color="${paperColor}" stop-opacity="0.55" />
+          <stop offset="85%" stop-color="${paperColor}" stop-opacity="0" />
+          <stop offset="92%" stop-color="${paperColor}" stop-opacity="0.3" />
+          <stop offset="97%" stop-color="${paperColor}" stop-opacity="0.7" />
           <stop offset="100%" stop-color="${paperColor}" stop-opacity="1" />
         </linearGradient>
         <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1">
