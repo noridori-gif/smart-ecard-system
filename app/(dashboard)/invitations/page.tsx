@@ -13,6 +13,7 @@ import SendWhatsAppCloudButton from "@/components/invitation/SendWhatsAppCloudBu
 import InvitationSmsSettingsPanel from "@/components/invitation/InvitationSmsSettingsPanel";
 import Badge from "@/components/ui/Badge";
 import { buttonClassName } from "@/components/ui/Button";
+import MessageChannelBadges from "@/components/guests/MessageChannelBadges";
 
 import {
   getAllInvitations,
@@ -25,6 +26,12 @@ import {
   formatGuestPhoneNumber,
 } from "@/services/invitationMessageService";
 import { sendSmsInvitation } from "@/services/smsService";
+import {
+  getMessageStatusByInvitationIds,
+  matchesMessageFilter,
+  type GuestMessageStatus,
+  type MessageFilter,
+} from "@/services/guestMessageStatusService";
 
 type NotificationType =
   | "success"
@@ -93,6 +100,16 @@ export default function InvitationsPage() {
   ] = useState("all");
 
   const [
+    selectedMessageFilter,
+    setSelectedMessageFilter,
+  ] = useState<MessageFilter>("all");
+
+  const [
+    messageStatusMap,
+    setMessageStatusMap,
+  ] = useState<Map<number, GuestMessageStatus>>(new Map());
+
+  const [
     currentPage,
     setCurrentPage,
   ] = useState(1);
@@ -122,6 +139,37 @@ export default function InvitationsPage() {
     }, 3500);
   }, []);
 
+  // Merges into the existing map rather than replacing it, so a targeted
+  // refresh after one SMS send (just that invitation's id) doesn't wipe out
+  // every other row's already-loaded badge.
+  const refreshMessageStatus = useCallback(
+    async (invitationIds: number[]) => {
+      try {
+        const statusMap =
+          await getMessageStatusByInvitationIds(
+            invitationIds
+          );
+
+        setMessageStatusMap((current) => {
+          const merged = new Map(current);
+          statusMap.forEach((value, key) => {
+            merged.set(key, value);
+          });
+          return merged;
+        });
+      } catch (statusError) {
+        // Non-fatal: the invitations list itself still works without the
+        // WhatsApp/SMS status badges (e.g. sms_message_logs migration not
+        // applied yet on this database).
+        console.warn(
+          "Invitation message status lookup failed:",
+          statusError
+        );
+      }
+    },
+    []
+  );
+
   const loadInvitations = useCallback(async () => {
     try {
       setLoading(true);
@@ -131,6 +179,12 @@ export default function InvitationsPage() {
 
       setInvitations(
         invitationData ?? []
+      );
+
+      await refreshMessageStatus(
+        (invitationData ?? []).map(
+          (invitation) => invitation.id
+        )
       );
     } catch (error) {
       console.error(
@@ -147,7 +201,7 @@ export default function InvitationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [showNotification]);
+  }, [showNotification, refreshMessageStatus]);
 
   useEffect(() => {
     const timer = window.setTimeout(
@@ -197,6 +251,10 @@ export default function InvitationsPage() {
           "SMS invitation accepted by BEEM Africa.",
         "success"
       );
+
+      await refreshMessageStatus([
+        invitation.id,
+      ]);
     } catch (error) {
       console.error(
         "Send SMS invitation error:",
@@ -403,10 +461,19 @@ export default function InvitationsPage() {
             invitation.language ===
               selectedLanguage;
 
+          const matchesMessage =
+            matchesMessageFilter(
+              messageStatusMap.get(
+                invitation.id
+              ),
+              selectedMessageFilter
+            );
+
           return (
             matchesSearch &&
             matchesEvent &&
-            matchesLanguage
+            matchesLanguage &&
+            matchesMessage
           );
         }
       );
@@ -415,6 +482,8 @@ export default function InvitationsPage() {
       searchTerm,
       selectedEventId,
       selectedLanguage,
+      selectedMessageFilter,
+      messageStatusMap,
     ]);
 
   const totalPages = Math.max(
@@ -498,7 +567,7 @@ export default function InvitationsPage() {
       </header>
 
       <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-4">
           <div>
             <label
               htmlFor="invitation-search"
@@ -600,6 +669,39 @@ export default function InvitationsPage() {
               </option>
             </select>
           </div>
+
+          <div>
+            <label
+              htmlFor="message-filter"
+              className="mb-2 block text-sm font-semibold text-slate-700"
+            >
+              Ujumbe
+            </label>
+
+            <select
+              id="message-filter"
+              value={selectedMessageFilter}
+              onChange={(event) => {
+                setSelectedMessageFilter(
+                  event.target
+                    .value as MessageFilter
+                );
+                setCurrentPage(1);
+              }}
+              className="min-h-12 w-full rounded-xl border border-[#ddd7cc] bg-white px-4 text-[15px] text-slate-900 outline-none focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 [color-scheme:light]"
+            >
+              <option value="all">Wote</option>
+              <option value="not_whatsapp">
+                Hawajatumiwa WhatsApp
+              </option>
+              <option value="not_sms">
+                Hawajatumiwa SMS
+              </option>
+              <option value="not_either">
+                Hawajatumiwa yoyote
+              </option>
+            </select>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#e7e1d7] pt-4">
@@ -677,6 +779,7 @@ export default function InvitationsPage() {
               handleCopyMessage
             }
             sendingInvitationId={sendingInvitationId}
+            messageStatusMap={messageStatusMap}
           />
 
           <MobileInvitationsList
@@ -688,6 +791,7 @@ export default function InvitationsPage() {
               handleCopyMessage
             }
             sendingInvitationId={sendingInvitationId}
+            messageStatusMap={messageStatusMap}
           />
 
           <Pagination
@@ -738,15 +842,17 @@ function DesktopInvitationsTable({
   onSMS,
   onCopy,
   sendingInvitationId,
+  messageStatusMap,
 }: InvitationActionHandlers & {
   invitations:
     InvitationWithDetails[];
   sendingInvitationId: number | null;
+  messageStatusMap: Map<number, GuestMessageStatus>;
 }) {
   return (
     <div className="hidden overflow-hidden rounded-2xl border border-[#e7e1d7] bg-white shadow-[0_8px_24px_rgba(39,34,25,0.05)] md:block">
       <div className="overflow-x-auto">
-        <table className="min-w-[1040px] divide-y divide-[#e8e2d9] text-[15px]">
+        <table className="min-w-[1140px] divide-y divide-[#e8e2d9] text-[15px]">
           <thead className="bg-[#faf8f4]">
             <tr>
               <TableHeading>
@@ -767,6 +873,10 @@ function DesktopInvitationsTable({
 
               <TableHeading center>
                 Language
+              </TableHeading>
+
+              <TableHeading>
+                Ujumbe
               </TableHeading>
 
               <TableHeading right>
@@ -826,6 +936,14 @@ function DesktopInvitationsTable({
                   </td>
 
                   <td className="px-5 py-4">
+                    <MessageChannelBadges
+                      status={messageStatusMap.get(
+                        invitation.id
+                      )}
+                    />
+                  </td>
+
+                  <td className="px-5 py-4">
                     <InvitationActions
                       invitation={
                         invitation
@@ -851,10 +969,12 @@ function MobileInvitationsList({
   onSMS,
   onCopy,
   sendingInvitationId,
+  messageStatusMap,
 }: InvitationActionHandlers & {
   invitations:
     InvitationWithDetails[];
   sendingInvitationId: number | null;
+  messageStatusMap: Map<number, GuestMessageStatus>;
 }) {
   return (
     <div className="grid gap-3 md:hidden">
@@ -942,6 +1062,14 @@ function MobileInvitationsList({
                     : "-"}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-3">
+              <MessageChannelBadges
+                status={messageStatusMap.get(
+                  invitation.id
+                )}
+              />
             </div>
 
             <InvitationActions

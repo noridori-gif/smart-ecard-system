@@ -83,6 +83,56 @@ function latestPerInvitation(rows: LogRow[]): Map<number, MessageChannelStatus> 
 }
 
 /**
+ * The core lookup: given invitation ids directly, returns each one's latest
+ * WhatsApp/SMS status. Used as-is by the invitations page (which already
+ * has invitation.id per row); the guest-list pages go through the
+ * guest-id-keyed wrapper below since guests has no invitation_id column of
+ * its own.
+ */
+export async function getMessageStatusByInvitationIds(
+  invitationIds: number[]
+): Promise<Map<number, GuestMessageStatus>> {
+  const result = new Map<number, GuestMessageStatus>();
+
+  if (invitationIds.length === 0) {
+    return result;
+  }
+
+  const [whatsappResult, smsResult] = await Promise.all([
+    supabase
+      .from("whatsapp_message_logs")
+      .select("invitation_id, status, sent_at, created_at")
+      .in("invitation_id", invitationIds),
+
+    supabase
+      .from("sms_message_logs")
+      .select("invitation_id, status, sent_at, created_at")
+      .in("invitation_id", invitationIds),
+  ]);
+
+  if (whatsappResult.error) {
+    throw new Error(whatsappResult.error.message);
+  }
+
+  // sms_message_logs is new -- if this deployment's database hasn't had the
+  // migration applied yet, treat every SMS status as "not_sent" instead of
+  // breaking the page.
+  const smsRows = smsResult.error ? [] : ((smsResult.data ?? []) as LogRow[]);
+
+  const latestWhatsapp = latestPerInvitation((whatsappResult.data ?? []) as LogRow[]);
+  const latestSms = latestPerInvitation(smsRows);
+
+  for (const invitationId of invitationIds) {
+    result.set(invitationId, {
+      whatsapp: latestWhatsapp.get(invitationId) ?? NOT_SENT,
+      sms: latestSms.get(invitationId) ?? NOT_SENT,
+    });
+  }
+
+  return result;
+}
+
+/**
  * Looks up the latest WhatsApp/SMS send status per guest, for however many
  * guest ids are passed in (one event's guest list, or all guests loaded on
  * the cross-event page). Guests are matched to logs via their invitation
@@ -114,39 +164,14 @@ export async function getGuestMessageStatusMap(
     invitationIds.push(row.id);
   }
 
-  if (invitationIds.length === 0) {
-    return result;
-  }
-
-  const [whatsappResult, smsResult] = await Promise.all([
-    supabase
-      .from("whatsapp_message_logs")
-      .select("invitation_id, status, sent_at, created_at")
-      .in("invitation_id", invitationIds),
-
-    supabase
-      .from("sms_message_logs")
-      .select("invitation_id, status, sent_at, created_at")
-      .in("invitation_id", invitationIds),
-  ]);
-
-  if (whatsappResult.error) {
-    throw new Error(whatsappResult.error.message);
-  }
-
-  // sms_message_logs is new -- if this deployment's database hasn't had the
-  // migration applied yet, treat every SMS status as "not_sent" instead of
-  // breaking the guest list.
-  const smsRows = smsResult.error ? [] : ((smsResult.data ?? []) as LogRow[]);
-
-  const latestWhatsapp = latestPerInvitation((whatsappResult.data ?? []) as LogRow[]);
-  const latestSms = latestPerInvitation(smsRows);
+  const byInvitation = await getMessageStatusByInvitationIds(invitationIds);
 
   for (const [invitationId, guestId] of invitationToGuest) {
-    result.set(guestId, {
-      whatsapp: latestWhatsapp.get(invitationId) ?? NOT_SENT,
-      sms: latestSms.get(invitationId) ?? NOT_SENT,
-    });
+    const status = byInvitation.get(invitationId);
+
+    if (status) {
+      result.set(guestId, status);
+    }
   }
 
   return result;
