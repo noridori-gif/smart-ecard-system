@@ -12,6 +12,7 @@ type SendWhatsAppCloudButtonProps = {
   invitationToken: string;
   disabled?: boolean;
   compact?: boolean;
+  onSendSuccess?: () => void;
 };
 
 type SendWhatsAppResponse = {
@@ -26,6 +27,7 @@ export default function SendWhatsAppCloudButton({
   invitationToken,
   disabled = false,
   compact = false,
+  onSendSuccess,
 }: SendWhatsAppCloudButtonProps) {
   const [
     isSending,
@@ -123,6 +125,8 @@ export default function SendWhatsAppCloudButton({
         responseData.message ||
           "Meta imepokea ombi la WhatsApp. Fuatilia hali ya delivery kwenye WhatsApp Logs."
       );
+
+      onSendSuccess?.();
     } catch (error) {
       console.error(
         "Send WhatsApp invitation error:",

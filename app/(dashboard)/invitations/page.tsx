@@ -52,6 +52,11 @@ type InvitationActionHandlers = {
     invitation:
       InvitationWithDetails
   ) => void;
+
+  onWhatsAppSent: (
+    invitation:
+      InvitationWithDetails
+  ) => void;
 };
 
 type InvitationActionsProps =
@@ -270,6 +275,15 @@ export default function InvitationsPage() {
     } finally {
       setSendingInvitationId(null);
     }
+  }
+
+  function handleWhatsAppSent(
+    invitation:
+      InvitationWithDetails
+  ) {
+    void refreshMessageStatus([
+      invitation.id,
+    ]);
   }
 
   async function handleCopyMessage(
@@ -778,6 +792,7 @@ export default function InvitationsPage() {
             onCopy={
               handleCopyMessage
             }
+            onWhatsAppSent={handleWhatsAppSent}
             sendingInvitationId={sendingInvitationId}
             messageStatusMap={messageStatusMap}
           />
@@ -790,6 +805,7 @@ export default function InvitationsPage() {
             onCopy={
               handleCopyMessage
             }
+            onWhatsAppSent={handleWhatsAppSent}
             sendingInvitationId={sendingInvitationId}
             messageStatusMap={messageStatusMap}
           />
@@ -841,6 +857,7 @@ function DesktopInvitationsTable({
   invitations,
   onSMS,
   onCopy,
+  onWhatsAppSent,
   sendingInvitationId,
   messageStatusMap,
 }: InvitationActionHandlers & {
@@ -950,6 +967,7 @@ function DesktopInvitationsTable({
                       }
                       onSMS={onSMS}
                       onCopy={onCopy}
+                      onWhatsAppSent={onWhatsAppSent}
                       compact
                       sendingInvitationId={sendingInvitationId}
                     />
@@ -968,6 +986,7 @@ function MobileInvitationsList({
   invitations,
   onSMS,
   onCopy,
+  onWhatsAppSent,
   sendingInvitationId,
   messageStatusMap,
 }: InvitationActionHandlers & {
@@ -1076,6 +1095,7 @@ function MobileInvitationsList({
               invitation={invitation}
               onSMS={onSMS}
               onCopy={onCopy}
+              onWhatsAppSent={onWhatsAppSent}
               sendingInvitationId={sendingInvitationId}
             />
           </article>
@@ -1090,6 +1110,7 @@ function InvitationActions({
   invitation,
   onSMS,
   onCopy,
+  onWhatsAppSent,
   compact = false,
   sendingInvitationId,
 }: InvitationActionsProps & {
@@ -1144,6 +1165,9 @@ function InvitationActions({
           !invitation.guests?.phone
         }
         compact={compact}
+        onSendSuccess={() =>
+          onWhatsAppSent(invitation)
+        }
       />
     </div>
   );
