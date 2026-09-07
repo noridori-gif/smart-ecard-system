@@ -151,12 +151,21 @@ function safeHexColor(value: string | null | undefined, fallback: string) {
  * only <img>-over-<img> stacking paints correctly (confirmed by testing:
  * identical PNG byte output whether or not overlay divs were present at
  * all, vs. a real difference once the same overlay was rendered as an
- * <img>). A uniform low-opacity wash across the whole photo does most of
- * the work -- it survives WhatsApp's own heavy downscaling of the header
- * image for its inline chat thumbnail, where a narrow edge gradient that
- * looks smooth at full 1080px resolution collapses to a few real pixels
- * and reads as a hard cut again. The wide right-edge gradient and the
- * top/bottom feathers are the final polish at full resolution.
+ * <img>). A low-opacity wash across the whole photo does most of the work
+ * -- it survives WhatsApp's own heavy downscaling of the header image for
+ * its inline chat thumbnail, where a narrow edge gradient that looks
+ * smooth at full 1080px resolution collapses to a few real pixels and
+ * reads as a hard cut again. The right-edge gradient and the top/bottom
+ * feathers are the final polish at full resolution.
+ *
+ * Tuned down after a live test against a white/gray studio backdrop photo
+ * (event 14): the original 0.22 blanket wash plus a linear 38%->100%
+ * gradient visibly dulled the subject whenever they sat in the right ~60%
+ * of the photo, not just at the seam. The wash opacity is lower and the
+ * gradient now holds near-zero until 62% before ramping (via extra stops,
+ * not a straight line) so the fade stays concentrated in the last ~20%
+ * next to the panel, while keeping enough width for the ramp to survive
+ * WhatsApp's thumbnail downscale the same way the wider original did.
  */
 async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
   const width = SIDE_PHOTO_OVERLAY_WIDTH;
@@ -167,7 +176,9 @@ async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
       <defs>
         <linearGradient id="rightFade" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="${paperColor}" stop-opacity="0" />
-          <stop offset="38%" stop-color="${paperColor}" stop-opacity="0" />
+          <stop offset="62%" stop-color="${paperColor}" stop-opacity="0" />
+          <stop offset="78%" stop-color="${paperColor}" stop-opacity="0.15" />
+          <stop offset="90%" stop-color="${paperColor}" stop-opacity="0.55" />
           <stop offset="100%" stop-color="${paperColor}" stop-opacity="1" />
         </linearGradient>
         <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1">
@@ -179,7 +190,7 @@ async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
           <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
         </linearGradient>
       </defs>
-      <rect width="${width}" height="${height}" fill="${paperColor}" opacity="0.22" />
+      <rect width="${width}" height="${height}" fill="${paperColor}" opacity="0.12" />
       <rect width="${width}" height="${height}" fill="url(#rightFade)" />
       <rect width="${width}" height="${height}" fill="url(#topFade)" />
       <rect width="${width}" height="${height}" fill="url(#bottomFade)" />

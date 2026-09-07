@@ -79,8 +79,10 @@ type Theme = {
   paper: string;
   paperAlt: string;
   ink: string;
+  textInk: string;
   muted: string;
   accent: string;
+  textAccent: string;
   accentSoft: string;
   ticket: string;
   shadow: string;
@@ -133,6 +135,11 @@ function mixHex(colorA: string, colorB: string, weight: number) {
   ]);
 }
 
+/** Darkens a hex color toward black by `amount` (0-1) -- scaling every channel down this way keeps hue/chroma ratios intact, which reads as richer/more saturated rather than just dimmer. Used only for body text colors, not borders/lines, so headings read bolder without the rest of the card's linework getting heavier. */
+function darken(hex: string, amount: number) {
+  return mixHex(hex, "#000000", amount);
+}
+
 /** Builds the card's colour theme from the organizer's chosen primary/secondary/accent, keeping only the decorative "skin" (shape/layout) tied to the template. */
 function buildTheme(data: PremiumWhatsAppCardData, template: PremiumWhatsAppTemplate): Theme {
   const primary = safeColor(data.primary, FALLBACK_COLORS.primary);
@@ -144,8 +151,10 @@ function buildTheme(data: PremiumWhatsAppCardData, template: PremiumWhatsAppTemp
     paper: secondary,
     paperAlt: mixHex(secondary, primary, 0.08),
     ink: primary,
+    textInk: darken(primary, 0.22),
     muted: mixHex(primary, secondary, 0.45),
     accent,
+    textAccent: darken(accent, 0.2),
     accentSoft: mixHex(accent, secondary, 0.55),
     ticket: mixHex(secondary, primary, 0.05),
     shadow: "rgba(15,23,42,0.18)",
@@ -227,7 +236,7 @@ function Label({ children, theme }: { children: ReactNode; theme: Theme }) {
         fontSize: 15,
         fontWeight: 800,
         letterSpacing: 4,
-        color: theme.accent,
+        color: theme.textAccent,
         textAlign: "center",
       }}
     >
@@ -540,7 +549,7 @@ function InvitationTop({ data, theme, compact = false }: { data: PremiumWhatsApp
       <div style={{ display: "flex", marginTop: 16 }}>
         <DiamondOrnament theme={theme} width={50} />
       </div>
-      <div style={{ display: "flex", marginTop: 18, fontFamily: "Georgia, serif", fontSize: compact ? 64 : 52, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.ink }}>
+      <div style={{ display: "flex", marginTop: 18, fontFamily: "Georgia, serif", fontSize: compact ? 64 : 52, lineHeight: 1, fontWeight: 700, letterSpacing: 1.2, color: theme.textInk }}>
         {text.heading}
       </div>
       <div
@@ -572,12 +581,12 @@ function PhotoBanner({ data, theme }: { data: PremiumWhatsAppCardData; theme: Th
         // eslint-disable-next-line @next/next/no-img-element
         <img src={data.coverImageDataUrl} alt="" width={1080} height={bannerHeight} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
       ) : (
-        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.ink }}>
+        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.textInk }}>
           <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 84, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
             {initials(data.title) || "S & E"}
           </div>
           <div style={{ width: 130, height: 1, display: "flex", marginTop: 26, backgroundColor: theme.accent }} />
-          <div style={{ display: "flex", marginTop: 20, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 5, color: theme.accent }}>
+          <div style={{ display: "flex", marginTop: 20, fontFamily: "Arial, sans-serif", fontSize: 14, fontWeight: 800, letterSpacing: 5, color: theme.textAccent }}>
             TOGETHER
           </div>
         </div>
@@ -591,14 +600,14 @@ function GuestAndTitle({ data, theme, compact = false }: { data: PremiumWhatsApp
 
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: compact ? "18px 6% 10px" : "12px 70px 6px", textAlign: "center" }}>
-      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34, compact ? 1.2 : 1), lineHeight: 1.04, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+      <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: responsiveSize(data.guestName, 46, 40, 34, compact ? 1.2 : 1), lineHeight: 1.04, fontWeight: 700, color: theme.textInk, textAlign: "center" }}>
         {data.guestName}
       </div>
       <div style={{ width: 180, height: 1, display: "flex", marginTop: 16, backgroundColor: theme.accent }} />
       <div style={{ display: "flex", marginTop: 16 }}>
         <Label theme={theme}>{text.weddingOf}</Label>
       </div>
-      <div style={{ maxWidth: compact ? 600 : 780, display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 40, 36, 30, compact ? 1.2 : 1), lineHeight: 1.06, fontWeight: 700, fontStyle: "italic", color: theme.ink, textAlign: "center" }}>
+      <div style={{ maxWidth: compact ? 600 : 780, display: "flex", marginTop: 10, fontFamily: "Georgia, serif", fontSize: responsiveSize(data.title, 40, 36, 30, compact ? 1.2 : 1), lineHeight: 1.06, fontWeight: 700, fontStyle: "italic", color: theme.textInk, textAlign: "center" }}>
         {data.title}
       </div>
     </div>
@@ -623,7 +632,7 @@ function Detail({
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4px 18px", textAlign: "center" }}>
       <Label theme={theme}>{label}</Label>
-      <div style={{ maxWidth: 420, display: "flex", marginTop: 7, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? (compact ? 48 : 40) : (compact ? 30 : 25), lineHeight: 1.12, fontWeight: 700, color: theme.ink, textAlign: "center" }}>
+      <div style={{ maxWidth: 420, display: "flex", marginTop: 7, whiteSpace: "pre-wrap", fontFamily: "Georgia, serif", fontSize: featured ? (compact ? 48 : 40) : (compact ? 30 : 25), lineHeight: 1.12, fontWeight: 700, color: theme.textInk, textAlign: "center" }}>
         {value || "—"}
       </div>
       {secondary && (
@@ -681,7 +690,7 @@ function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCar
         <div style={{ display: "flex", marginTop: 16 }}>
           <Label theme={theme}>{text.passId}</Label>
         </div>
-        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? (compact ? 42 : 38) : (compact ? 56 : 48), lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.ink }}>
+        <div style={{ display: "flex", marginTop: 6, fontFamily: "Georgia, serif", fontSize: passId.length > 16 ? (compact ? 42 : 38) : (compact ? 56 : 48), lineHeight: 1, fontWeight: 700, letterSpacing: 1, color: theme.textInk }}>
           {passId}
         </div>
         <div style={{ maxWidth: compact ? 320 : 480, display: "flex", marginTop: 14, fontFamily: "Georgia, serif", fontSize: compact ? 15 : 18, lineHeight: 1.25, fontStyle: "italic", color: theme.muted }}>
@@ -694,7 +703,7 @@ function PassTicket({ data, theme, compact = false }: { data: PremiumWhatsAppCar
           // eslint-disable-next-line @next/next/no-img-element
           <img src={data.qrCodeDataUrl} alt="" width={qrSize} height={qrSize} style={{ width: qrSize, height: qrSize, objectFit: "contain" }} />
         ) : (
-          <div style={{ width: qrSize - 20, height: qrSize - 20, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.accentSoft}`, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900, color: theme.ink }}>
+          <div style={{ width: qrSize - 20, height: qrSize - 20, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${theme.accentSoft}`, fontFamily: "Arial, sans-serif", fontSize: 24, fontWeight: 900, color: theme.textInk }}>
             QR
           </div>
         )}
@@ -722,7 +731,7 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
         // eslint-disable-next-line @next/next/no-img-element
         <img src={data.coverImageDataUrl} alt="" width={width} height={1180} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
       ) : (
-        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.ink }}>
+        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: theme.paperAlt, color: theme.textInk }}>
           <div style={{ display: "flex", fontFamily: "Georgia, serif", fontSize: 56, lineHeight: 1, fontWeight: 700, fontStyle: "italic" }}>
             {initials(data.title) || "S & E"}
           </div>
