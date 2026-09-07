@@ -415,7 +415,11 @@ export default function InvitationsPage() {
         ) ?? null
       : null;
 
-  const filteredInvitations =
+  // Search/Event/Language scope only -- deliberately excludes the Ujumbe
+  // status filter, so the channel summary counters below can be computed
+  // from this set without being circular (e.g. filtering to "Hawajatumiwa
+  // WhatsApp" would otherwise always show 0 sent).
+  const scopeFilteredInvitations =
     useMemo(() => {
       const normalizedSearch =
         searchTerm
@@ -475,19 +479,10 @@ export default function InvitationsPage() {
             invitation.language ===
               selectedLanguage;
 
-          const matchesMessage =
-            matchesMessageFilter(
-              messageStatusMap.get(
-                invitation.id
-              ),
-              selectedMessageFilter
-            );
-
           return (
             matchesSearch &&
             matchesEvent &&
-            matchesLanguage &&
-            matchesMessage
+            matchesLanguage
           );
         }
       );
@@ -496,7 +491,72 @@ export default function InvitationsPage() {
       searchTerm,
       selectedEventId,
       selectedLanguage,
-      selectedMessageFilter,
+    ]);
+
+  const filteredInvitations =
+    useMemo(
+      () =>
+        scopeFilteredInvitations.filter(
+          (invitation) =>
+            matchesMessageFilter(
+              messageStatusMap.get(
+                invitation.id
+              ),
+              selectedMessageFilter
+            )
+        ),
+      [
+        scopeFilteredInvitations,
+        selectedMessageFilter,
+        messageStatusMap,
+      ]
+    );
+
+  const messageSummary =
+    useMemo(() => {
+      let whatsappSent = 0;
+      let smsSent = 0;
+
+      for (const invitation of scopeFilteredInvitations) {
+        const status =
+          messageStatusMap.get(
+            invitation.id
+          );
+
+        if (
+          status?.whatsapp
+            .state === "sent"
+        ) {
+          whatsappSent += 1;
+        }
+
+        if (
+          status?.sms.state ===
+          "sent"
+        ) {
+          smsSent += 1;
+        }
+      }
+
+      const total =
+        scopeFilteredInvitations.length;
+
+      return {
+        whatsapp: {
+          total,
+          sent: whatsappSent,
+          remaining:
+            total - whatsappSent,
+        },
+        sms: {
+          total,
+          sent: smsSent,
+          remaining:
+            total - smsSent,
+        },
+      };
+    }, [
+      scopeFilteredInvitations,
       messageStatusMap,
     ]);
 
@@ -579,6 +639,22 @@ export default function InvitationsPage() {
           </p>
         </div>
       </header>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <ChannelSummaryCard
+          label="WhatsApp"
+          summary={
+            messageSummary.whatsapp
+          }
+        />
+
+        <ChannelSummaryCard
+          label="SMS"
+          summary={
+            messageSummary.sms
+          }
+        />
+      </div>
 
       <section className="rounded-2xl border border-[#e7e1d7] bg-white p-5 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
         <div className="grid gap-4 lg:grid-cols-4">
@@ -1169,6 +1245,49 @@ function InvitationActions({
           onWhatsAppSent(invitation)
         }
       />
+    </div>
+  );
+}
+
+function ChannelSummaryCard({
+  label,
+  summary,
+}: {
+  label: string;
+  summary: {
+    total: number;
+    sent: number;
+    remaining: number;
+  };
+}) {
+  return (
+    <div className="rounded-2xl border border-[#e7e1d7] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(39,34,25,0.05)]">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-slate-600">
+        <span>
+          Jumla:{" "}
+          <span className="font-bold tabular-nums text-slate-950">
+            {summary.total}
+          </span>
+        </span>
+
+        <span>
+          Imetumwa:{" "}
+          <span className="font-bold tabular-nums text-emerald-700">
+            {summary.sent}
+          </span>
+        </span>
+
+        <span>
+          Bado:{" "}
+          <span className="font-bold tabular-nums text-slate-800">
+            {summary.remaining}
+          </span>
+        </span>
+      </div>
     </div>
   );
 }
