@@ -577,11 +577,19 @@ export async function POST(
         ).origin
       ).replace(/\/$/, "");
 
+    // Nonce lives in the URL PATH (not just a ?v= query string) so a fetcher
+    // that normalizes/drops query strings when caching -- including, per
+    // WhatsApp Business Platform reports, Meta's own header-image fetcher --
+    // can't collapse two different sends onto the same cached image.
+    const cardImageNonce =
+      `${Date.now()}-` +
+      Math.random().toString(36).slice(2, 10);
+
     const cardImageUrl =
       `${siteOrigin}/api/invitations/` +
       `${encodeURIComponent(
         invitationToken
-      )}/card?v=${Date.now()}`;
+      )}/card/${cardImageNonce}`;
 
     try {
       const { bytes: imageBytes, contentType: cardContentType } =
