@@ -135,6 +135,61 @@ const LEAF_TOP_LEFT_URL = loadRoyalPortraitAsset("leaf_top_left.png");
 const LEAF_BOTTOM_LEFT_URL = loadRoyalPortraitAsset("leaf_bottom_left.png");
 const LEAF_TOP_RIGHT_URL = loadRoyalPortraitAsset("leaf_top_right_light.png");
 
+// Matches SIDE_PHOTO_WIDTH / SIDE_BY_SIDE_HEIGHT in PremiumWhatsAppCard.tsx.
+const SIDE_PHOTO_OVERLAY_WIDTH = 400;
+const SIDE_PHOTO_OVERLAY_HEIGHT = 1500;
+
+function safeHexColor(value: string | null | undefined, fallback: string) {
+  const normalized = value?.trim();
+  return normalized && /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : fallback;
+}
+
+/**
+ * Blends the side_by_side layout's photo into the panel's own background
+ * color -- rendered as an actual PNG (not a CSS-styled div) because satori
+ * does not composite a plain <div> over a sibling <img> in this pipeline;
+ * only <img>-over-<img> stacking paints correctly (confirmed by testing:
+ * identical PNG byte output whether or not overlay divs were present at
+ * all, vs. a real difference once the same overlay was rendered as an
+ * <img>). A uniform low-opacity wash across the whole photo does most of
+ * the work -- it survives WhatsApp's own heavy downscaling of the header
+ * image for its inline chat thumbnail, where a narrow edge gradient that
+ * looks smooth at full 1080px resolution collapses to a few real pixels
+ * and reads as a hard cut again. The wide right-edge gradient and the
+ * top/bottom feathers are the final polish at full resolution.
+ */
+async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
+  const width = SIDE_PHOTO_OVERLAY_WIDTH;
+  const height = SIDE_PHOTO_OVERLAY_HEIGHT;
+
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="rightFade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="${paperColor}" stop-opacity="0" />
+          <stop offset="38%" stop-color="${paperColor}" stop-opacity="0" />
+          <stop offset="100%" stop-color="${paperColor}" stop-opacity="1" />
+        </linearGradient>
+        <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${paperColor}" stop-opacity="1" />
+          <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="bottomFade" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stop-color="${paperColor}" stop-opacity="1" />
+          <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <rect width="${width}" height="${height}" fill="${paperColor}" opacity="0.22" />
+      <rect width="${width}" height="${height}" fill="url(#rightFade)" />
+      <rect width="${width}" height="${height}" fill="url(#topFade)" />
+      <rect width="${width}" height="${height}" fill="url(#bottomFade)" />
+    </svg>
+  `;
+
+  const buffer = await sharp(Buffer.from(svg)).png().toBuffer();
+  return `data:image/png;base64,${buffer.toString("base64")}`;
+}
+
 const DEFAULT_BANNER_HEIGHT = 620;
 const MIN_BANNER_HEIGHT = 480;
 // Capped well below the photo's true aspect ratio for very tall portrait
@@ -554,10 +609,15 @@ export async function createWhatsAppInvitationCard(
     qrCodeDataUrl
   );
 
+  const sidePhotoBlendOverlayUrl =
+    normalizedData.photoLayout === "side_by_side"
+      ? await buildSidePhotoBlendOverlayUrl(safeHexColor(normalizedData.secondary, "#FFF8EC"))
+      : undefined;
+
   try {
     return jpegResponse(
       await materializeJpeg(
-        renderWhatsAppCard(template, normalizedData),
+        renderWhatsAppCard(template, normalizedData, sidePhotoBlendOverlayUrl),
         CARD_WIDTH,
         whatsAppCardTotalHeight(normalizedData.photoLayout, normalizedData.coverImageBannerHeight)
       )
@@ -570,7 +630,7 @@ export async function createWhatsAppInvitationCard(
       try {
         return jpegResponse(
           await materializeJpeg(
-            renderWhatsAppCard(template, normalizedData),
+            renderWhatsAppCard(template, normalizedData, sidePhotoBlendOverlayUrl),
             CARD_WIDTH,
             whatsAppCardTotalHeight(normalizedData.photoLayout, normalizedData.coverImageBannerHeight)
           )
@@ -1110,7 +1170,8 @@ export async function createCompactWhatsAppInvitationCard(
 
 function renderWhatsAppCard(
   template: Exclude<WhatsAppCardTemplate, "custom" | "rose_garden">,
-  data: RenderData
+  data: RenderData,
+  sidePhotoBlendOverlayUrl?: string
 ): ReactElement {
   return (
     <PremiumWhatsAppCard
@@ -1119,6 +1180,7 @@ function renderWhatsAppCard(
         leafTopLeftUrl: LEAF_TOP_LEFT_URL,
         leafBottomLeftUrl: LEAF_BOTTOM_LEFT_URL,
         leafTopRightUrl: LEAF_TOP_RIGHT_URL,
+        sidePhotoBlendOverlayUrl,
       }}
       template={template}
     />

@@ -46,6 +46,16 @@ export type PremiumWhatsAppCardData = {
   leafTopLeftUrl?: string;
   leafBottomLeftUrl?: string;
   leafTopRightUrl?: string;
+
+  // Pre-rendered PNG (real image, not a CSS gradient div) that blends the
+  // side_by_side photo into the panel's background -- satori does not
+  // composite a <div> over a sibling <img> in this pipeline, only
+  // <img>-over-<img> paints correctly, so this has to be a real raster
+  // asset generated server-side per event (the panel color is per-event
+  // configurable). Same client/server split as the leaf URLs above: the
+  // browser preview has no such value, so it falls back to plain CSS
+  // gradients, which work fine in an actual browser.
+  sidePhotoBlendOverlayUrl?: string;
 };
 
 const DEFAULT_BANNER_HEIGHT = 620;
@@ -719,14 +729,27 @@ function SidePhoto({ data, theme, width }: { data: PremiumWhatsAppCardData; them
           <div style={{ width: 90, height: 1, display: "flex", marginTop: 20, backgroundColor: theme.accent }} />
         </div>
       )}
-      {/* Feathers the photo's top, right, and bottom edges into the panel's
-          own background color -- an organic vignette rather than a hard
-          rectangle -- so the whole card reads as one continuous surface
-          instead of a photo-box stitched to a text-box. The left edge is
-          the card's own outer border and stays crisp. */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to right, transparent 68%, ${theme.paper})` }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to bottom, ${theme.paper}, transparent 12%)` }} />
-      <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to top, ${theme.paper}, transparent 12%)` }} />
+      {data.sidePhotoBlendOverlayUrl ? (
+        // Pre-rendered PNG -- see the comment on sidePhotoBlendOverlayUrl.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={data.sidePhotoBlendOverlayUrl}
+          alt=""
+          width={width}
+          height={1180}
+          style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%" }}
+        />
+      ) : (
+        // Browser-preview fallback (EventFormWizard's live preview never
+        // goes through satori, so plain CSS gradients render correctly
+        // here even though they don't in the actual JPEG pipeline).
+        <>
+          <div style={{ position: "absolute", inset: 0, display: "flex", backgroundColor: theme.paper, opacity: 0.22 }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to right, transparent 38%, ${theme.paper})` }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to bottom, ${theme.paper}, transparent 22%)` }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", backgroundImage: `linear-gradient(to top, ${theme.paper}, transparent 22%)` }} />
+        </>
+      )}
     </div>
   );
 }
