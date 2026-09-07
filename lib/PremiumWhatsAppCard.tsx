@@ -1,6 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 import { formatPassIdForDisplay } from "./passId";
+import { formatSwahiliTime } from "./swahiliTime";
 
 export type PremiumWhatsAppTemplate =
   | "royal_portrait"
@@ -214,21 +215,13 @@ export function copy(language: "sw" | "en") {
       };
 }
 
-/**
- * Single/Double already say the count in the word itself -- appending
- * "1 Person"/"2 People" (or the Swahili equivalent) was redundant. Group
- * keeps its count since "Group" alone doesn't say how many.
- */
+/** Just the status word -- no guest count anywhere, per explicit request. */
 function statusText(data: PremiumWhatsAppCardData) {
   const count = Number.isFinite(data.allowedGuests)
     ? Math.max(1, Math.floor(data.allowedGuests))
     : 1;
 
-  if (data.language === "en") {
-    return count === 1 ? "Single" : count === 2 ? "Double" : `Group · ${count} People`;
-  }
-
-  return count === 1 ? "Single" : count === 2 ? "Double" : `Group · Watu ${count}`;
+  return count === 1 ? "Single" : count === 2 ? "Double" : "Group";
 }
 
 function responsiveSize(value: string, large: number, medium: number, small: number, scale = 1) {
@@ -772,16 +765,25 @@ function EventDetails({ data, theme, compact = false }: { data: PremiumWhatsAppC
   const ceremonyVenue = data.ceremonyVenue;
   const receptionVenue = data.receptionVenue || data.venue;
 
+  // Traditional Swahili time-of-day reckoning ("Saa 12:00 Jioni") for
+  // Swahili-language events only -- it's a Swahili cultural convention, not
+  // something to show on an English-language invitation. Applied to both
+  // ceremony and reception time so they match each other on this card.
+  const displayCeremonyTime =
+    data.language === "sw" ? formatSwahiliTime(ceremonyTime) ?? ceremonyTime : ceremonyTime;
+  const displayReceptionTime =
+    data.language === "sw" ? formatSwahiliTime(data.eventTime) ?? data.eventTime : data.eventTime;
+
   return (
     <div style={{ width: compact ? "94%" : 920, height: compact ? 460 : 350, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", padding: "18px 20px 16px", borderTop: `1px solid ${theme.accentSoft}`, borderBottom: `1px solid ${theme.accentSoft}` }}>
       <Detail label={text.date} value={data.date} theme={theme} featured compact={compact} />
       <div style={{ width: "100%", display: "flex", alignItems: "stretch" }}>
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={data.ceremonyTitle || text.ceremony} value={ceremonyTime} secondary={ceremonyVenue} theme={theme} compact={compact} />
+          <Detail label={data.ceremonyTitle || text.ceremony} value={displayCeremonyTime} secondary={ceremonyVenue} theme={theme} compact={compact} />
         </div>
         <div style={{ width: 1, display: "flex", backgroundColor: theme.accentSoft }} />
         <div style={{ width: "50%", display: "flex" }}>
-          <Detail label={text.reception} value={receptionVenue} secondary={data.eventTime} theme={theme} compact={compact} />
+          <Detail label={text.reception} value={receptionVenue} secondary={displayReceptionTime} theme={theme} compact={compact} />
         </div>
       </div>
       <div style={{ width: "72%", display: "flex", paddingTop: 10, borderTop: `1px solid ${theme.accentSoft}` }}>
