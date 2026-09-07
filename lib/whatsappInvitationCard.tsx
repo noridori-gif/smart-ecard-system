@@ -151,28 +151,34 @@ function safeHexColor(value: string | null | undefined, fallback: string) {
  * only <img>-over-<img> stacking paints correctly (confirmed by testing:
  * identical PNG byte output whether or not overlay divs were present at
  * all, vs. a real difference once the same overlay was rendered as an
- * <img>). The right-edge gradient and the top/bottom feathers are each
- * zero everywhere except their own edge zone, so most of the photo is
- * left untouched. There is no blur filter anywhere in this pipeline --
- * this is a plain alpha-composited color layer (checked: no
- * feGaussianBlur, no CSS blur()). What reads as "haze" on a subject is
- * the gradient's own alpha reaching a moderately high value well before
- * 100%, which looks like a foggy/washed-out photo wherever it overlaps
- * real detail, even though it's a per-pixel color mix, not a spatial blur.
+ * <img>). There is no blur filter anywhere in this pipeline -- this is a
+ * plain alpha-composited color layer (checked: no feGaussianBlur, no CSS
+ * blur()). What reads as "haze" on a subject is the gradient's own alpha
+ * reaching a moderately high value, which looks like a foggy/washed-out
+ * photo wherever it overlaps real detail, even though it's a per-pixel
+ * color mix, not a spatial blur.
  *
- * There used to also be a blanket low-opacity wash rect covering 100% of
- * the photo (removed already -- see below) plus a wider ~38%-of-width
- * right-edge ramp (62% -> 100%). On event 14's actual photo, the subject
- * standing on the side nearer the panel has her face positioned right in
- * the middle of that ramp (roughly 55-90% of the photo width), so a wide
- * ramp doesn't just blend an empty background strip -- it visibly fades
- * her face too. Narrowed to the last 15% of the width (85% -> 100%): the
- * ramp still needs enough width to survive WhatsApp's own heavy
+ * Only the right edge actually blends into another visible surface (the
+ * text panel) -- that's the one real seam. The photo spans the card's
+ * full height in this layout (see PremiumWhatsAppCard's side_by_side
+ * branch), so its top/bottom edges are just the outer edges of the whole
+ * card image, not a seam into anything; there used to be top/bottom
+ * "feather" gradients here too (22% of the height each), but they were
+ * fading real subject detail for no reason -- confirmed by comparing a
+ * render against event 14's actual original photo: his head (which
+ * starts well within that top 22%) and both their feet/shoes (which sit
+ * within that bottom 22%) read visibly hazier than the source photo, with
+ * no adjacent surface there to justify it. Removed entirely.
+ *
+ * The right-edge ramp itself was also too wide before (62% -> 100% of the
+ * photo's width): the subject standing nearer the panel had her face
+ * positioned inside that zone (roughly 55-90% of the width), so it faded
+ * her, not just an empty background strip. Narrowed to the last 15%
+ * (85% -> 100%) -- still enough width to survive WhatsApp's own heavy
  * downscaling of the header image for its inline chat thumbnail (a
- * too-narrow gradient can alias into a hard cut once scaled down for a
- * small inline thumbnail), but 15% of 400px (60px) is still a real
- * multi-pixel ramp post-downscale, and keeps it clear of a subject who
- * isn't standing in the outermost sliver of the frame.
+ * too-narrow gradient can alias into a hard cut once scaled down), but
+ * clear of a subject who isn't standing in the outermost sliver of the
+ * frame.
  */
 async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
   const width = SIDE_PHOTO_OVERLAY_WIDTH;
@@ -188,18 +194,8 @@ async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
           <stop offset="97%" stop-color="${paperColor}" stop-opacity="0.7" />
           <stop offset="100%" stop-color="${paperColor}" stop-opacity="1" />
         </linearGradient>
-        <linearGradient id="topFade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${paperColor}" stop-opacity="1" />
-          <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
-        </linearGradient>
-        <linearGradient id="bottomFade" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stop-color="${paperColor}" stop-opacity="1" />
-          <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
-        </linearGradient>
       </defs>
       <rect width="${width}" height="${height}" fill="url(#rightFade)" />
-      <rect width="${width}" height="${height}" fill="url(#topFade)" />
-      <rect width="${width}" height="${height}" fill="url(#bottomFade)" />
     </svg>
   `;
 
