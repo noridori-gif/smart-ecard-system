@@ -151,21 +151,23 @@ function safeHexColor(value: string | null | undefined, fallback: string) {
  * only <img>-over-<img> stacking paints correctly (confirmed by testing:
  * identical PNG byte output whether or not overlay divs were present at
  * all, vs. a real difference once the same overlay was rendered as an
- * <img>). A low-opacity wash across the whole photo does most of the work
- * -- it survives WhatsApp's own heavy downscaling of the header image for
- * its inline chat thumbnail, where a narrow edge gradient that looks
- * smooth at full 1080px resolution collapses to a few real pixels and
- * reads as a hard cut again. The right-edge gradient and the top/bottom
- * feathers are the final polish at full resolution.
+ * <img>). The right-edge gradient and the top/bottom feathers are each
+ * zero everywhere except their own edge zone, so most of the photo is
+ * left untouched.
  *
- * Tuned down after a live test against a white/gray studio backdrop photo
- * (event 14): the original 0.22 blanket wash plus a linear 38%->100%
- * gradient visibly dulled the subject whenever they sat in the right ~60%
- * of the photo, not just at the seam. The wash opacity is lower and the
- * gradient now holds near-zero until 62% before ramping (via extra stops,
- * not a straight line) so the fade stays concentrated in the last ~20%
- * next to the panel, while keeping enough width for the ramp to survive
- * WhatsApp's thumbnail downscale the same way the wider original did.
+ * There used to also be a blanket low-opacity wash rect covering 100% of
+ * the photo (first at 0.22, then tuned to 0.12) meant to survive WhatsApp's
+ * own heavy downscaling of the header image for its inline chat thumbnail
+ * -- a narrow edge gradient that looks smooth at full 1080px resolution can
+ * collapse to a few real pixels post-downscale and read as a hard cut
+ * again. But on event 14's actual photo (a genuinely white/light studio
+ * backdrop), ANY uniform tint away from the seam is visible as a cream
+ * cast across the whole background, plus a flattened/desaturated look --
+ * confirmed by looking at the rendered output directly, not just a pixel
+ * sample. The blanket rect is removed entirely; the right-edge gradient's
+ * own ramp zone (still ~38% of the photo width, unchanged) is wide enough
+ * on its own to survive the downscale without needing a second, untargeted
+ * layer over the rest of the photo.
  */
 async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
   const width = SIDE_PHOTO_OVERLAY_WIDTH;
@@ -190,7 +192,6 @@ async function buildSidePhotoBlendOverlayUrl(paperColor: string) {
           <stop offset="22%" stop-color="${paperColor}" stop-opacity="0" />
         </linearGradient>
       </defs>
-      <rect width="${width}" height="${height}" fill="${paperColor}" opacity="0.12" />
       <rect width="${width}" height="${height}" fill="url(#rightFade)" />
       <rect width="${width}" height="${height}" fill="url(#topFade)" />
       <rect width="${width}" height="${height}" fill="url(#bottomFade)" />
