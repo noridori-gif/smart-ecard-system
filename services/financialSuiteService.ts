@@ -262,7 +262,7 @@ export async function runContributionCleanup(eventId: number, input: {
   }>;
 }
 
-export function exportPledges(eventTitle: string, pledges: FinancialPledge[]) {
+export function exportPledges(eventTitle: string, pledges: FinancialPledge[], fileLabel: string = "Contributions") {
   const rows = pledges.map((p) => ({
     "Full Name": p.full_name, Phone: p.phone, Email: p.email ?? "",
     "Pledged Amount": p.pledged_amount, "Total Paid": p.total_paid, Balance: p.balance,
@@ -271,7 +271,7 @@ export function exportPledges(eventTitle: string, pledges: FinancialPledge[]) {
   }));
   const book = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), "Pledges");
-  XLSX.writeFile(book, `${eventTitle.replace(/\W+/g, "_")}_Contributions.xlsx`);
+  XLSX.writeFile(book, `${eventTitle.replace(/\W+/g, "_")}_${fileLabel}.xlsx`);
 }
 
 export const PLEDGE_IMPORT_HEADERS = ["Full Name", "Phone", "Email", "Pledged Amount", "Notes"] as const;
