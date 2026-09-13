@@ -1,15 +1,20 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { Html5Qrcode } from "html5-qrcode";
+import { createClient } from "@/lib/supabase/client";
 import AttendanceCards, { type AttendanceMetrics } from "@/components/check-in/AttendanceCards";
 import CardTypeBreakdown from "@/components/check-in/CardTypeBreakdown";
 import ManualEntryPanel from "@/components/check-in/ManualEntryPanel";
 import ProgressCards from "@/components/check-in/ProgressCards";
 import RecentActivity, { passLabel, type ActivityEntry, type ActivityStatus } from "@/components/check-in/RecentActivity";
 import ScannerPanel from "@/components/check-in/ScannerPanel";
+import ScannerTopBar from "@/components/check-in/ScannerTopBar";
 import StatStrip from "@/components/check-in/StatStrip";
+import StatusBanner from "@/components/check-in/StatusBanner";
 import CheckInIcon from "@/components/check-in/CheckInIcons";
-import EventSelector from "@/components/dashboard/EventSelector";
 import { getEvents, type Event } from "@/services/eventService";
 import {
   checkInGuest,
@@ -21,9 +26,11 @@ import {
 import { getInvitationsByEvent, type Invitation } from "@/services/invitationService";
 import { getPledgesForEvent, type FinancialPledge } from "@/services/financialSuiteService";
 import { classifyContribution, getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
+import { getCurrentUserProfile, type CurrentUserProfile } from "@/services/profileService";
 
 type CheckInMethod = "qr" | "event_pass";
 type SecondaryTab = "activity" | "stats";
+type FacingMode = "environment" | "user";
 
 function describeCameraError(error: unknown): string {
   const name = error instanceof DOMException ? error.name : "";
@@ -45,6 +52,9 @@ function describeCameraError(error: unknown): string {
 }
 
 export default function CheckInPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+
   const [eventPassId, setEventPassId] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -66,7 +76,25 @@ export default function CheckInPage() {
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>("activity");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scannerRetryToken, setScannerRetryToken] = useState(0);
+  const [facingMode, setFacingMode] = useState<FacingMode>("environment");
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [profile, setProfile] = useState<CurrentUserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const scanLockedRef = useRef(false);
+  const engineRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // A separate Html5Qrcode instance, bound to its own (hidden) element and never
+  // started, dedicated to "Scan from Gallery". html5-qrcode's scanFile() refuses to
+  // run on an instance whose state isn't NOT_STARTED ("Cannot start file scan -
+  // ongoing camera scan"), so it cannot share the live-camera engine above -- this
+  // one never calls start()/getUserMedia, so it never touches the live camera at all.
+  const fileScanEngineRef = useRef<Html5Qrcode | null>(null);
+  // Holds a promise that resolves once the previous camera instance (if any) has
+  // fully released its stream -- the next start() awaits this so a retry or event
+  // switch can never race a still-closing track (a common source of NotReadableError).
+  const cameraTeardownRef = useRef<Promise<void>>(Promise.resolve());
 
   const loadEvents = useCallback(async () => {
     try {
@@ -114,6 +142,28 @@ export default function CheckInPage() {
     return () => { active = false; };
   }, [selectedEventId, loadAttendance]);
 
+  useEffect(() => {
+    let active = true;
+    getCurrentUserProfile()
+      .then((data) => { if (active) setProfile(data); })
+      .catch(() => { /* the top bar simply shows a generic identity if this fails */ })
+      .finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    if (isLoggingOut) return;
+    try {
+      setIsLoggingOut(true);
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
+      router.replace("/login");
+      router.refresh();
+    } catch {
+      setIsLoggingOut(false);
+    }
+  }, [isLoggingOut, supabase, router]);
+
   const pushScanLog = useCallback((entry: { status: Exclude<ActivityStatus, "checked_in">; guestName: string | null; passId: string | null; detail: string }) => {
     setScanLog((current) => [
       { ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, occurredAt: new Date().toISOString() },
@@ -157,41 +207,88 @@ export default function CheckInPage() {
     setScannerRetryToken((value) => value + 1);
   }, []);
 
+  const handleSwitchCamera = useCallback(() => {
+    setFacingMode((mode) => (mode === "environment" ? "user" : "environment"));
+  }, []);
+
+  const handleToggleTorch = useCallback(async () => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    try {
+      const torch = engine.getRunningTrackCameraCapabilities().torchFeature();
+      if (!torch.isSupported()) return;
+      const next = !torchOn;
+      await torch.apply(next);
+      setTorchOn(next);
+    } catch {
+      // The track can change mid-toggle (e.g. a camera switch just started) --
+      // safe to ignore, the flash button simply keeps its last known state.
+    }
+  }, [torchOn]);
+
+  const handleGalleryFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+      if (!fileScanEngineRef.current) {
+        fileScanEngineRef.current = new Html5Qrcode("qr-reader-file-scan", {
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          verbose: false,
+        });
+      }
+      const decodedText = await fileScanEngineRef.current.scanFile(file, false);
+      void verifyQrTokenRef.current(decodedText);
+    } catch {
+      setErrorMessage("No QR code could be found in that image. Try another photo, or use manual entry below.");
+    }
+  }, []);
+
+  // The camera engine is started exactly once per mount/retry/facing-mode change and
+  // must never restart just because a scan was verified or the selected event changed
+  // -- verifyQrToken's identity does change with selectedEventId (via applyVerification),
+  // so the scan callback reads it through a ref instead of being a dependency below.
+  const verifyQrTokenRef = useRef(verifyQrToken);
+  useEffect(() => { verifyQrTokenRef.current = verifyQrToken; }, [verifyQrToken]);
+
   useEffect(() => {
-    let scanner: import("html5-qrcode").Html5QrcodeScanner | null = null;
-    let preflightStream: MediaStream | null = null;
     let componentActive = true;
+    let engine: Html5Qrcode | null = null;
+
+    async function stopEngine(instance: Html5Qrcode | null) {
+      if (!instance) return;
+      try {
+        const { Html5QrcodeScannerState } = await import("html5-qrcode");
+        if (instance.getState() === Html5QrcodeScannerState.SCANNING || instance.getState() === Html5QrcodeScannerState.PAUSED) {
+          await instance.stop();
+        }
+      } catch { /* already stopped, or never fully started -- nothing to release */ }
+      try { instance.clear(); } catch { /* target element already gone */ }
+    }
 
     async function startScanner() {
-      setCameraError(null);
-      setScannerReady(false);
-
-      if (!navigator.mediaDevices?.getUserMedia) {
-        if (componentActive) { setCameraError("This browser does not support camera scanning. Use manual entry below."); setShowManualEntry(true); }
-        return;
-      }
-
-      // Pre-flight our own getUserMedia call so we control error messaging instead of
-      // letting Html5QrcodeScanner's internal UI surface a raw technical error to staff.
-      try {
-        preflightStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      } catch (error) {
-        if (componentActive) { setCameraError(describeCameraError(error)); setShowManualEntry(true); }
-        return;
-      } finally {
-        preflightStream?.getTracks().forEach((track) => track.stop());
-        preflightStream = null;
-      }
-
+      // Wait for any previous camera instance (from a prior retry/facing-mode change)
+      // to fully release its stream first -- starting a new getUserMedia call while
+      // the old track is still closing intermittently throws NotReadableError.
+      await cameraTeardownRef.current;
       if (!componentActive) return;
 
+      setCameraError(null);
+      setScannerReady(false);
+      setTorchOn(false);
+      setTorchSupported(false);
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError("This browser does not support camera scanning. Use manual entry below.");
+        setShowManualEntry(true);
+        return;
+      }
+
       try {
-        const { Html5QrcodeScanner, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
         if (!componentActive) return;
-        scanner = new Html5QrcodeScanner("qr-reader", {
-          fps: 15,
-          qrbox: { width: 250, height: 250 },
-          rememberLastUsedCamera: true,
+        engine = new Html5Qrcode("qr-reader", {
           // Guests' passes are always plain QR codes — skipping other barcode
           // formats keeps every decode attempt focused on that alone.
           formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
@@ -200,22 +297,39 @@ export default function CheckInPage() {
           // than the pure-JS decoder, which matters when scanning a QR code off
           // another phone's screen rather than a printed code.
           experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        }, false);
-        scanner.render((decodedText) => void verifyQrToken(decodedText), () => {});
+          verbose: false,
+        });
+        engineRef.current = engine;
+        // Passing a facingMode constraint object (rather than a device ID string) makes
+        // this a single direct getUserMedia call -- no separate camera-enumeration pass.
+        await engine.start(
+          { facingMode },
+          { fps: 15, qrbox: { width: 250, height: 250 } },
+          (decodedText) => void verifyQrTokenRef.current(decodedText),
+          () => {},
+        );
+        if (!componentActive) { await stopEngine(engine); return; }
         setScannerReady(true);
+        try {
+          setTorchSupported(engine.getRunningTrackCameraCapabilities().torchFeature().isSupported());
+        } catch {
+          setTorchSupported(false);
+        }
       } catch (error) {
-        setPageError(error instanceof Error ? error.message : "Camera scanner could not start.");
+        if (!componentActive) return;
+        setCameraError(describeCameraError(error));
         setShowManualEntry(true);
       }
     }
 
-    void startScanner();
+    const startTask = startScanner();
+
     return () => {
       componentActive = false;
-      preflightStream?.getTracks().forEach((track) => track.stop());
-      if (scanner) scanner.clear().catch(() => {});
+      engineRef.current = null;
+      cameraTeardownRef.current = startTask.catch(() => {}).then(() => stopEngine(engine));
     };
-  }, [verifyQrToken, scannerRetryToken]);
+  }, [scannerRetryToken, facingMode]);
 
   function normalizeEventPassId(value: string) {
     const cleanedValue = value.trim().toUpperCase().replace(/\s+/g, "");
@@ -335,26 +449,67 @@ export default function CheckInPage() {
       .slice(0, 15);
   }, [recentCheckins, scanLog]);
 
-  return <main className="mx-auto max-w-[1600px] space-y-6 pb-8">
-    <header className="flex flex-col gap-1">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Attendance Operations</p>
-      <h1 className="sep-page-title">Guest Check-In</h1>
-      <p className="hidden text-sm text-slate-600 sm:block">Scan a guest QR code or verify an Event Pass ID.</p>
-    </header>
+  const isAwaitingNext = !isChecking && (result !== null || Boolean(errorMessage));
+  const canGoBack = Boolean(profile) && profile?.role !== "scanner";
 
-    <EventSelector events={events} selectedEventId={selectedEventId} isLoading={dashboardLoading} onRefresh={handleRefresh} onChange={handleEventChange} />
+  return <>
+    <ScannerTopBar
+      events={events}
+      selectedEventId={selectedEventId}
+      onEventChange={handleEventChange}
+      profile={profile}
+      profileLoading={profileLoading}
+      onLogout={handleLogout}
+      isLoggingOut={isLoggingOut}
+    />
 
-    {pageError && (
-      <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{pageError}</div>
-    )}
+    <main className="mx-auto max-w-[1600px] space-y-5 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+      <h1 className="sr-only">Guest Check-In</h1>
 
-    {!dashboardLoading && events.length === 0 ? (
-      <div className="sep-card p-6 text-center text-sm text-slate-600">No events found. Create an event first to start checking in guests.</div>
-    ) : dashboardLoading ? (
-      <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
-    ) : (
-      <>
-        <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3">
+        {canGoBack ? (
+          <Link href="/dashboard" className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-bold text-slate-700 transition hover:bg-stone-100">
+            <CheckInIcon name="back" className="h-4 w-4" /> Back
+          </Link>
+        ) : <span />}
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={dashboardLoading}
+            aria-label="Refresh attendance data"
+            title="Refresh"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e7e1d7] bg-white text-slate-600 shadow-sm transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckInIcon name="refresh" className={`h-4 w-4 ${dashboardLoading ? "animate-spin" : ""}`} />
+          </button>
+
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={() => void handleToggleTorch()}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#e7e1d7] bg-white px-3.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-stone-50"
+            >
+              <CheckInIcon name={torchOn ? "flash" : "flashOff"} className="h-3.5 w-3.5" />
+              {torchOn ? "Flash On" : "Flash Off"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {pageError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{pageError}</div>
+      )}
+
+      {!dashboardLoading && events.length === 0 ? (
+        <div className="sep-card p-6 text-center text-sm text-slate-600">No events found. Create an event first to start checking in guests.</div>
+      ) : dashboardLoading ? (
+        <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
+      ) : (
+        <>
+          <StatusBanner checking={isChecking} result={result} errorMessage={errorMessage} onNext={handleNextGuest} />
+
           <StatStrip
             totalGuests={classifiedTotalGuests}
             checkedIn={classifiedCheckedIn}
@@ -362,79 +517,75 @@ export default function CheckInPage() {
             attendancePercentage={classifiedAttendancePercentage}
           />
 
-          <CardTypeBreakdown single={cardTypeStats.single} double={cardTypeStats.double} />
-        </div>
+          <ScannerPanel
+            scannerReady={scannerReady}
+            cameraError={cameraError}
+            isChecking={isChecking}
+            controlsDisabled={isChecking || isAwaitingNext}
+            onRetry={handleRetryCamera}
+            onGalleryClick={() => fileInputRef.current?.click()}
+            onSwitchCamera={handleSwitchCamera}
+          />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => void handleGalleryFile(event)} />
+          {/* Target element for the dedicated gallery file-scan engine (see fileScanEngineRef) --
+              never rendered visibly, never given a live camera stream. */}
+          <div id="qr-reader-file-scan" className="hidden" />
 
-        <section aria-labelledby="check-in-tools-title">
-          <div className="mb-4">
-            <h2 id="check-in-tools-title" className="sep-section-title">Check-In Tools</h2>
-            <p className="sep-secondary mt-1">Use the scanner for the fastest entry, with manual verification as a fallback.</p>
-          </div>
-          <div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-4">
-            <ScannerPanel
-              scannerReady={scannerReady}
-              checking={isChecking}
-              cameraError={cameraError}
-              onRetry={handleRetryCamera}
-              result={result}
-              errorMessage={errorMessage}
-              onNext={handleNextGuest}
-            />
+          <button
+            type="button"
+            onClick={() => setShowManualEntry((value) => !value)}
+            aria-expanded={showManualEntry}
+            aria-controls="manual-entry-panel"
+            className="sep-card flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-stone-50 sm:p-5"
+          >
+            <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
+              <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
+              {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
+            </span>
+            <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setShowManualEntry((value) => !value)}
-              aria-expanded={showManualEntry}
-              aria-controls="manual-entry-panel"
-              className="sep-card flex min-h-11 w-full items-center justify-between gap-3 p-4 text-left transition hover:bg-stone-50 sm:p-5"
-            >
-              <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
-                <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
-                {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
-              </span>
-              <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-            </button>
-
-            {showManualEntry && (
-              <div id="manual-entry-panel">
-                <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section aria-labelledby="secondary-title">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 id="secondary-title" className="sep-section-title">Event Overview</h2>
-              <p className="sep-secondary mt-1">Detailed stats and scan activity for this event.</p>
-            </div>
-            <div className="inline-flex gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm" role="tablist" aria-label="Event overview sections">
-              <button type="button" role="tab" aria-selected={secondaryTab === "activity"} onClick={() => setSecondaryTab("activity")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "activity" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Recent Activity</button>
-              <button type="button" role="tab" aria-selected={secondaryTab === "stats"} onClick={() => setSecondaryTab("stats")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "stats" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Live Statistics</button>
-            </div>
-          </div>
-
-          {secondaryTab === "activity" ? (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {[["Duplicate Scan Attempts", duplicateAttempts], ["Rejected Passes", rejectedPasses], ["Successful Today", successfulToday]].map(([label, value]) => (
-                  <div key={label} className="rounded-xl border border-[#e7e1d7] bg-stone-50 p-4">
-                    <p className="text-xs font-semibold leading-5 text-slate-500">{label}</p>
-                    <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
-                  </div>
-                ))}
-              </div>
-              <RecentActivity entries={activityEntries} />
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <AttendanceCards metrics={metrics} />
-              <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: cardTypeStats.single.checkedIn, maximum: cardTypeStats.single.capacity }} double={{ current: cardTypeStats.double.checkedIn, maximum: cardTypeStats.double.capacity }} />
+          {showManualEntry && (
+            <div id="manual-entry-panel">
+              <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
             </div>
           )}
-        </section>
-      </>
-    )}
-  </main>;
+
+          <CardTypeBreakdown single={cardTypeStats.single} double={cardTypeStats.double} />
+
+          <section aria-labelledby="secondary-title">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 id="secondary-title" className="sep-section-title">Event Overview</h2>
+                <p className="sep-secondary mt-1">Detailed stats and scan activity for this event.</p>
+              </div>
+              <div className="inline-flex gap-1 rounded-2xl border border-[#e7e1d7] bg-white p-1.5 shadow-sm" role="tablist" aria-label="Event overview sections">
+                <button type="button" role="tab" aria-selected={secondaryTab === "activity"} onClick={() => setSecondaryTab("activity")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "activity" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Recent Activity</button>
+                <button type="button" role="tab" aria-selected={secondaryTab === "stats"} onClick={() => setSecondaryTab("stats")} className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${secondaryTab === "stats" ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-stone-100"}`}>Live Statistics</button>
+              </div>
+            </div>
+
+            {secondaryTab === "activity" ? (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {[["Duplicate Scan Attempts", duplicateAttempts], ["Rejected Passes", rejectedPasses], ["Successful Today", successfulToday]].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-[#e7e1d7] bg-stone-50 p-4">
+                      <p className="text-xs font-semibold leading-5 text-slate-500">{label}</p>
+                      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <RecentActivity entries={activityEntries} />
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <AttendanceCards metrics={metrics} />
+                <ProgressCards total={{ current: metrics.checkedInGuests, maximum: metrics.invitedGuests }} single={{ current: cardTypeStats.single.checkedIn, maximum: cardTypeStats.single.capacity }} double={{ current: cardTypeStats.double.checkedIn, maximum: cardTypeStats.double.capacity }} />
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </main>
+  </>;
 }

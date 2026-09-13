@@ -191,6 +191,18 @@
   outline-offset: 1px;
 }
 
+/* Scanner viewfinder scan-line (Check-In page) -- animates via the `top`
+   percentage (relative to the nearest positioned ancestor), not `transform`,
+   so the same keyframe scales correctly across the qrbox's responsive sizes. */
+@keyframes sep-scan-line {
+  0%, 100% { top: 6%; opacity: 0.9; }
+  50% { top: 92%; opacity: 0.35; }
+}
+
+.sep-scan-line {
+  animation: sep-scan-line 2.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-shell *,
   .dashboard-shell *::before,

@@ -1,93 +1,103 @@
-import Button from "@/components/ui/Button";
-import type { CheckInResult } from "@/services/guestService";
-import { formatPassIdForDisplay } from "@/lib/passId";
 import CheckInIcon from "./CheckInIcons";
-
-function formatTime(value: string | null) {
-  return value ? new Intl.DateTimeFormat("en-TZ", { dateStyle: "medium", timeStyle: "medium" }).format(new Date(value)) : "Not available";
-}
-
-function Detail({ label, value, mono = false, wide = false }: { label: string; value: string; mono?: boolean; wide?: boolean }) {
-  return <div className={`rounded-xl border border-white/70 bg-white/70 p-3 ${wide ? "sm:col-span-2 lg:col-span-4" : ""}`}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</dt><dd className={`mt-1 break-words font-bold text-slate-900 ${mono ? "font-mono" : ""}`}>{value}</dd></div>;
-}
 
 export default function ScannerPanel({
   scannerReady,
-  checking,
   cameraError,
+  isChecking,
+  controlsDisabled,
   onRetry,
-  result,
-  errorMessage,
-  onNext,
+  onGalleryClick,
+  onSwitchCamera,
 }: {
   scannerReady: boolean;
-  checking: boolean;
   cameraError: string | null;
+  isChecking: boolean;
+  controlsDisabled: boolean;
   onRetry: () => void;
-  result: CheckInResult | null;
-  errorMessage: string;
-  onNext: () => void;
+  onGalleryClick: () => void;
+  onSwitchCamera: () => void;
 }) {
-  const state = errorMessage ? "invalid" : result?.status;
-  const showResult = checking || Boolean(state);
-  const config = state === "checked_in"
-    ? { title: "Check-in Successful", icon: "success" as const, shell: "border-emerald-200 bg-emerald-50", accent: "text-emerald-700" }
-    : state === "partially_checked_in"
-      ? { title: "Partially Checked In", icon: "clock" as const, shell: "border-sky-200 bg-sky-50", accent: "text-sky-700" }
-      : state === "already_checked_in"
-        ? { title: "Fully Checked In", icon: "warning" as const, shell: "border-amber-200 bg-amber-50", accent: "text-amber-700" }
-        : { title: "Invalid Event Pass", icon: "error" as const, shell: "border-red-200 bg-red-50", accent: "text-red-700" };
-  const remainingGuests = result?.guest ? result.guest.allowed_guests - result.guest.checked_in_count : 0;
+  return (
+    <section className="sep-card overflow-hidden p-3 sm:p-4" aria-labelledby="scanner-title">
+      <h2 id="scanner-title" className="sr-only">QR Scanner</h2>
 
-  return <section className="sep-card min-w-0 p-4 sm:p-6" aria-labelledby="scanner-title">
-    <div className="flex items-start gap-4"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><CheckInIcon name="camera" /></span><div><h2 id="scanner-title" className="sep-card-title">QR Scanner</h2><p className="sep-secondary mt-1">Point the camera at the guest&apos;s QR code or use the upload option in the scanner.</p></div></div>
+      {/* The camera target (#qr-reader) stays mounted and visible at all times once
+          started -- verifyQrToken already guards re-entry while a result is showing,
+          so there is no need to hide the live feed between guests; it keeps scanning
+          continuously, matching how a scanner is actually used at an event entrance. */}
+      <div className="relative overflow-hidden rounded-2xl bg-slate-900">
+        {cameraError ? (
+          <div role="alert" className="flex min-h-[20rem] flex-col items-center justify-center gap-3 p-8 text-center sm:min-h-[24rem]">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-500/15 text-amber-300"><CheckInIcon name="warning" className="h-6 w-6" /></span>
+            <p className="font-bold text-white">Camera unavailable</p>
+            <p className="max-w-sm text-sm text-white/70">{cameraError}</p>
+            <button type="button" onClick={onRetry} className="mt-2 inline-flex min-h-11 items-center rounded-xl bg-white px-4 text-sm font-bold text-slate-900 transition hover:bg-white/90">Try camera again</button>
+          </div>
+        ) : (
+          <>
+            <div id="qr-reader" className="min-h-[20rem] sm:min-h-[24rem] [&_video]:block [&_video]:h-full [&_video]:w-full [&_video]:rounded-2xl [&_video]:object-cover" />
 
-    {/* The camera target stays mounted (just hidden) whenever a result is showing, so the
-        scanner never has to restart — "Check In Next Guest" just reveals it again instantly. */}
-    <div className={`mt-5 overflow-hidden rounded-2xl border border-[#e7e1d7] bg-stone-50 p-2 sm:p-3 ${showResult || cameraError ? "hidden" : ""}`}>
-      <div id="qr-reader" className="w-full" />
-      {!scannerReady && <p role="status" className="p-6 text-center text-sm text-slate-500">Requesting camera permission and starting scanner…</p>}
-    </div>
-
-    {cameraError && !showResult && (
-      <div role="alert" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-        <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-white text-amber-700"><CheckInIcon name="warning" className="h-5 w-5" /></span>
-        <p className="mt-3 font-bold text-amber-900">Camera unavailable</p>
-        <p className="mt-1 text-sm text-amber-800">{cameraError}</p>
-        <Button type="button" variant="secondary" size="sm" onClick={onRetry} className="mt-4">Try camera again</Button>
-      </div>
-    )}
-
-    {showResult && (
-      <div aria-live="polite" aria-atomic="true" className={`mt-5 min-h-40 rounded-2xl border p-5 shadow-sm sm:p-6 ${checking ? "border-emerald-200 bg-emerald-50" : config.shell}`}>
-        {checking
-          ? <div className="flex min-h-28 items-center justify-center gap-3 text-emerald-700"><span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" /><b>Verifying Event Pass…</b></div>
-          : <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-              <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white ${config.accent}`}><CheckInIcon name={config.icon} /></span>
-              <div className="min-w-0 flex-1">
-                <h3 className={`text-xl font-bold ${config.accent}`}>{config.title}</h3>
-                <p className="mt-1 text-sm text-slate-700">{errorMessage || result?.message}</p>
-                {result?.guest && result.guest.allowed_guests > 1 && (state === "checked_in" || state === "partially_checked_in" || state === "already_checked_in") && (
-                  <p className={`mt-2 text-sm font-bold ${config.accent}`}>
-                    Checked in: {result.guest.checked_in_count} of {result.guest.allowed_guests}
-                    {state === "partially_checked_in" && ` — ${remainingGuests} more guest${remainingGuests === 1 ? "" : "s"} expected`}
-                  </p>
-                )}
-                {result?.guest && <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <Detail label="Guest Name" value={result.guest.full_name} />
-                  <Detail label="Pass ID" value={result.guest.event_pass_id ? formatPassIdForDisplay(result.guest.event_pass_id) : "Not available"} mono />
-                  <Detail label="Checked In Progress" value={`${result.guest.checked_in_count} of ${result.guest.allowed_guests}`} />
-                  <Detail label="Category" value={result.guest.category || "Normal"} />
-                  <Detail label="Checked In Time" value={formatTime(result.guest.checked_in_at)} wide />
-                </dl>}
-                <Button variant="dark" onClick={onNext} className="mt-5 w-full sm:w-auto">{state === "invalid" ? "Try Again" : "Check In Next Guest"}</Button>
+            {!scannerReady && (
+              <div className="absolute inset-0 grid place-items-center bg-slate-900">
+                <p role="status" className="flex items-center gap-2 text-sm font-semibold text-white/80">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />
+                  Starting camera…
+                </p>
               </div>
-            </div>}
-      </div>
-    )}
+            )}
 
-    {!showResult && (
-      <div className="mt-4 flex items-center gap-2 text-sm"><span className={`h-2.5 w-2.5 rounded-full ${cameraError ? "bg-red-500" : scannerReady ? "bg-emerald-500" : "bg-amber-500"}`} /><span className="font-semibold text-slate-700">{cameraError ? "Camera unavailable — use manual entry" : scannerReady ? "Scanner ready" : "Camera permission pending"}</span></div>
-    )}
-  </section>;
+            {scannerReady && (
+              <>
+                <div className="pointer-events-none absolute inset-x-4 top-4 rounded-xl bg-black/55 px-4 py-2.5 text-center backdrop-blur-sm sm:inset-x-10">
+                  <p className="text-sm font-bold text-white">Point the camera at the QR code</p>
+                  <p className="text-xs text-white/70">The guest details will appear automatically</p>
+                </div>
+
+                <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                  <div className="relative h-52 w-52 sm:h-64 sm:w-64">
+                    <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-2xl border-l-4 border-t-4 border-emerald-400" />
+                    <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-2xl border-r-4 border-t-4 border-emerald-400" />
+                    <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-2xl border-b-4 border-l-4 border-emerald-400" />
+                    <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-2xl border-b-4 border-r-4 border-emerald-400" />
+                    <span className="sep-scan-line absolute inset-x-3 h-0.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px_rgba(52,211,153,0.7)]" />
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center justify-center gap-6 py-1 sm:gap-10">
+        <button
+          type="button"
+          onClick={onGalleryClick}
+          disabled={controlsDisabled || Boolean(cameraError)}
+          aria-label="Scan from gallery"
+          className="flex flex-col items-center gap-1.5 text-xs font-semibold text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-900 text-white"><CheckInIcon name="gallery" className="h-5 w-5" /></span>
+          Scan from Gallery
+        </button>
+
+        <div className="flex flex-col items-center gap-1.5 text-xs font-bold text-emerald-700">
+          <span className={`grid h-16 w-16 place-items-center rounded-full text-white shadow-lg ${cameraError ? "bg-slate-400" : "bg-emerald-600"}`}>
+            <CheckInIcon name="camera" className="h-7 w-7" />
+          </span>
+          {cameraError ? "Camera off" : isChecking ? "Verifying…" : scannerReady ? "Scanning…" : "Starting…"}
+        </div>
+
+        <button
+          type="button"
+          onClick={onSwitchCamera}
+          disabled={isChecking || Boolean(cameraError)}
+          aria-label="Switch camera"
+          className="flex flex-col items-center gap-1.5 text-xs font-semibold text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-900 text-white"><CheckInIcon name="refresh" className="h-5 w-5" /></span>
+          Switch Camera
+        </button>
+      </div>
+    </section>
+  );
 }

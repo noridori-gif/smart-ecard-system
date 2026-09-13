@@ -102,7 +102,7 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
     } catch (err) { setBudgetError(err instanceof Error ? err.message : "Budget could not be saved."); }
     finally { setBudgetBusy(false); }
   }
-  async function useDefaultCategories() {
+  async function applyDefaultCategories() {
     try {
       setBudgetBusy(true); setBudgetError("");
       await seedDefaultCategoryBudgets(eventId, DEFAULT_EVENT_BUDGET_CATEGORIES.map((item) => item[language]));
@@ -169,7 +169,7 @@ export default function FinancialExpensesTab({ eventId }: { eventId: number }) {
           <p className="mt-1 text-xs text-slate-500">Set a spending budget per category, then track it against what you actually spend.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {!categoryBudgets.length && <button type="button" disabled={budgetBusy} onClick={() => void useDefaultCategories()} className="text-sm font-semibold text-emerald-700 disabled:opacity-50">+ Use default categories</button>}
+          {!categoryBudgets.length && <button type="button" disabled={budgetBusy} onClick={() => void applyDefaultCategories()} className="text-sm font-semibold text-emerald-700 disabled:opacity-50">+ Use default categories</button>}
           {!addingCategory && <button type="button" onClick={() => { setAddingCategory(true); setBudgetError(""); }} className="text-sm font-semibold text-emerald-700">+ Add category budget</button>}
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
@@ -14,6 +15,21 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] =
     useState(false);
+
+  const pathname = usePathname();
+  // The Check-In / scanner screen is a focused, full-bleed kiosk view with its own
+  // top bar (see components/check-in/ScannerTopBar) rather than the admin Sidebar +
+  // Header shell -- scanners working an event entrance need a distraction-free,
+  // camera-first layout instead of the full dashboard chrome.
+  const isScannerMode = pathname?.startsWith("/check-in") ?? false;
+
+  if (isScannerMode) {
+    return (
+      <LanguageProvider>
+        <div className="dashboard-shell min-h-screen">{children}</div>
+      </LanguageProvider>
+    );
+  }
 
   return (
     <LanguageProvider><div className="dashboard-shell min-h-screen lg:flex">
