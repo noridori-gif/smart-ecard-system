@@ -54,6 +54,10 @@ export default function EventPermanentDeleteDialog({ event, onClose, onDeleted }
           ["Finance audit logs",preview.financeAuditLogs],["Automation settings",preview.financeAutomationSettings],
           ["Workflow events",preview.workflowEvents],["Public pledge links",preview.publicPledgeLinks],
           ["Public pledge reviews",preview.publicPledgeReviews],["Reminder policy settings",preview.pledgeReminderSettings],
+          ["Expenses",preview.expenses],["Expense budgets",preview.expenseCategoryBudgets],
+          ["Meetings",preview.meetings],["Meeting invitation deliveries",preview.meetingInvitationDeliveries],
+          ["SMS campaigns",preview.smsCampaigns],["SMS campaign recipients",preview.smsCampaignRecipients],
+          ["SMS campaign deliveries",preview.smsCampaignDeliveries],
         ].map(([label,value])=><div key={String(label)} className="rounded-lg border p-3"><span className="block text-xs text-slate-500">{label}</span><b>{value}</b></div>)}
       </div>}
       <div className="mt-6 space-y-4">
