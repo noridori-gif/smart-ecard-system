@@ -12,6 +12,7 @@ import {
 
 import SendWhatsAppCloudButton from "@/components/invitation/SendWhatsAppCloudButton";
 import InvitationSmsSettingsPanel from "@/components/invitation/InvitationSmsSettingsPanel";
+import ThankYouMessageDialog from "@/components/invitation/ThankYouMessageDialog";
 import Badge from "@/components/ui/Badge";
 import { buttonClassName } from "@/components/ui/Button";
 import MessageChannelBadges from "@/components/guests/MessageChannelBadges";
@@ -30,6 +31,7 @@ import {
   type GuestMessageStatus,
   type MessageFilter,
 } from "@/services/guestMessageStatusService";
+import { canManageEvents, getCurrentUserProfile } from "@/services/profileService";
 
 type NotificationType =
   | "success"
@@ -120,6 +122,16 @@ export default function InvitationsPage() {
   const [
     smsSettingsOpen,
     setSmsSettingsOpen,
+  ] = useState(false);
+
+  const [
+    thankYouOpen,
+    setThankYouOpen,
+  ] = useState(false);
+
+  const [
+    canSendThankYou,
+    setCanSendThankYou,
   ] = useState(false);
 
   const [
@@ -216,6 +228,27 @@ export default function InvitationsPage() {
     );
     return () => window.clearTimeout(timer);
   }, [loadInvitations]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getCurrentUserProfile()
+      .then((profile) => {
+        if (!cancelled) {
+          setCanSendThankYou(
+            Boolean(profile) &&
+              canManageEvents(profile!.role)
+          );
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the Tuma Shukrani button just stays hidden.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSMS(
     invitation:
@@ -801,6 +834,37 @@ export default function InvitationsPage() {
               ? `Changes the SMS invitation wording for ${selectedEventDetails.title}.`
               : "Chagua event kwanza ili kubadilisha maandishi ya SMS ya mwaliko."}
           </p>
+
+          {canSendThankYou && (
+            <>
+              <button
+                type="button"
+                disabled={
+                  !selectedEventDetails
+                }
+                onClick={() =>
+                  setThankYouOpen(
+                    true
+                  )
+                }
+                className={buttonClassName(
+                  {
+                    variant:
+                      "outline",
+                    size: "sm",
+                  }
+                )}
+              >
+                Tuma Shukrani kwa Wageni
+              </button>
+
+              <p className="text-xs text-slate-500">
+                {selectedEventDetails
+                  ? `Tuma ujumbe wa shukrani kwa wageni wote wa ${selectedEventDetails.title}.`
+                  : "Chagua event kwanza ili kutuma shukrani kwa wageni."}
+              </p>
+            </>
+          )}
         </div>
       </section>
 
@@ -820,6 +884,26 @@ export default function InvitationsPage() {
               setSmsSettingsOpen(
                 false
               )
+            }
+          />
+        )}
+
+      {thankYouOpen &&
+        selectedEventDetails && (
+          <ThankYouMessageDialog
+            eventId={
+              selectedEventDetails.id
+            }
+            eventTitle={
+              selectedEventDetails.title
+            }
+            onClose={() =>
+              setThankYouOpen(
+                false
+              )
+            }
+            onSent={() =>
+              void loadInvitations()
             }
           />
         )}
