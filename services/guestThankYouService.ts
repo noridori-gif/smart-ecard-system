@@ -89,14 +89,13 @@ function buildThankYouMessage(
   language: "sw" | "en",
   guestName: string,
   brideName: string,
-  groomName: string,
-  eventDate: string
+  groomName: string
 ) {
   if (language === "en") {
-    return `Hello ${guestName}, thank you so much for attending / supporting the wedding of ${brideName} and ${groomName} on ${eventDate}. God bless you!`;
+    return `Hello ${guestName}, thank you so much for the love and support you showed us at the wedding of ${brideName} and ${groomName}. Your presence was a huge blessing to us. God bless and keep you always. \u{1F64F}`;
   }
 
-  return `Habari ${guestName}, tunakushukuru sana kwa kuhudhuria/kutusaidia kwenye harusi ya ${brideName} na ${groomName} tarehe ${eventDate}. Mungu akubariki!`;
+  return `Habari ${guestName}, tunawashukuru sana kwa upendo na support mliyotuonyesha katika harusi ya ${brideName} na ${groomName}. Uwepo wenu ulikuwa baraka kubwa kwetu. Mungu awabariki na awalinde daima. \u{1F64F}`;
 }
 
 export async function previewGuestThankYou(
@@ -148,7 +147,7 @@ export async function previewGuestThankYou(
 
   const rows: GuestThankYouRecipientRow[] = guestRows.map((guest) => {
     const existing = historyByGuest.get(guest.id) ?? null;
-    const message = buildThankYouMessage(language, guest.full_name, brideName, groomName, eventDate);
+    const message = buildThankYouMessage(language, guest.full_name, brideName, groomName);
 
     let reason: GuestThankYouSkipReason | null = null;
     if (!guest.phone?.trim()) reason = "missing_phone";
@@ -237,6 +236,7 @@ export async function sendGuestThankYou(
           recipient_phone: row.phone ?? "",
           channel: null,
           error_message: null,
+          whatsapp_error_message: null,
           failed_at: null,
         })
         .eq("id", existing.data.id)
@@ -276,7 +276,14 @@ export async function sendGuestThankYou(
     const phone = row.phone as string;
     let sentChannel: "whatsapp" | "sms" | null = null;
     let providerMessageId: string | undefined;
-    let lastError = "";
+    // Kept separate from smsError, and never cleared even when SMS fallback
+    // eventually succeeds -- confirmed on production (event 14, guest 31)
+    // that collapsing both into one "error_message" field that gets reset to
+    // null on any success discards the actual Meta Cloud API failure reason
+    // the moment the fallback works, leaving no way to diagnose why WhatsApp
+    // itself failed.
+    let whatsappError = "";
+    let smsError = "";
 
     if (template.configured) {
       try {
@@ -284,15 +291,16 @@ export async function sendGuestThankYou(
           phoneNumber: phone,
           templateName: template.templateName as string,
           languageCode: template.languageCode,
-          parameters: [row.name, preview.event.brideName, preview.event.groomName, preview.event.eventDate],
+          parameters: [row.name, preview.event.brideName, preview.event.groomName],
         });
         sentChannel = "whatsapp";
         providerMessageId = sent.messageId;
       } catch (cause) {
-        lastError = `WhatsApp: ${safeError(cause)}`;
+        whatsappError = safeError(cause);
+        console.error("Guest thank-you WhatsApp send failed:", { guestId: row.guestId, eventId: input.eventId, error: whatsappError });
       }
     } else {
-      lastError = "WhatsApp: thank-you template is not configured.";
+      whatsappError = "WhatsApp thank-you template is not configured.";
     }
 
     if (!sentChannel) {
@@ -302,7 +310,8 @@ export async function sendGuestThankYou(
         sentChannel = "sms";
         providerMessageId = sms.providerMessageId;
       } catch (cause) {
-        lastError = `${lastError} SMS: ${safeError(cause)}`;
+        smsError = safeError(cause);
+        console.error("Guest thank-you SMS fallback failed:", { guestId: row.guestId, eventId: input.eventId, error: smsError });
       }
     }
 
@@ -315,6 +324,10 @@ export async function sendGuestThankYou(
           provider_message_id: providerMessageId ?? null,
           sent_at: new Date().toISOString(),
           error_message: null,
+          // Preserved even though the overall send succeeded -- this is the
+          // only record of why WhatsApp itself failed when the SMS fallback
+          // is what actually delivered the message.
+          whatsapp_error_message: sentChannel === "sms" ? whatsappError || null : null,
         })
         .eq("id", log.id);
       if (saved.error) {
@@ -325,16 +338,20 @@ export async function sendGuestThankYou(
       if (sentChannel === "whatsapp") result.sentWhatsapp += 1;
       else result.sentSms += 1;
     } else {
+      const combinedError = [whatsappError && `WhatsApp: ${whatsappError}`, smsError && `SMS: ${smsError}`]
+        .filter(Boolean)
+        .join(" ") || "Send failed.";
       const saved = await db
         .from("guest_thank_you_deliveries")
         .update({
           delivery_status: "failed",
-          error_message: lastError || "Send failed.",
+          error_message: combinedError,
+          whatsapp_error_message: whatsappError || null,
           failed_at: new Date().toISOString(),
         })
         .eq("id", log.id);
       result.failed += 1;
-      result.errors.push(`${row.name}: ${lastError}`);
+      result.errors.push(`${row.name}: ${combinedError}`);
       if (saved.error) result.errors.push(`${row.name}: failure could not be recorded.`);
     }
   }
