@@ -3,7 +3,10 @@ import Link from "next/link";
 
 import QrVisual from "@/components/ui/QrVisual";
 import EventCostEstimator from "@/components/marketing/EventCostEstimator";
+import FeatureShowcaseTabs from "@/components/marketing/FeatureShowcaseTabs";
+import BookServiceForm from "@/components/marketing/BookServiceForm";
 import { canonicalAppUrl } from "@/lib/publicPledgeMetadata";
+import { getMarketingStats } from "@/lib/marketingStats";
 
 const homeTitle = "Smart Event Pass — Mialiko ya Harusi & Matukio Tanzania";
 const homeDescription =
@@ -175,6 +178,12 @@ const trustSignals: TrustSignal[] = [
   { icon: "✅", en: "WhatsApp & SMS notifications", sw: "Arifa za WhatsApp na SMS" },
 ];
 
+const journeyGuestInitials = [
+  { initials: "AJ", color: "from-emerald-400 to-teal-500" },
+  { initials: "MK", color: "from-teal-400 to-emerald-500" },
+  { initials: "NL", color: "from-emerald-300 to-emerald-500" },
+];
+
 const journeyStatuses = [
   { label: "Invitation Delivered", detail: "WhatsApp · 10:41", color: "bg-teal-400", ring: "ring-teal-400/25" },
   { label: "RSVP Confirmed", detail: "2 guests · 10:44", color: "bg-emerald-300", ring: "ring-emerald-300/25" },
@@ -196,9 +205,21 @@ function LiveGuestJourney() {
               <h2 className="mt-2 text-lg font-semibold text-white sm:text-xl">Newton Ludovick</h2>
               <p className="mt-1 text-xs text-slate-400">Invitation opened · 10:42</p>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-              Live
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+                Live
+              </div>
+              <div className="flex -space-x-2" aria-hidden="true">
+                {journeyGuestInitials.map((guest) => (
+                  <span
+                    key={guest.initials}
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-900 bg-gradient-to-br text-[7px] font-bold text-white ${guest.color}`}
+                  >
+                    {guest.initials}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -268,7 +289,9 @@ function LiveGuestJourney() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const marketingStats = await getMarketingStats();
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <script
@@ -327,18 +350,18 @@ export default function Home() {
               </p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <Link
-                  href="/login"
+                <a
+                  href="#book-services"
                   className="inline-flex items-center justify-center rounded-xl bg-emerald-700 px-7 py-4 text-base font-bold text-white shadow-lg shadow-emerald-700/25 transition hover:bg-emerald-600"
                 >
-                  Open Admin Dashboard
-                </Link>
+                  Book a Free Demo / Anza Bila Malipo
+                </a>
 
                 <a
                   href="#features"
                   className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-7 py-4 text-base font-bold text-white transition hover:bg-white/10"
                 >
-                  Explore Features
+                  See How It Works / Ona Jinsi Inavyofanya Kazi
                 </a>
               </div>
 
@@ -392,54 +415,38 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-14 space-y-14">
-            {featureGroups.map((group) => (
-              <div key={group.title}>
-                <h3 className="text-sm font-bold uppercase tracking-[0.22em] text-emerald-700">
-                  {group.title}
-                </h3>
-
-                <div className="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {group.features.map((feature) => (
-                    <div
-                      key={feature.title}
-                      className={`rounded-2xl border border-[#e7e1d7] p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
-                        feature.flagship
-                          ? "bg-gradient-to-br from-emerald-50 to-white md:col-span-2 xl:col-span-2"
-                          : "bg-white"
-                      }`}
-                    >
-                      <div className={feature.flagship ? "text-5xl" : "text-4xl"}>
-                        {feature.icon}
-                      </div>
-
-                      <h4
-                        className={`mt-5 font-bold text-slate-900 ${
-                          feature.flagship ? "text-2xl" : "text-xl"
-                        }`}
-                      >
-                        {feature.title}
-                      </h4>
-
-                      <p className="mt-3 leading-7 text-slate-600">
-                        {feature.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <FeatureShowcaseTabs groups={featureGroups} />
         </div>
       </section>
 
       <section className="bg-white px-6 py-16 text-slate-900 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-6xl">
-          <p className="text-center text-base font-semibold text-slate-700 sm:text-lg">
-            Trusted by event organizers across Tanzania
+          <p className="text-center text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">
+            Trusted by Real Events Across Tanzania
             <span className="mx-2 text-slate-300">·</span>
-            Inaaminika na waandaaji wa matukio Tanzania
+            Wameaminika na Matukio Halisi Tanzania
           </p>
+
+          {marketingStats ? (
+            <div className="mx-auto mt-8 grid max-w-2xl grid-cols-2 gap-4 text-center">
+              <div className="rounded-2xl border border-[#e7e1d7] bg-slate-50 px-4 py-6">
+                <p className="text-3xl font-bold text-emerald-700">{marketingStats.eventsManaged}+</p>
+                <p className="mt-1 text-sm font-semibold text-slate-700">Events Managed</p>
+                <p className="text-xs text-slate-500">Matukio Yaliyosimamiwa</p>
+              </div>
+              <div className="rounded-2xl border border-[#e7e1d7] bg-slate-50 px-4 py-6">
+                <p className="text-3xl font-bold text-emerald-700">{marketingStats.guestsCheckedIn}+</p>
+                <p className="mt-1 text-sm font-semibold text-slate-700">Guests Checked In</p>
+                <p className="text-xs text-slate-500">Wageni Waliosajiliwa Mlangoni</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mx-auto mt-3 max-w-xl text-center text-base font-semibold text-slate-700">
+              Trusted by event organizers across Tanzania
+              <span className="mx-2 text-slate-300">·</span>
+              Inaaminika na waandaaji wa matukio Tanzania
+            </p>
+          )}
 
           <div className="mx-auto mt-8 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
             {trustSignals.map((signal) => (
@@ -484,27 +491,32 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-white px-6 py-24 text-slate-900 sm:px-8 lg:px-12">
+      <section
+        id="book-services"
+        className="bg-white px-6 py-24 text-slate-900 sm:px-8 lg:px-12"
+      >
         <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-700 to-teal-700 px-7 py-14 text-center text-white shadow-xl sm:px-12">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-100">
-            Smart Event Pass
+            Book Our Services · Tuombe Huduma Zetu
           </p>
 
           <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-bold sm:text-5xl">
-            Turn every invitation into a complete digital event experience.
+            Ready to make your guests feel truly invited?
           </h2>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-emerald-100">
-            Manage events, guests, RSVP responses, QR passes and check-ins from
-            one simple platform.
+            Tayari Kuwafanya Wageni Wako Wajisikie Kukaribishwa Kweli? Tuambie
+            kidogo kuhusu tukio lako na timu yetu itawasiliana nawe.
           </p>
 
-          <Link
-            href="/login"
-            className="mt-8 inline-flex rounded-xl bg-white px-7 py-4 font-bold text-emerald-700 transition hover:bg-emerald-50"
-          >
-            Login to Continue
-          </Link>
+          <BookServiceForm />
+
+          <p className="mt-8 text-sm text-emerald-100">
+            Already have an account?{" "}
+            <Link href="/login" className="font-bold text-white underline underline-offset-2">
+              Login to Continue
+            </Link>
+          </p>
         </div>
       </section>
     </main>
