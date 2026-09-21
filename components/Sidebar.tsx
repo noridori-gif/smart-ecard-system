@@ -23,6 +23,8 @@ import {
   type UserRole,
 } from "@/services/profileService";
 
+import { countNewServiceInquiries } from "@/services/serviceInquiryService";
+
 type SidebarProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -45,7 +47,8 @@ type MenuItem = {
     | "message"
     | "settings"
     | "support"
-    | "outreach";
+    | "outreach"
+    | "inquiry";
   allowedRoles: UserRole[];
 };
 
@@ -147,6 +150,14 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    href: "/service-inquiries",
+    label: "Service Inquiries",
+    icon: "inquiry",
+    allowedRoles: [
+      "admin",
+    ],
+  },
+  {
     href: "/users",
     label: "User Management",
     icon: "shield",
@@ -196,6 +207,7 @@ function SidebarIcon({ name }: { name: MenuItem["icon"] }) {
     settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.4.3.7.6.9 1 .2.3.3.7.3 1.1v.1h.1v4h-.1a1.7 1.7 0 0 0-1.2-.2Z" /></>,
     support: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 1.8-2.5 3.5" /><path d="M12 17h.01" /></>,
     outreach: <><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" /></>,
+    inquiry: <><path d="M9 3h6l2 4H7l2-4Z" /><path d="M5 7h14v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7Z" /><path d="M9 12h6M9 16h6" /></>,
   };
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -245,6 +257,12 @@ export default function Sidebar({
     setErrorMessage,
   ] =
     useState("");
+
+  const [
+    newInquiryCount,
+    setNewInquiryCount,
+  ] =
+    useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -303,6 +321,21 @@ export default function Sidebar({
           role:
             profile.role,
         });
+
+        if (profile.role === "admin") {
+          countNewServiceInquiries()
+            .then((count) => {
+              if (isMounted) {
+                setNewInquiryCount(count);
+              }
+            })
+            .catch((countError) => {
+              console.error(
+                "Sidebar service inquiry count error:",
+                countError
+              );
+            });
+        }
       } catch (error) {
         console.error(
           "Sidebar profile error:",
@@ -496,11 +529,18 @@ export default function Sidebar({
                       <SidebarIcon name={item.icon} />
                     </span>
 
-                    <span>
+                    <span className="flex-1">
                       {
                         item.label
                       }
                     </span>
+
+                    {item.href === "/service-inquiries" &&
+                      newInquiryCount > 0 && (
+                        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-slate-900">
+                          {newInquiryCount}
+                        </span>
+                      )}
                   </Link>
                 );
               }
