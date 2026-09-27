@@ -116,7 +116,7 @@ async function notificationRequest(eventId:number,body:Record<string,unknown>){
   const payload=await safeJson(response);if(!response.ok)throw new Error(typeof payload.error==="string"?payload.error:"Financial notification request failed.");return payload;
 }
 export function previewReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"preview",channels,pledgeId}) as Promise<ReminderPreview>;}
-export function sendReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
+export function sendReminders(eventId:number,channels:ReminderChannel[],pledgeId?:number,pledgeIds?:number[]){return notificationRequest(eventId,{action:"send",channels,pledgeId,pledgeIds,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
 export function previewPledgeThankYous(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"thank_you_preview",channels,pledgeId}) as Promise<ThankYouPreview>;}
 export function sendPledgeThankYous(eventId:number,channels:ReminderChannel[],pledgeId?:number){return notificationRequest(eventId,{action:"thank_you_send",channels,pledgeId,confirmed:true}) as Promise<{queued:number;sent:number;failed:number;skipped:number;errors:string[]}>;}
 

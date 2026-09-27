@@ -202,7 +202,7 @@ function skipReason(input: {
 }
 
 export async function previewFinancialReminders(db: SupabaseClient, input: {
-  eventId: number; requestedChannels: FinancialChannel[]; pledgeId?: number; scheduled?: boolean; now?: Date; language?: "sw" | "en";
+  eventId: number; requestedChannels: FinancialChannel[]; pledgeId?: number; pledgeIds?: number[]; scheduled?: boolean; now?: Date; language?: "sw" | "en";
 }): Promise<ReminderPreview> {
   const now = input.now ?? new Date();
   const [{ data: event, error: eventError }, { data: setting, error: settingError }] = await Promise.all([
@@ -224,7 +224,8 @@ export async function previewFinancialReminders(db: SupabaseClient, input: {
   if (input.pledgeId) pledgeQuery = pledgeQuery.eq("id", input.pledgeId);
   const { data: pledgeData, error: pledgeError } = await pledgeQuery;
   if (pledgeError) throw new Error("Contributors could not be loaded.");
-  const pledges = ((pledgeData ?? []) as PledgeRow[]).filter((pledge) => ["pledged", "partial"].includes(pledge.calculated_status) && Number(pledge.balance) > 0);
+  const allowedIds = input.pledgeIds ? new Set(input.pledgeIds) : null;
+  const pledges = ((pledgeData ?? []) as PledgeRow[]).filter((pledge) => ["pledged", "partial"].includes(pledge.calculated_status) && Number(pledge.balance) > 0 && (!allowedIds || allowedIds.has(pledge.id)));
   const pledgeIds = pledges.map((pledge) => pledge.id);
   const { data: history } = pledgeIds.length
     ? await db.from("pledge_reminders").select("pledge_id,channel,created_at,idempotency_key").in("pledge_id", pledgeIds).order("created_at", { ascending: false })

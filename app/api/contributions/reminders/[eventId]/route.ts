@@ -22,6 +22,13 @@ function requestedChannels(value: unknown): FinancialChannel[] {
   return [...new Set(value.filter((channel): channel is FinancialChannel => channel === "sms" || channel === "whatsapp"))];
 }
 
+function requestedPledgeIds(value: unknown): number[] | undefined | null {
+  if (value == null) return undefined;
+  if (!Array.isArray(value) || value.length > 5000) return null;
+  const ids = value.map(Number);
+  return ids.every((id) => Number.isInteger(id) && id > 0) ? [...new Set(ids)] : null;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ eventId: string }> }) {
  try {
   if (!sameOrigin(request)) return reply({ error: "Request not allowed." }, 403);
@@ -36,7 +43,7 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   const { data: authorized } = await authClient.rpc("can_manage_event_finance", { target_event_id: eventId });
   if (!authorized) return reply({ error: "Not authorized." }, 403);
   const body = await request.json().catch(() => null) as {
-    action?: string; channels?: unknown; pledgeId?: unknown; date?: unknown; confirmed?: unknown;
+    action?: string; channels?: unknown; pledgeId?: unknown; pledgeIds?: unknown; date?: unknown; confirmed?: unknown;
   } | null;
   const channels = requestedChannels(body?.channels);
   const db = serviceClient();
@@ -85,7 +92,10 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     if (body?.action === "preview") return reply(preview);
     if (body?.action === "send") {
       if (body.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
-      const freshPreview = await previewFinancialReminders(db, { eventId, requestedChannels: channels, pledgeId });
+      const pledgeIds = requestedPledgeIds(body.pledgeIds);
+      if (pledgeIds === null) return reply({ error: "Invalid recipient list." }, 400);
+      if (pledgeIds && pledgeIds.length === 0) return reply({ error: "No recipients selected." }, 400);
+      const freshPreview = await previewFinancialReminders(db, { eventId, requestedChannels: channels, pledgeId, pledgeIds });
       return reply(await sendFinancialReminders(db, freshPreview, { type: "authenticated_user", userId: auth.user.id }));
     }
     return reply({ error: "Unsupported action." }, 400);
