@@ -15,7 +15,8 @@ export async function POST(request: Request) {
   if (!body || typeof body.website === "string" && body.website || Number(body.durationMs) < 1500) return Response.json({ error: "Submission could not be accepted." }, { status: 400, headers: publicPledgeHeaders });
   const token = typeof body.token === "string" ? body.token : "", fullName = typeof body.fullName === "string" ? body.fullName.trim() : "", idempotencyKey = typeof body.idempotencyKey === "string" ? body.idempotencyKey : "";
   const amountText = typeof body.amount === "string" ? body.amount.replace(/,/g, "").trim() : ""; let phone: string | null = null;
-  try { phone = typeof body.phone === "string" && body.phone.trim() ? normalizePublicPhone(body.phone) : null; } catch { return Response.json({ error: "Enter a valid Tanzanian phone number.", code: "phone" }, { status: 400, headers: publicPledgeHeaders }); }
+  if (typeof body.phone !== "string" || !body.phone.trim()) return Response.json({ error: "Phone number is required.", code: "phone" }, { status: 400, headers: publicPledgeHeaders });
+  try { phone = normalizePublicPhone(body.phone); } catch { return Response.json({ error: "Enter a valid Tanzanian phone number.", code: "phone" }, { status: 400, headers: publicPledgeHeaders }); }
   if (token.length < 32 || fullName.length < 2 || fullName.length > 160 || !/^\d+(\.\d{1,2})?$/.test(amountText) || Number(amountText) <= 0 || Number(amountText) > 1_000_000_000 || idempotencyKey.length < 16 || idempotencyKey.length > 100) return Response.json({ error: "Check the highlighted fields and try again." }, { status: 400, headers: publicPledgeHeaders });
   const email = typeof body.email === "string" && body.email.trim() ? body.email.trim().toLowerCase().slice(0,254) : null;
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return Response.json({ error: "Enter a valid email address.", code: "email" }, { status: 400, headers: publicPledgeHeaders });
