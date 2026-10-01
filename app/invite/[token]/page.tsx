@@ -12,6 +12,7 @@ import {
 
 import InvitationViewedTracker from "@/components/invitation/InvitationViewedTracker";
 import { TEMPLATE_COMPONENTS } from "@/components/invitation/templates";
+import { gildedWebTheme } from "@/lib/GildedBorderCard";
 
 import {
   DEFAULT_INVITATION_TEMPLATE,
@@ -126,17 +127,35 @@ export default async function InvitationPage({
         : "Together with their families, they warmly invite you to celebrate their special day."
     );
 
+  // gilded_border's card has a fixed palette per variant and ignores the
+  // event's theme_* colours, so its web page takes the same palette instead --
+  // otherwise an event left on the default (red/pink) theme shows a page that
+  // doesn't match its navy/cream card. Every other template is unchanged.
+  const gildedTheme =
+    invitation.invitation_template ===
+    "gilded_border"
+      ? gildedWebTheme(
+          invitation.gilded_variant ===
+            "cream"
+            ? "cream"
+            : "navy"
+        )
+      : null;
+
   const primaryColor =
+    gildedTheme?.primary ||
     invitation
       .theme_primary_color ||
     "#BE123C";
 
   const secondaryColor =
+    gildedTheme?.secondary ||
     invitation
       .theme_secondary_color ||
     "#FFF1F2";
 
   const accentColor =
+    gildedTheme?.accent ||
     invitation
       .theme_accent_color ||
     "#D4AF37";

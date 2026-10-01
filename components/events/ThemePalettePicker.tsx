@@ -91,6 +91,26 @@ export const EVENT_THEME_PALETTES: EventThemePalette[] =
     },
 
     {
+      id: "navy-burnt-orange",
+
+      name:
+        "Navy & Burnt Orange",
+
+      dressCode:
+        "Navy blue, burnt orange, cream",
+
+      // Same three colours as the gilded_border card (lib/GildedBorderCard.tsx).
+      primaryColor:
+        "#0C1F3D",
+
+      secondaryColor:
+        "#F5EEE2",
+
+      accentColor:
+        "#D65A12",
+    },
+
+    {
       id:
         "terracotta-sage",
 

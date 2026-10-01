@@ -113,6 +113,22 @@ const PALETTES: Record<GildedBorderVariant, Palette> = {
   },
 };
 
+/**
+ * Theme colours for the public /invite web page of a gilded_border event, so
+ * it tells the same colour story as the card (the card ignores the event's
+ * theme_* colours). Mapped by the role the web templates give each variable,
+ * not by the card's own fields: --theme-primary is the dark colour (headings,
+ * and the footer background under white text), --theme-secondary the light
+ * card background, --theme-accent the small accents. The web page is light in
+ * both variants, so navy uses its brighter "hot" orange for contrast on cream.
+ */
+export function gildedWebTheme(variant: GildedBorderVariant) {
+  const p = PALETTES[variant];
+  return variant === "navy"
+    ? { primary: p.background, secondary: p.text, accent: p.hot }
+    : { primary: p.text, secondary: p.background, accent: p.accent };
+}
+
 /** QR colours used for gilded_border (navy modules on the reference's cream). */
 export const GILDED_QR_COLORS = { dark: "#0c1f3d", light: "#efe6d6" };
 
