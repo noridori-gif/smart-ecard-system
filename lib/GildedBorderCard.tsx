@@ -5,7 +5,7 @@ import { formatSwahiliTime } from "./swahiliTime";
 
 /**
  * "Gilded Border": a navy full-bleed card (subtle diagonal texture). The
- * couple photo sits top-right (~55% of the card's height) and melts into the
+ * couple photo sits top-right (~53% of the card's height) and melts into the
  * navy through a wavy bottom edge; the text column runs down the left; a
  * hexagon monogram with floral accents and the dress-code swatches sit under
  * the photo; the QR/pass card sits bottom-left. Without a photo the
@@ -23,7 +23,9 @@ import { formatSwahiliTime } from "./swahiliTime";
  * rasterised once by that module and passed in as `assets`.
  */
 
-export const GILDED_BORDER_CARD_HEIGHT = 1800;
+// 4:5 portrait (like a WhatsApp status / Instagram portrait post): the
+// earlier 1080x1800 (3:5) read as too tall and narrow in the chat.
+export const GILDED_BORDER_CARD_HEIGHT = 1350;
 const CARD_WIDTH = 1080;
 
 export type GildedBorderCardData = {
@@ -68,16 +70,18 @@ const SCRIPT = "Great Vibes";
 const SANS = "Inter";
 
 // Photo block, top-right.
-const PHOTO_LEFT = 470;
+const PHOTO_LEFT = 500;
 const PHOTO_WIDTH = CARD_WIDTH - PHOTO_LEFT;
-const PHOTO_HEIGHT = 990;
+const PHOTO_HEIGHT = 720;
 
 // Hexagon monogram (pointy-top), under the photo -- or in the photo's place.
-const HEX_WIDTH = 260;
-const HEX_HEIGHT = 300;
+const HEX_WIDTH = 222;
+const HEX_HEIGHT = 256;
 const HEX_LEFT = 680;
-const HEX_TOP_WITH_PHOTO = 1010;
-const HEX_TOP_NO_PHOTO = 360;
+const HEX_TOP_WITH_PHOTO = 755;
+const HEX_TOP_NO_PHOTO = 300;
+// Floral accents tucked against the hexagon's top-left / bottom-right.
+const HEX_ACCENT = 170;
 
 function gildedCopy(language: "sw" | "en") {
   return language === "en"
@@ -186,7 +190,7 @@ export function gildedPhotoOverlaySvg() {
   };
   const points: Array<[number, number]> = [];
   for (let x = 0; x <= width + 8; x += 8) {
-    const y = height - 92 + 26 * Math.sin(x / 105 + 0.6) + 11 * Math.sin(x / 41) + (random() - 0.5) * 5;
+    const y = height - 78 + 22 * Math.sin(x / 105 + 0.6) + 11 * Math.sin(x / 41) + (random() - 0.5) * 5;
     points.push([Math.min(x, width), Math.round(y * 10) / 10]);
   }
   const line = (dy: number) => points.map(([x, y]) => `${x},${y + dy}`).join(" ");
@@ -259,7 +263,7 @@ function CoupleNames({ title, text }: { title: string; text: Copy }) {
     return <div style={{ display: "flex", maxWidth: 420, fontFamily: SERIF, fontSize: title.length > 22 ? 30 : 38, fontWeight: 700, color: WHITE, textAlign: "center" }}>{title}</div>;
   }
   const longest = Math.max(names.groom.length, names.bride.length);
-  const size = longest > 14 ? 28 : longest > 9 ? 36 : 44;
+  const size = longest > 14 ? 30 : longest > 9 ? 38 : 46;
   const block = (name: string, label: string) => (
     <div style={{ width: 175, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
       <div style={{ display: "flex", fontFamily: SERIF, fontSize: size, fontWeight: 700, lineHeight: 1.1, color: WHITE, textAlign: "center" }}>{name}</div>
@@ -288,7 +292,7 @@ function DateRow({ data }: { data: GildedBorderCardData }) {
       <div style={{ display: "flex", margin: "0 18px" }}>
         <VRule height={84} />
       </div>
-      <div style={{ display: "flex", fontFamily: SERIF, fontSize: 112, fontWeight: 700, lineHeight: 1, color: ORANGE }}>{parts.day}</div>
+      <div style={{ display: "flex", fontFamily: SERIF, fontSize: 116, fontWeight: 700, lineHeight: 1, color: ORANGE }}>{parts.day}</div>
       <div style={{ display: "flex", margin: "0 18px" }}>
         <VRule height={84} />
       </div>
@@ -301,7 +305,7 @@ function ScheduleColumn({ heading, first, second }: { heading: string; first: st
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "0 12px", textAlign: "center" }}>
       <Label size={15} spacing={2.6}>{heading}</Label>
-      {first ? <div style={{ display: "flex", marginTop: 12, fontFamily: SERIF, fontSize: 24, fontWeight: 700, lineHeight: 1.2, whiteSpace: "nowrap", color: WHITE, textAlign: "center" }}>{first}</div> : null}
+      {first ? <div style={{ display: "flex", marginTop: 10, fontFamily: SERIF, fontSize: 26, fontWeight: 700, lineHeight: 1.2, whiteSpace: "nowrap", color: WHITE, textAlign: "center" }}>{first}</div> : null}
       {second ? <div style={{ display: "flex", marginTop: 6, fontFamily: SERIF, fontSize: 21, fontStyle: "italic", lineHeight: 1.25, color: CREAM_SOFT, textAlign: "center" }}>{second}</div> : null}
     </div>
   );
@@ -335,22 +339,22 @@ function Schedule({ data, text }: { data: GildedBorderCardData; text: Copy }) {
 }
 
 function guestNameSize(name: string) {
-  return name.length > 34 ? 32 : name.length > 22 ? 40 : 52;
+  return name.length > 34 ? 34 : name.length > 22 ? 44 : 56;
 }
 
 function TextColumn({ data, assets, text }: { data: GildedBorderCardData; assets: GildedBorderAssets; text: Copy }) {
   const message = data.invitationMessage.trim();
   return (
-    <div style={{ position: "absolute", left: 30, top: 40, width: 440, height: 1385, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", textAlign: "center" }}>
+    <div style={{ position: "absolute", left: 28, top: 26, width: 452, height: 980, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", textAlign: "center" }}>
       <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={assets.flourish} alt="" width={420} height={158} style={{ width: 420, height: 158 }} />
+        <img src={assets.flourish} alt="" width={340} height={128} style={{ width: 340, height: 128 }} />
         {message ? (
-          <div style={{ display: "flex", marginTop: 30, fontFamily: SERIF, fontSize: message.length > 140 ? 20 : 24, lineHeight: 1.45, color: WHITE, textAlign: "center" }}>{message}</div>
+          <div style={{ display: "flex", marginTop: 14, fontFamily: SERIF, fontSize: message.length > 140 ? 21 : 25, lineHeight: 1.4, color: WHITE, textAlign: "center" }}>{message}</div>
         ) : null}
-        <div style={{ display: "flex", marginTop: 36, fontFamily: SERIF, fontSize: guestNameSize(data.guestName), fontWeight: 700, lineHeight: 1.15, color: ORANGE, textAlign: "center" }}>{data.guestName}</div>
-        <div style={{ display: "flex", marginTop: 22, fontFamily: SERIF, fontSize: 25, fontStyle: "italic", color: WHITE }}>{text.weddingOf}</div>
-        <div style={{ display: "flex", marginTop: 32 }}>
+        <div style={{ display: "flex", marginTop: 18, fontFamily: SERIF, fontSize: guestNameSize(data.guestName), fontWeight: 700, lineHeight: 1.15, color: ORANGE, textAlign: "center" }}>{data.guestName}</div>
+        <div style={{ display: "flex", marginTop: 8, fontFamily: SERIF, fontSize: 26, fontStyle: "italic", color: WHITE }}>{text.weddingOf}</div>
+        <div style={{ display: "flex", marginTop: 16 }}>
           <CoupleNames title={data.title} text={text} />
         </div>
       </div>
@@ -365,7 +369,7 @@ function TextColumn({ data, assets, text }: { data: GildedBorderCardData; assets
 
       <Separator />
 
-      <div style={{ display: "flex", maxWidth: 420, fontFamily: SERIF, fontSize: 23, fontStyle: "italic", lineHeight: 1.35, color: CREAM, textAlign: "center" }}>{text.closing}</div>
+      <div style={{ display: "flex", maxWidth: 440, fontFamily: SERIF, fontSize: 24, fontStyle: "italic", lineHeight: 1.35, color: CREAM, textAlign: "center" }}>{text.closing}</div>
     </div>
   );
 }
@@ -373,15 +377,18 @@ function TextColumn({ data, assets, text }: { data: GildedBorderCardData; assets
 function Monogram({ title, assets, top }: { title: string; assets: GildedBorderAssets; top: number }) {
   const names = coupleNames(title);
   const letters = names ? [monogramLetter(names.groom), monogramLetter(names.bride)] : [monogramLetter(title)];
+  // Where the hexagon sits inside the accent-padded box.
+  const hexX = Math.round(HEX_ACCENT * 0.45);
+  const hexY = Math.round(HEX_ACCENT * 0.4);
   return (
-    <div style={{ position: "absolute", left: HEX_LEFT - 90, top: top - 80, width: HEX_WIDTH + 180, height: HEX_HEIGHT + 160, display: "flex" }}>
-      <Img src={assets.hexAccentTopLeft} left={0} top={0} width={200} height={200} />
-      <Img src={assets.hexagon} left={90} top={80} width={HEX_WIDTH} height={HEX_HEIGHT} />
-      <Img src={assets.hexAccentBottomRight} left={HEX_WIDTH - 20} top={HEX_HEIGHT - 40} width={200} height={200} />
-      <div style={{ position: "absolute", left: 90, top: 80, width: HEX_WIDTH, height: HEX_HEIGHT, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ display: "flex", fontFamily: SERIF, fontSize: 64, fontWeight: 700, color: INK }}>{letters[0]}</div>
-        {letters[1] ? <div style={{ display: "flex", margin: "0 8px", fontFamily: SCRIPT, fontSize: 60, color: ORANGE }}>&amp;</div> : null}
-        {letters[1] ? <div style={{ display: "flex", fontFamily: SERIF, fontSize: 64, fontWeight: 700, color: INK }}>{letters[1]}</div> : null}
+    <div style={{ position: "absolute", left: HEX_LEFT - hexX, top: top - hexY, width: HEX_WIDTH + 2 * hexX, height: HEX_HEIGHT + 2 * hexY, display: "flex" }}>
+      <Img src={assets.hexAccentTopLeft} left={0} top={0} width={HEX_ACCENT} height={HEX_ACCENT} />
+      <Img src={assets.hexagon} left={hexX} top={hexY} width={HEX_WIDTH} height={HEX_HEIGHT} />
+      <Img src={assets.hexAccentBottomRight} left={hexX + HEX_WIDTH - Math.round(HEX_ACCENT * 0.55)} top={hexY + HEX_HEIGHT - Math.round(HEX_ACCENT * 0.6)} width={HEX_ACCENT} height={HEX_ACCENT} />
+      <div style={{ position: "absolute", left: hexX, top: hexY, width: HEX_WIDTH, height: HEX_HEIGHT, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", fontFamily: SERIF, fontSize: 56, fontWeight: 700, color: INK }}>{letters[0]}</div>
+        {letters[1] ? <div style={{ display: "flex", margin: "0 6px", fontFamily: SCRIPT, fontSize: 52, color: ORANGE }}>&amp;</div> : null}
+        {letters[1] ? <div style={{ display: "flex", fontFamily: SERIF, fontSize: 56, fontWeight: 700, color: INK }}>{letters[1]}</div> : null}
       </div>
     </div>
   );
@@ -391,7 +398,7 @@ function DressCode({ dressCode, text }: { dressCode: string; text: Copy }) {
   const parts = splitDressCode(dressCode).slice(0, 5);
   if (parts.length === 0) return null;
   return (
-    <div style={{ position: "absolute", left: 610, top: 1478, width: 450, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+    <div style={{ position: "absolute", left: 600, top: 1068, width: 480, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
       <Label color={WHITE} size={15} spacing={4}>{text.dress}</Label>
       <div style={{ display: "flex", marginTop: 18, gap: 14 }}>
         {parts.map((part, index) => (
@@ -405,7 +412,7 @@ function DressCode({ dressCode, text }: { dressCode: string; text: Copy }) {
 
 function PassCard({ data, text }: { data: GildedBorderCardData; text: Copy }) {
   const passId = data.eventPassId ? formatPassIdForDisplay(data.eventPassId) : "—";
-  const qrSize = 214;
+  const qrSize = 208;
   const row = (label: string, value: string) => (
     <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
       <div style={{ display: "flex", fontFamily: SANS, fontSize: 14, fontWeight: 700, color: INK, opacity: 0.7 }}>{label}</div>
@@ -414,7 +421,7 @@ function PassCard({ data, text }: { data: GildedBorderCardData; text: Copy }) {
     </div>
   );
   return (
-    <div style={{ position: "absolute", left: 30, top: 1470, width: 560, height: 300, display: "flex", alignItems: "center", padding: "0 22px", borderRadius: 20, backgroundColor: CREAM }}>
+    <div style={{ position: "absolute", left: 28, top: 1032, width: 562, height: 290, display: "flex", alignItems: "center", padding: "0 22px", borderRadius: 20, backgroundColor: CREAM }}>
       <div style={{ width: qrSize + 16, height: qrSize + 16, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: WHITE }}>
         {data.qrCodeDataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -460,8 +467,8 @@ export default function GildedBorderCard({ data, assets }: { data: GildedBorderC
       <DressCode dressCode={data.dressCode} text={text} />
       {/* Same flourish as the top of the text column, repeated in the
           bottom-right corner so the lower half of the card is balanced
-          (otherwise ~230px of bare navy sits under the dress-code block). */}
-      <Img src={assets.flourish} left={665} top={1648} width={340} height={128} />
+          (otherwise bare navy sits under the dress-code block). */}
+      <Img src={assets.flourish} left={710} top={1236} width={260} height={98} />
       <PassCard data={data} text={text} />
     </div>
   );
