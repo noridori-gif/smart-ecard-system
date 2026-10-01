@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import PremiumWhatsAppCard, { whatsAppCardTotalHeight, type PremiumWhatsAppCardData, type PremiumWhatsAppTemplate } from "@/lib/PremiumWhatsAppCard";
-import GildedBorderCard, { GILDED_BORDER_CARD_HEIGHT, gildedHexagonSvg, gildedPhotoOverlaySvg, gildedTextureSvg, type GildedBorderAssets } from "@/lib/GildedBorderCard";
+import GildedBorderCard, { GILDED_BORDER_CARD_HEIGHT, gildedTextureSvg, type GildedBorderAssets } from "@/lib/GildedBorderCard";
 import { useAppLanguage } from "@/lib/i18n/useAppLanguage";
 import type { EventLanguage, InvitationTemplate, PhotoLayout } from "@/services/eventService";
 
@@ -48,7 +48,7 @@ export type EventPreviewData = {
   title:string; eventType:string; brideName:string; groomName:string; language:EventLanguage;
   template:InvitationTemplate; photoLayout:PhotoLayout; invitationMessage?:string; coverImageUrl:string|null;
   eventDate:string; eventTime:string; venue:string; ceremonyTitle:string; ceremonyDate:string; ceremonyTime:string;
-  ceremonyVenue:string; ceremonyMapUrl?:string; receptionMapUrl?:string; dressCode:string; contactPhone?:string; primary:string; secondary:string; accent:string;
+  ceremonyVenue:string; ceremonyMapUrl?:string; receptionMapUrl?:string; dressCode:string; contactPhone?:string; gildedVariant?:"navy"|"cream"; primary:string; secondary:string; accent:string;
 };
 
 type Mode="invitation"|"whatsapp"|"pass";
@@ -72,11 +72,11 @@ export default function EventPreviewSwitcher({data,invitationPreview}:{data:Even
   }),[data,names,bannerHeight]);
 
   // gilded_border is its own component (not a PremiumWhatsAppCard skin). In the
-  // browser its SVG backdrops work directly as data URIs and the florals load
-  // from /public -- the server renderer embeds the same art as PNGs instead.
+  // browser its texture works directly as an SVG data URI; the torn-paper photo
+  // edge is cut server-side with sharp, so this preview shows the plain photo.
   // Names go groom-first here, matching the server card (displayTitle).
   const isGilded=data.template==="gilded_border";
-  const gildedAssets=useMemo<GildedBorderAssets|null>(()=>{if(!isGilded)return null;const svg=(markup:string)=>`data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;return {flourish:"/invitation-assets/gilded-border/flourish.png",hexAccentTopLeft:"/invitation-assets/gilded-border/hex-tl.png",hexAccentBottomRight:"/invitation-assets/gilded-border/hex-br.png",texture:svg(gildedTextureSvg()),photoOverlay:svg(gildedPhotoOverlaySvg()),hexagon:svg(gildedHexagonSvg())};},[isGilded]);
+  const gildedAssets=useMemo<GildedBorderAssets|null>(()=>isGilded?{texture:`data:image/svg+xml;charset=utf-8,${encodeURIComponent(gildedTextureSvg(data.gildedVariant??"navy"))}`}:null,[isGilded,data.gildedVariant]);
   const cardHeight=isGilded?GILDED_BORDER_CARD_HEIGHT:totalCardHeight;
 
   function keyNavigation(event:KeyboardEvent<HTMLButtonElement>,index:number){if(!["ArrowLeft","ArrowRight"].includes(event.key))return;event.preventDefault();const next=(index+(event.key==="ArrowRight"?1:-1)+modes.length)%modes.length;setMode(modes[next][0]);document.getElementById(`event-preview-${modes[next][0]}`)?.focus();}
@@ -86,7 +86,7 @@ export default function EventPreviewSwitcher({data,invitationPreview}:{data:Even
     <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-bold text-emerald-800">{t("preview.only")}</p>
     <div role="tabpanel" className="mt-4 transition-opacity duration-200">
       {mode==="invitation"&&invitationPreview}
-      {mode==="whatsapp"&&(data.template==="custom"?<p className="rounded-xl bg-white p-4 text-center text-sm text-slate-600">{data.language==="sw"?"Muundo wa mwaliko binafsi unahakikiwa kwenye sehemu ya \"Muundo Binafsi\" hapo juu.":"The custom design is previewed in the Custom Design section above."}</p>:<div><div className="mb-3 flex justify-center gap-1"><button type="button" aria-pressed={whatsAppView==="card"} onClick={()=>setWhatsAppView("card")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="card"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.cardImage")}</button><button type="button" aria-pressed={whatsAppView==="message"} onClick={()=>setWhatsAppView("message")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="message"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.messageView")}</button></div>{whatsAppView==="card"?<div className="mx-auto w-[300px] overflow-hidden rounded-xl bg-white shadow-xl" style={{height:cardHeight*PREVIEW_SCALE}}><div style={{width:CARD_WIDTH,height:cardHeight,transform:`scale(${PREVIEW_SCALE})`,transformOrigin:"top left"}}>{gildedAssets?<GildedBorderCard assets={gildedAssets} data={{...payload,title:data.groomName&&data.brideName?`${data.groomName} & ${data.brideName}`:names,eventDateIso:data.eventDate,ceremonyTime:data.ceremonyTime,eventTime:data.eventTime,contactPhone:data.contactPhone??""}}/>:<PremiumWhatsAppCard data={payload} template={data.template as PremiumWhatsAppTemplate}/>}</div></div>:<MessagePreview data={data} names={names}/>}</div>)}
+      {mode==="whatsapp"&&(data.template==="custom"?<p className="rounded-xl bg-white p-4 text-center text-sm text-slate-600">{data.language==="sw"?"Muundo wa mwaliko binafsi unahakikiwa kwenye sehemu ya \"Muundo Binafsi\" hapo juu.":"The custom design is previewed in the Custom Design section above."}</p>:<div><div className="mb-3 flex justify-center gap-1"><button type="button" aria-pressed={whatsAppView==="card"} onClick={()=>setWhatsAppView("card")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="card"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.cardImage")}</button><button type="button" aria-pressed={whatsAppView==="message"} onClick={()=>setWhatsAppView("message")} className={`rounded-full px-3 py-2 text-xs font-bold ${whatsAppView==="message"?"bg-slate-950 text-white":"bg-white"}`}>{t("preview.messageView")}</button></div>{whatsAppView==="card"?<div className="mx-auto w-[300px] overflow-hidden rounded-xl bg-white shadow-xl" style={{height:cardHeight*PREVIEW_SCALE}}><div style={{width:CARD_WIDTH,height:cardHeight,transform:`scale(${PREVIEW_SCALE})`,transformOrigin:"top left"}}>{gildedAssets?<GildedBorderCard assets={gildedAssets} variant={data.gildedVariant??"navy"} data={{...payload,title:data.groomName&&data.brideName?`${data.groomName} & ${data.brideName}`:names,eventDateIso:data.eventDate,ceremonyTime:data.ceremonyTime,eventTime:data.eventTime,contactPhone:data.contactPhone??""}}/>:<PremiumWhatsAppCard data={payload} template={data.template as PremiumWhatsAppTemplate}/>}</div></div>:<MessagePreview data={data} names={names}/>}</div>)}
       {mode==="pass"&&<div className="rounded-2xl border-2 border-dashed bg-white p-5 text-center shadow-sm" style={{borderColor:data.accent}}><p className="text-xs font-black uppercase tracking-[.18em]" style={{color:data.primary}}>Smart Event Pass</p><h3 className="mt-4 font-serif text-2xl font-black">{names}</h3><p className="mt-3 text-sm">Mr & Mrs Mgeni · 2</p><div className="mx-auto mt-5 grid h-28 w-28 place-items-center border-4 text-xs font-black">PREVIEW QR</div><p className="mt-4 font-mono font-black">SEP-PREVIEW</p></div>}
     </div>
   </section>;

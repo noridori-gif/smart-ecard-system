@@ -108,6 +108,12 @@ export type Event = {
     | string
     | null;
 
+  // gilded_border colour variant; column added by migration 202610020001.
+  gilded_variant?:
+    | "navy"
+    | "cream"
+    | null;
+
   cover_image_url?:
     | string
     | null;
@@ -158,6 +164,10 @@ export type NewEvent = {
   // migration 202609040004 has been applied.
   contact_phone?: string;
 
+  // Same rule as contact_phone: omitted unless the form sends it (only for
+  // gilded_border events), so other saves never reference the column.
+  gilded_variant?: "navy" | "cream";
+
   cover_image_url?:
     | string
     | null;
@@ -202,6 +212,10 @@ export type UpdateEvent = {
   // present, so saving an event never references contact_phone before
   // migration 202609040004 has been applied.
   contact_phone?: string;
+
+  // Same rule as contact_phone: omitted unless the form sends it (only for
+  // gilded_border events), so other saves never reference the column.
+  gilded_variant?: "navy" | "cream";
 
   cover_image_url?:
     | string
@@ -674,6 +688,15 @@ export async function createEvent(
           }
         : {}),
 
+      ...(event.gilded_variant !== undefined
+        ? {
+            gilded_variant:
+              event.gilded_variant === "cream"
+                ? "cream"
+                : "navy",
+          }
+        : {}),
+
       cover_image_url:
         event.cover_image_url ??
         null,
@@ -928,6 +951,15 @@ export async function updateEvent(
               normalizeOptionalText(
                 event.contact_phone
               ),
+          }
+        : {}),
+
+      ...(event.gilded_variant !== undefined
+        ? {
+            gilded_variant:
+              event.gilded_variant === "cream"
+                ? "cream"
+                : "navy",
           }
         : {}),
 

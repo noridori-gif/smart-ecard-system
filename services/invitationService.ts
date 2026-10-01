@@ -222,6 +222,12 @@ export type PublicInvitation = {
   contact_phone?:
     | string
     | null;
+
+  // gilded_border colour variant (migration 202610020001); absent before
+  // that is applied, which renders the default navy.
+  gilded_variant?:
+    | string
+    | null;
 };
 
 type RawInvitationWithDetails =

@@ -13,10 +13,11 @@ import PremiumWhatsAppCard, {
 import { formatPassIdForDisplay } from "./passId";
 import GildedBorderCard, {
   GILDED_BORDER_CARD_HEIGHT,
-  gildedHexagonSvg,
-  gildedPhotoOverlaySvg,
+  GILDED_PHOTO_SIZE,
+  GILDED_QR_COLORS,
+  gildedPhotoTornMaskSvg,
   gildedTextureSvg,
-  type GildedBorderAssets,
+  type GildedBorderVariant,
 } from "./GildedBorderCard";
 import { DEFAULT_CUSTOM_LAYOUT } from "@/services/invitationLayoutService";
 
@@ -60,6 +61,8 @@ export type WhatsAppCardData = {
   // Raw "YYYY-MM-DD" (date above is already formatted for display);
   // gilded_border derives its weekday / big day / short month from this.
   eventDateIso: string;
+  // gilded_border colour variant (events.gilded_variant); navy when unset.
+  gildedVariant?: GildedBorderVariant;
   primary: string;
   secondary: string;
   accent: string;
@@ -124,7 +127,7 @@ function loadRoseGardenFont(file: string) {
 type EmbeddedFont = {
   name: string;
   data: Buffer;
-  weight: 400 | 700;
+  weight: 400 | 700 | 900;
   style: "normal" | "italic";
 };
 const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
@@ -134,18 +137,16 @@ const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
   { name: "Great Vibes", data: loadRoseGardenFont("GreatVibes-Regular.woff"), weight: 400, style: "normal" },
   { name: "Inter", data: loadRoseGardenFont("Inter-Bold.woff"), weight: 700, style: "normal" },
 ];
-// Gilded Border's floral art -- drawn in code (no third-party art), see
-// scripts/build-gilded-border-assets.mjs. Same load-once pattern as the
-// Rose Garden corners above.
-const GILDED_BORDER_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "gilded-border");
-function loadGildedBorderAsset(file: string) {
-  return `data:image/png;base64,${readFileSync(join(GILDED_BORDER_ASSET_DIR, file)).toString("base64")}`;
-}
-const GILDED_BORDER_FLORALS = {
-  flourish: loadGildedBorderAsset("flourish.png"),
-  hexAccentTopLeft: loadGildedBorderAsset("hex-tl.png"),
-  hexAccentBottomRight: loadGildedBorderAsset("hex-br.png"),
-};
+// Gilded Border's reference design is set in Kaushan Script (names, "&",
+// monogram, closing line) and Lato 400/700/900 (everything else). Same
+// bundled-WOFF, load-once approach as the Rose Garden fonts above (Google
+// Fonts, OFL licensed).
+const GILDED_BORDER_FONTS: EmbeddedFont[] = [
+  { name: "Kaushan Script", data: loadRoseGardenFont("KaushanScript-Regular.woff"), weight: 400, style: "normal" },
+  { name: "Lato", data: loadRoseGardenFont("Lato-Regular.woff"), weight: 400, style: "normal" },
+  { name: "Lato", data: loadRoseGardenFont("Lato-Bold.woff"), weight: 700, style: "normal" },
+  { name: "Lato", data: loadRoseGardenFont("Lato-Black.woff"), weight: 900, style: "normal" },
+];
 // Embedded (not left as a plain public URL) for the same reason as the
 // Rose Garden fonts above -- next/og's ImageResponse renders through this
 // module's server-only path, and embedding avoids a live network fetch
@@ -397,6 +398,7 @@ export function getWhatsAppCardData(
     customLayoutElements: invitation.custom_layout_elements ?? null,
     contactPhone: cleanText(invitation.contact_phone, ""),
     eventDateIso: invitation.event_date ?? "",
+    gildedVariant: invitation.gilded_variant === "cream" ? "cream" : "navy",
     primary: safeColor(invitation.theme_primary_color, "#145A46"),
     secondary: safeColor(invitation.theme_secondary_color, "#FFF8EC"),
     accent: safeColor(invitation.theme_accent_color, "#C9A962"),
@@ -610,7 +612,10 @@ function jpegResponse(buffer: Buffer) {
   });
 }
 
-async function buildQrCodeDataUrl(token: string | null | undefined) {
+async function buildQrCodeDataUrl(
+  token: string | null | undefined,
+  colors: { dark: string; light: string } = { dark: "#0F172A", light: "#FFFFFF" }
+) {
   if (!token) {
     return null;
   }
@@ -620,10 +625,7 @@ async function buildQrCodeDataUrl(token: string | null | undefined) {
       margin: 3,
       width: 400,
       errorCorrectionLevel: "M",
-      color: {
-        dark: "#0F172A",
-        light: "#FFFFFF",
-      },
+      color: colors,
     });
   } catch (error) {
     console.warn("WhatsApp card QR fallback:", error);
@@ -1196,43 +1198,72 @@ async function createRoseGardenInvitationCard(data: WhatsAppCardData) {
   }
 }
 
-// Gilded Border's texture, photo edge and hexagon never change, so they're
-// rasterised once per server instance and reused (same PNG-over-photo
-// approach as the side_by_side blend overlay above).
-let gildedBackdrops: Promise<Pick<GildedBorderAssets, "texture" | "photoOverlay" | "hexagon">> | null = null;
-function getGildedBackdrops() {
-  const rasterise = async (svg: string) =>
-    `data:image/png;base64,${(await sharp(Buffer.from(svg)).png().toBuffer()).toString("base64")}`;
-  gildedBackdrops ??= Promise.all([
-    rasterise(gildedTextureSvg()),
-    rasterise(gildedPhotoOverlaySvg()),
-    rasterise(gildedHexagonSvg()),
-  ])
-    .then(([texture, photoOverlay, hexagon]) => ({ texture, photoOverlay, hexagon }))
-    .catch((error) => {
-      gildedBackdrops = null;
-      throw error;
-    });
-  return gildedBackdrops;
+// Each variant's stripe texture never changes, so it's rasterised once per
+// server instance and reused.
+const gildedTextures = new Map<GildedBorderVariant, Promise<string>>();
+function getGildedTexture(variant: GildedBorderVariant) {
+  let texture = gildedTextures.get(variant);
+  if (!texture) {
+    texture = sharp(Buffer.from(gildedTextureSvg(variant)))
+      .png()
+      .toBuffer()
+      .then((buffer) => `data:image/png;base64,${buffer.toString("base64")}`)
+      .catch((error) => {
+        gildedTextures.delete(variant);
+        throw error;
+      });
+    gildedTextures.set(variant, texture);
+  }
+  return texture;
+}
+
+/**
+ * Cuts the event's own photo to Gilded Border's torn-paper shape as real
+ * alpha (the reference uses a pre-cut PNG; every event here has a different
+ * upload, so the same cut is applied at render time): cover-crop to the
+ * photo box, then keep only what lies inside gildedPhotoTornMaskSvg.
+ * Returns null if anything fails, in which case the card falls back to the
+ * plain rectangular photo rather than failing the render.
+ */
+async function buildGildedTornPhoto(coverDataUrl: string) {
+  try {
+    const source = Buffer.from(coverDataUrl.slice(coverDataUrl.indexOf(",") + 1), "base64");
+    const { width, height } = GILDED_PHOTO_SIZE;
+    const cut = await sharp(source)
+      .resize(width, height, { fit: "cover", position: "centre" })
+      .ensureAlpha()
+      .composite([{ input: Buffer.from(gildedPhotoTornMaskSvg()), blend: "dest-in" }])
+      .png()
+      .toBuffer();
+    return `data:image/png;base64,${cut.toString("base64")}`;
+  } catch (error) {
+    console.warn("Gilded Border torn photo fallback:", error);
+    return null;
+  }
 }
 
 async function createGildedBorderInvitationCard(data: WhatsAppCardData) {
+  const variant: GildedBorderVariant = data.gildedVariant === "cream" ? "cream" : "navy";
   const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
-  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken, GILDED_QR_COLORS);
   const normalizedData = renderData(
     data,
     cover?.dataUrl ?? null,
     cover?.bannerHeight ?? DEFAULT_BANNER_HEIGHT,
     qrCodeDataUrl
   );
+  const [texture, tornPhoto] = await Promise.all([
+    getGildedTexture(variant),
+    normalizedData.coverImageDataUrl ? buildGildedTornPhoto(normalizedData.coverImageDataUrl) : null,
+  ]);
 
   try {
     return jpegResponse(
       await materializeJpeg(
-        <GildedBorderCard data={normalizedData} assets={{ ...GILDED_BORDER_FLORALS, ...(await getGildedBackdrops()) }} />,
+        <GildedBorderCard data={normalizedData} variant={variant} assets={{ texture, tornPhoto: tornPhoto ?? undefined }} />,
         CARD_WIDTH,
         GILDED_BORDER_CARD_HEIGHT,
-        ROSE_GARDEN_FONTS
+        GILDED_BORDER_FONTS
       )
     );
   } catch (error) {
