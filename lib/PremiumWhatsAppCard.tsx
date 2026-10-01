@@ -263,8 +263,8 @@ const DRESS_COLOR_KEYWORDS: Array<[RegExp, string]> = [
   [/\bivory\b/i, "#FFFFF2"],
   [/\bchampagne\b/i, "#F0E2B6"],
   [/\bcream\b/i, "#F3EAD3"],
-  [/\bgold(en)?\b/i, "#C9A227"],
-  [/\bsilver\b/i, "#C0C0C0"],
+  [/\bgold(en)?\b|\bdhahabu\b/i, "#C9A227"],
+  [/\bsilver\b|\bfedha\b/i, "#C0C0C0"],
   [/\bnavy\b/i, "#1B2A4A"],
   [/\bblue\b|\bbluu\b|\bsamawati\b/i, "#2A5CAA"],
   [/\bteal\b/i, "#1F7A72"],
@@ -286,17 +286,32 @@ const DRESS_COLOR_KEYWORDS: Array<[RegExp, string]> = [
   [/\blavender\b/i, "#B7A6D9"],
   [/\blilac\b/i, "#C6A6D9"],
   [/\bviolet\b/i, "#7C4DA6"],
-  [/\bpurple\b/i, "#6A3E9B"],
+  [/\bpurple\b|\bzambarau\b/i, "#6A3E9B"],
   [/\bmustard\b/i, "#C9A22B"],
   [/\byellow\b|\bmanjano\b/i, "#E8C93A"],
-  [/\borange\b/i, "#E07A2C"],
+  [/\bburnt\s+orange\b/i, "#C2561A"],
+  [/\borange\b|\bmachungwa\b/i, "#E07A2C"],
   [/\bchocolate\b/i, "#4A2A1D"],
-  [/\bbrown\b/i, "#6B4226"],
+  [/\bbrown\b|\bkahawia\b/i, "#6B4226"],
   [/\btan\b/i, "#C8A57A"],
   [/\bbeige\b/i, "#D8CBB0"],
   [/\bcharcoal\b/i, "#3A3A3A"],
-  [/\bgr[ae]y\b/i, "#8A8A8A"],
+  [/\bgr[ae]y\b|\bkijivu\b/i, "#8A8A8A"],
 ];
+
+/**
+ * Splits the organizer's free-text dress code into individual colors.
+ * Organizers don't only use commas -- "Navy & Burnt Orange", "Navy na
+ * Machungwa", "Black and White", "Gold / Ivory" are all common -- so each of
+ * those separators starts a new color (and its own swatch dot). "na"/"and"
+ * only match as standalone words, never inside a color name.
+ */
+export function splitDressCode(dressCode: string): string[] {
+  return dressCode
+    .split(/\s*(?:,|&|\/|\+|\band\b|\bna\b)\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
 function dressCodeSwatch(segment: string): string {
   for (const [pattern, hex] of DRESS_COLOR_KEYWORDS) {
@@ -723,9 +738,9 @@ function Detail({
   );
 }
 
-/** Same label/shell as Detail, but for the dress-code field specifically: splits the organizer's comma-separated color list into one row per color, each with a small dot swatch (see dressCodeSwatch) instead of a single wrapped line of plain text. */
+/** Same label/shell as Detail, but for the dress-code field specifically: splits the organizer's color list (see splitDressCode) into one row per color, each with a small dot swatch (see dressCodeSwatch) instead of a single wrapped line of plain text. */
 function DressColorList({ label, dressCode, theme, compact = false }: { label: string; dressCode: string; theme: Theme; compact?: boolean }) {
-  const parts = dressCode.split(",").map((part) => part.trim()).filter(Boolean);
+  const parts = splitDressCode(dressCode);
   const valueFontSize = compact ? 30 : 25;
 
   return (

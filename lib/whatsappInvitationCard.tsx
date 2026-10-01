@@ -7,6 +7,7 @@ import sharp from "sharp";
 import PremiumWhatsAppCard, {
   CompactHorizontalCard,
   copy,
+  splitDressCode,
   whatsAppCardTotalHeight,
 } from "./PremiumWhatsAppCard";
 import { formatPassIdForDisplay } from "./passId";
@@ -914,11 +915,7 @@ function RoseEyebrow({ children }: { children: string }) {
 }
 
 function DressChips({ dressCode }: { dressCode: string }) {
-  const parts = dressCode
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 4);
+  const parts = splitDressCode(dressCode).slice(0, 4);
 
   if (parts.length === 0) return null;
 
