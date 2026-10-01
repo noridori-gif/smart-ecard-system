@@ -215,6 +215,13 @@ export type PublicInvitation = {
   custom_layout_elements:
     | CustomLayoutElement[]
     | null;
+
+  // Only returned once migration 202610010001 (get_public_invitation with
+  // contact_phone) is applied; absent before that, which just hides the
+  // gilded_border MAWASILIANO line.
+  contact_phone?:
+    | string
+    | null;
 };
 
 type RawInvitationWithDetails =
@@ -274,6 +281,7 @@ function normalizeInvitationTemplate(
     template === "heritage_pattern" ||
     template === "garden_elegance" ||
     template === "rose_garden" ||
+    template === "gilded_border" ||
     template === "custom"
   ) {
     return template;

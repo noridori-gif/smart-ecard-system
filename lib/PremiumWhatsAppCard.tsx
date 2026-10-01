@@ -216,7 +216,7 @@ export function copy(language: "sw" | "en") {
 }
 
 /** Just the status word -- no guest count anywhere, per explicit request. */
-function statusText(data: PremiumWhatsAppCardData) {
+export function statusText(data: Pick<PremiumWhatsAppCardData, "allowedGuests">) {
   const count = Number.isFinite(data.allowedGuests)
     ? Math.max(1, Math.floor(data.allowedGuests))
     : 1;
@@ -313,7 +313,7 @@ export function splitDressCode(dressCode: string): string[] {
     .filter(Boolean);
 }
 
-function dressCodeSwatch(segment: string): string {
+export function dressCodeSwatch(segment: string): string {
   for (const [pattern, hex] of DRESS_COLOR_KEYWORDS) {
     if (pattern.test(segment)) return hex;
   }

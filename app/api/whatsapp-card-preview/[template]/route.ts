@@ -19,6 +19,7 @@ const previewTemplates = new Set<WhatsAppCardTemplate>([
   "heritage_pattern",
   "garden_elegance",
   "rose_garden",
+  "gilded_border",
 ]);
 
 type RouteContext = {
@@ -90,6 +91,8 @@ function previewData(
       coverImageUrl,
       customBackgroundUrl: null,
       customLayoutElements: null,
+      contactPhone: "",
+      eventDateIso: "2026-09-12",
       primary: "#145A46",
       secondary: "#FFF8EC",
       accent: "#C9A962",
@@ -118,6 +121,8 @@ function previewData(
     coverImageUrl,
     customBackgroundUrl: null,
     customLayoutElements: null,
+    contactPhone: "0712 345 678 / 0754 111 222",
+    eventDateIso: "2026-09-12",
     primary: "#145A46",
     secondary: "#FFF8EC",
     accent: "#C9A962",

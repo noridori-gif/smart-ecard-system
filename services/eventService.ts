@@ -14,6 +14,7 @@ export type InvitationTemplate =
   | "heritage_pattern"
   | "garden_elegance"
   | "rose_garden"
+  | "gilded_border"
   | "custom";
 
 export const DEFAULT_INVITATION_TEMPLATE: InvitationTemplate =
@@ -101,6 +102,12 @@ export type Event = {
     | string
     | null;
 
+  // gilded_border's MAWASILIANO line; column added by migration
+  // 202609040004 (absent from rows until then).
+  contact_phone?:
+    | string
+    | null;
+
   cover_image_url?:
     | string
     | null;
@@ -146,6 +153,11 @@ export type NewEvent = {
 
   dress_code?: string;
 
+  // Omit to leave the column untouched: create/update only send it when
+  // present, so saving an event never references contact_phone before
+  // migration 202609040004 has been applied.
+  contact_phone?: string;
+
   cover_image_url?:
     | string
     | null;
@@ -186,6 +198,11 @@ export type UpdateEvent = {
 
   dress_code?: string;
 
+  // Omit to leave the column untouched: create/update only send it when
+  // present, so saving an event never references contact_phone before
+  // migration 202609040004 has been applied.
+  contact_phone?: string;
+
   cover_image_url?:
     | string
     | null;
@@ -215,6 +232,7 @@ const INVITATION_TEMPLATES: InvitationTemplate[] = [
   "heritage_pattern",
   "garden_elegance",
   "rose_garden",
+  "gilded_border",
   "custom",
 ];
 
@@ -647,6 +665,15 @@ export async function createEvent(
           event.dress_code
         ),
 
+      ...(event.contact_phone !== undefined
+        ? {
+            contact_phone:
+              normalizeOptionalText(
+                event.contact_phone
+              ),
+          }
+        : {}),
+
       cover_image_url:
         event.cover_image_url ??
         null,
@@ -894,6 +921,15 @@ export async function updateEvent(
         normalizeOptionalText(
           event.dress_code
         ),
+
+      ...(event.contact_phone !== undefined
+        ? {
+            contact_phone:
+              normalizeOptionalText(
+                event.contact_phone
+              ),
+          }
+        : {}),
 
       cover_image_url:
         event.cover_image_url ??

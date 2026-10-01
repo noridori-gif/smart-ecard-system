@@ -11,6 +11,13 @@ import PremiumWhatsAppCard, {
   whatsAppCardTotalHeight,
 } from "./PremiumWhatsAppCard";
 import { formatPassIdForDisplay } from "./passId";
+import GildedBorderCard, {
+  GILDED_BORDER_CARD_HEIGHT,
+  gildedHexagonSvg,
+  gildedPhotoOverlaySvg,
+  gildedTextureSvg,
+  type GildedBorderAssets,
+} from "./GildedBorderCard";
 import { DEFAULT_CUSTOM_LAYOUT } from "@/services/invitationLayoutService";
 
 import type { PublicInvitation } from "@/services/invitationService";
@@ -25,6 +32,7 @@ export type WhatsAppCardTemplate =
   | "heritage_pattern"
   | "garden_elegance"
   | "rose_garden"
+  | "gilded_border"
   | "custom";
 
 export type WhatsAppCardData = {
@@ -48,6 +56,10 @@ export type WhatsAppCardData = {
   coverImageUrl: string | null;
   customBackgroundUrl: string | null;
   customLayoutElements: CustomLayoutElement[] | null;
+  contactPhone: string;
+  // Raw "YYYY-MM-DD" (date above is already formatted for display);
+  // gilded_border derives its weekday / big day / short month from this.
+  eventDateIso: string;
   primary: string;
   secondary: string;
   accent: string;
@@ -122,6 +134,18 @@ const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
   { name: "Great Vibes", data: loadRoseGardenFont("GreatVibes-Regular.woff"), weight: 400, style: "normal" },
   { name: "Inter", data: loadRoseGardenFont("Inter-Bold.woff"), weight: 700, style: "normal" },
 ];
+// Gilded Border's floral art -- drawn in code (no third-party art), see
+// scripts/build-gilded-border-assets.mjs. Same load-once pattern as the
+// Rose Garden corners above.
+const GILDED_BORDER_ASSET_DIR = join(process.cwd(), "public", "invitation-assets", "gilded-border");
+function loadGildedBorderAsset(file: string) {
+  return `data:image/png;base64,${readFileSync(join(GILDED_BORDER_ASSET_DIR, file)).toString("base64")}`;
+}
+const GILDED_BORDER_FLORALS = {
+  flourish: loadGildedBorderAsset("flourish.png"),
+  hexAccentTopLeft: loadGildedBorderAsset("hex-tl.png"),
+  hexAccentBottomRight: loadGildedBorderAsset("hex-br.png"),
+};
 // Embedded (not left as a plain public URL) for the same reason as the
 // Rose Garden fonts above -- next/og's ImageResponse renders through this
 // module's server-only path, and embedding avoids a live network fetch
@@ -330,6 +354,7 @@ export function normalizeWhatsAppCardTemplate(
     template === "heritage_pattern" ||
     template === "garden_elegance" ||
     template === "rose_garden" ||
+    template === "gilded_border" ||
     template === "custom"
   ) {
     return template;
@@ -370,6 +395,8 @@ export function getWhatsAppCardData(
     coverImageUrl: invitation.cover_image_url?.trim() || null,
     customBackgroundUrl: invitation.custom_invitation_background_url?.trim() || null,
     customLayoutElements: invitation.custom_layout_elements ?? null,
+    contactPhone: cleanText(invitation.contact_phone, ""),
+    eventDateIso: invitation.event_date ?? "",
     primary: safeColor(invitation.theme_primary_color, "#145A46"),
     secondary: safeColor(invitation.theme_secondary_color, "#FFF8EC"),
     accent: safeColor(invitation.theme_accent_color, "#C9A962"),
@@ -614,6 +641,10 @@ export async function createWhatsAppInvitationCard(
 
   if (template === "rose_garden") {
     return createRoseGardenInvitationCard(data);
+  }
+
+  if (template === "gilded_border") {
+    return createGildedBorderInvitationCard(data);
   }
 
   const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
@@ -1165,6 +1196,54 @@ async function createRoseGardenInvitationCard(data: WhatsAppCardData) {
   }
 }
 
+// Gilded Border's texture, photo edge and hexagon never change, so they're
+// rasterised once per server instance and reused (same PNG-over-photo
+// approach as the side_by_side blend overlay above).
+let gildedBackdrops: Promise<Pick<GildedBorderAssets, "texture" | "photoOverlay" | "hexagon">> | null = null;
+function getGildedBackdrops() {
+  const rasterise = async (svg: string) =>
+    `data:image/png;base64,${(await sharp(Buffer.from(svg)).png().toBuffer()).toString("base64")}`;
+  gildedBackdrops ??= Promise.all([
+    rasterise(gildedTextureSvg()),
+    rasterise(gildedPhotoOverlaySvg()),
+    rasterise(gildedHexagonSvg()),
+  ])
+    .then(([texture, photoOverlay, hexagon]) => ({ texture, photoOverlay, hexagon }))
+    .catch((error) => {
+      gildedBackdrops = null;
+      throw error;
+    });
+  return gildedBackdrops;
+}
+
+async function createGildedBorderInvitationCard(data: WhatsAppCardData) {
+  const cover = await fetchCoverImageDataUrl(data.coverImageUrl);
+  const qrCodeDataUrl = await buildQrCodeDataUrl(data.qrToken);
+  const normalizedData = renderData(
+    data,
+    cover?.dataUrl ?? null,
+    cover?.bannerHeight ?? DEFAULT_BANNER_HEIGHT,
+    qrCodeDataUrl
+  );
+
+  try {
+    return jpegResponse(
+      await materializeJpeg(
+        <GildedBorderCard data={normalizedData} assets={{ ...GILDED_BORDER_FLORALS, ...(await getGildedBackdrops()) }} />,
+        CARD_WIDTH,
+        GILDED_BORDER_CARD_HEIGHT,
+        ROSE_GARDEN_FONTS
+      )
+    );
+  } catch (error) {
+    console.error("Gilded Border card render failed:", error);
+
+    return jpegResponse(
+      await materializeJpeg(<SafeFallbackCard data={normalizedData} />)
+    );
+  }
+}
+
 export async function createCompactWhatsAppInvitationCard(
   data: WhatsAppCardData
 ) {
@@ -1181,7 +1260,7 @@ export async function createCompactWhatsAppInvitationCard(
 }
 
 function renderWhatsAppCard(
-  template: Exclude<WhatsAppCardTemplate, "custom" | "rose_garden">,
+  template: Exclude<WhatsAppCardTemplate, "custom" | "rose_garden" | "gilded_border">,
   data: RenderData,
   sidePhotoBlendOverlayUrl?: string
 ): ReactElement {

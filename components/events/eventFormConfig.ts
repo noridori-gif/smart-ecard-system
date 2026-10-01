@@ -16,6 +16,7 @@ export const EVENT_TEMPLATE_OPTIONS: EventTemplateOption[] = [
   { value: "heritage_pattern", name: "Heritage Pattern", icon: "HP", category: "Classic", description: { en: "A bold cultural design with a geometric border pattern.", sw: "Design ya kitamaduni yenye mpaka wa geometric pattern." } },
   { value: "garden_elegance", name: "Garden Elegance", icon: "GA", category: "Modern", description: { en: "Forest green leaf sprays, deep red berries and blush pink blooms in an ivory frame.", sw: "Matawi ya kijani ya msituni, matunda mekundu na maua ya waridi ndani ya mpaka wa ivory." } },
   { value: "rose_garden", name: "Rose Garden", icon: "RG", category: "Premium", description: { en: "Photographic green silk, red and pink roses, and ribbon framing an arched cover photo on ivory.", sw: "Hariri ya kijani, waridi nyekundu na za pinki, na utepe unaozunguka picha ya arch juu ya ivory." } },
+  { value: "gilded_border", name: "Gilded Border", icon: "GB", category: "Premium", description: { en: "Navy card with the couple photo top-right, a hexagon monogram, burnt-orange and cream florals, and a QR pass card.", sw: "Kadi ya navy yenye picha ya wanandoa juu-kulia, monogram ya hexagon, maua ya machungwa na cream, na kadi ya QR." } },
   { value: "custom", name: "Custom Design", icon: "CD", category: "Custom", description: { en: "Upload your own fully-designed invitation image and position guest name, venue, date/time and QR code on it.", sw: "Pakia muundo wako mwenyewe wa mwaliko na weka jina la mgeni, eneo, tarehe/muda na QR code juu yake." } },
 ];
 

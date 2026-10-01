@@ -33,5 +33,10 @@ export const TEMPLATE_COMPONENTS: Record<InvitationTemplate, ComponentType<Invit
   // corner assets (silk/roses/ribbon) only exist in the WhatsApp card
   // renderer today. Reusing the closest match for the public web page.
   rose_garden: BotanicalRomance,
+  // gilded_border is likewise a WhatsApp-card-only design (vector floral
+  // corners in lib/GildedBorderCard.tsx). Mapped to the default template --
+  // exactly what /invite/[token] already falls back to for an unknown
+  // template -- so the public web page is unchanged by adding it.
+  gilded_border: RoyalPortrait,
   custom: Custom,
 };
