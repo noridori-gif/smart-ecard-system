@@ -677,10 +677,12 @@ export async function POST(
         failed_at: status === "failed" ? statusTime : undefined,
         error_message: status === "failed" ? getFailureMessage(statusRecord.errors) : null,
       };
-      const [{ data: updatedReminder, error: reminderStatusError }, { error: summaryStatusError }, { error: meetingStatusError }] = await Promise.all([
+      const [{ data: updatedReminder, error: reminderStatusError }, { error: summaryStatusError }, { error: meetingStatusError }, { error: saveTheDateStatusError }] = await Promise.all([
         supabase.from("pledge_reminders").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp").select("id,event_id,pledge_id,retry_count").maybeSingle(),
         supabase.from("finance_automation_delivery_logs").update(financialUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp"),
         supabase.from("meeting_invitation_deliveries").update(meetingUpdate).eq("provider_message_id",messageId).eq("channel","whatsapp"),
+        // Same receipt shape as meetings. A 'failed' receipt makes the row retryable in the tab.
+        supabase.from("save_the_date_deliveries").update(meetingUpdate).eq("provider_message_id", messageId).eq("channel", "whatsapp"),
       ]);
       if (status === "failed" && updatedReminder) {
         const transient = statusRecord.errors?.some((item) => [130429, 131000, 131016].includes(item.code ?? 0)) ?? false;
@@ -698,13 +700,14 @@ export async function POST(
           metadata: { channel: "whatsapp", reminder_id: updatedReminder.id, source: "meta_webhook" },
         });
       }
-      if (reminderStatusError || summaryStatusError || meetingStatusError) {
+      if (reminderStatusError || summaryStatusError || meetingStatusError || saveTheDateStatusError) {
         console.error("Financial WhatsApp status update failed:", {
           messageId,
           status,
           reminderError: reminderStatusError?.message,
           summaryError: summaryStatusError?.message,
           meetingError: meetingStatusError?.message,
+          saveTheDateError: saveTheDateStatusError?.message,
         });
       }
 

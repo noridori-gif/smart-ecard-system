@@ -34,7 +34,7 @@ type PledgeRow = {
 type DeliveryRow = {
   id: number;
   pledge_id: number;
-  delivery_status: "processing" | "sent" | "failed";
+  delivery_status: "processing" | "sent" | "delivered" | "read" | "failed";
   channel: "whatsapp" | "sms" | null;
   error_message: string | null;
   sent_at: string | null;
@@ -133,7 +133,8 @@ export async function previewSaveTheDate(db: SupabaseClient, eventId: number): P
     const rule = saveTheDateEligibility(pledge, settings);
     const delivery = deliveries.get(pledge.id) ?? null;
     let reason: SaveTheDateSkipReason | null = rule.eligible ? null : rule.reason;
-    if (!reason && delivery?.delivery_status === "sent") reason = "already_sent";
+    // delivered/read come from WhatsApp receipts (webhook) and count as sent.
+    if (!reason && (delivery?.delivery_status === "sent" || delivery?.delivery_status === "delivered" || delivery?.delivery_status === "read")) reason = "already_sent";
     else if (!reason && delivery?.delivery_status === "processing") reason = "in_progress";
     else if (!reason && !phone) reason = "missing_phone";
     return {

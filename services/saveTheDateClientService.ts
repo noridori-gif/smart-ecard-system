@@ -18,7 +18,7 @@ export type SaveTheDateRow = {
   qualifies: boolean;
   sendable: boolean;
   reason: SaveTheDateSkipReason | null;
-  deliveryStatus: "processing" | "sent" | "failed" | null;
+  deliveryStatus: "processing" | "sent" | "delivered" | "read" | "failed" | null;
   deliveryChannel: "whatsapp" | "sms" | null;
   deliveryError: string | null;
   sentAt: string | null;

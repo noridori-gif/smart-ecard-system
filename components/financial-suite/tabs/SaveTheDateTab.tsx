@@ -28,8 +28,10 @@ const REASON_LABEL: Record<SaveTheDateSkipReason, string> = {
 };
 
 function StatusBadge({ row }: { row: SaveTheDateRow }) {
-  if (row.deliveryStatus === "sent") {
-    return <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">Imetumwa · {row.deliveryChannel === "whatsapp" ? "WhatsApp" : "SMS"}</span>;
+  if (row.deliveryStatus === "sent" || row.deliveryStatus === "delivered" || row.deliveryStatus === "read") {
+    // delivered/read are WhatsApp receipts from the webhook; SMS stays at "Imetumwa".
+    const label = row.deliveryStatus === "read" ? "Imesomwa" : row.deliveryStatus === "delivered" ? "Imefika" : "Imetumwa";
+    return <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{label} · {row.deliveryChannel === "whatsapp" ? "WhatsApp" : "SMS"}</span>;
   }
   if (row.deliveryStatus === "failed" && row.sendable) {
     return <span title={row.deliveryError ?? undefined} className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700">Imeshindikana — jaribu tena</span>;
@@ -92,7 +94,7 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   const sendable = qualifying.filter((row) => row.sendable);
   const counts = {
     qualifying: qualifying.length,
-    sent: qualifying.filter((row) => row.deliveryStatus === "sent").length,
+    sent: qualifying.filter((row) => row.reason === "already_sent").length,
     noPhone: qualifying.filter((row) => row.reason === "missing_phone").length,
     waiting: sendable.length,
   };
