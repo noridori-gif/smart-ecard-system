@@ -177,9 +177,9 @@ export default function CheckInPage() {
       setDuplicateAttempts((value) => value + 1);
       pushScanLog({ status: "already_checked_in", guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
     }
-    if (verification.status === "invalid") {
+    if (verification.status === "invalid" || verification.status === "wrong_event") {
       setRejectedPasses((value) => value + 1);
-      pushScanLog({ status: "invalid", guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
+      pushScanLog({ status: verification.status, guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
     }
     if ((verification.status === "checked_in" || verification.status === "partially_checked_in") && verification.guest) {
       setGuests((current) => verification.guest?.event_id === selectedEventId
@@ -193,7 +193,7 @@ export default function CheckInPage() {
     if (!cleanedToken || scanLockedRef.current) return;
     scanLockedRef.current = true;
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("qr");
-    try { applyVerification(await checkInGuest(cleanedToken), "qr"); }
+    try { applyVerification(await checkInGuest(cleanedToken, selectedEventId), "qr"); }
     catch (error) {
       const message = error instanceof Error ? error.message : "QR verification failed.";
       setErrorMessage(message);
@@ -201,7 +201,7 @@ export default function CheckInPage() {
       pushScanLog({ status: "invalid", guestName: null, passId: null, detail: message });
       scanLockedRef.current = false;
     } finally { setIsChecking(false); }
-  }, [applyVerification, pushScanLog]);
+  }, [applyVerification, pushScanLog, selectedEventId]);
 
   const handleRetryCamera = useCallback(() => {
     setScannerRetryToken((value) => value + 1);
@@ -346,7 +346,7 @@ export default function CheckInPage() {
     setEventPassId(normalizedPassId);
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("event_pass");
     scanLockedRef.current = true;
-    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId), "event_pass", normalizedPassId); }
+    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId, selectedEventId), "event_pass", normalizedPassId); }
     catch (error) {
       const message = error instanceof Error ? error.message : "Event Pass ID verification failed.";
       setErrorMessage(message);

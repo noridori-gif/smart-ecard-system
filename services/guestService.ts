@@ -42,6 +42,7 @@ export type CheckInResult = {
     | "checked_in"
     | "partially_checked_in"
     | "already_checked_in"
+    | "wrong_event"
     | "invalid";
   message: string;
   guest: Guest | null;
@@ -114,6 +115,7 @@ function normalizeCheckInResult(
     "checked_in",
     "partially_checked_in",
     "already_checked_in",
+    "wrong_event",
     "invalid",
   ] as const;
 
@@ -124,10 +126,7 @@ function normalizeCheckInResult(
         (typeof validStatuses)[number]
     )
       ? (result.status as
-          | "checked_in"
-          | "partially_checked_in"
-          | "already_checked_in"
-          | "invalid")
+          (typeof validStatuses)[number])
       : "invalid";
 
   return {
@@ -149,6 +148,7 @@ async function secureCheckIn(
   values: {
     qrToken?: string;
     eventPassId?: string;
+    expectedEventId: number | null;
   }
 ): Promise<CheckInResult> {
   const qrToken =
@@ -176,6 +176,10 @@ async function secureCheckIn(
         qr_token_input: qrToken,
         event_pass_id_input:
           eventPassId,
+        // A pass that belongs to any other event is rejected
+        // with status "wrong_event".
+        expected_event_id:
+          values.expectedEventId,
       }
     );
 
@@ -401,18 +405,22 @@ export async function getGuestByEventPassId(
 }
 
 export async function checkInGuest(
-  qrToken: string
+  qrToken: string,
+  expectedEventId: number | null
 ): Promise<CheckInResult> {
   return secureCheckIn({
     qrToken,
+    expectedEventId,
   });
 }
 
 export async function checkInGuestByEventPassId(
-  eventPassId: string
+  eventPassId: string,
+  expectedEventId: number | null
 ): Promise<CheckInResult> {
   return secureCheckIn({
     eventPassId,
+    expectedEventId,
   });
 }
 

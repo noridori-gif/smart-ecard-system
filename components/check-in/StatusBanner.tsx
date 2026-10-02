@@ -32,9 +32,14 @@ export default function StatusBanner({
       ? { title: "Partially Checked In", icon: "clock" as const, shell: "border-sky-200 bg-sky-50", accent: "text-sky-700", avatar: "bg-sky-100 text-sky-800", pill: "bg-sky-600 text-white", pillLabel: "Partial" }
       : state === "already_checked_in"
         ? { title: "Fully Checked In", icon: "warning" as const, shell: "border-amber-200 bg-amber-50", accent: "text-amber-700", avatar: "bg-amber-100 text-amber-800", pill: "bg-amber-600 text-white", pillLabel: "Already In" }
-        : { title: "Invalid Event Pass", icon: "error" as const, shell: "border-red-200 bg-red-50", accent: "text-red-700", avatar: "bg-red-100 text-red-800", pill: "bg-red-600 text-white", pillLabel: "Rejected" };
+        : state === "wrong_event"
+          ? { title: "Wrong Event", icon: "calendar" as const, shell: "border-violet-200 bg-violet-50", accent: "text-violet-700", avatar: "bg-violet-100 text-violet-800", pill: "bg-violet-600 text-white", pillLabel: "Other Event" }
+          : { title: "Invalid Event Pass", icon: "error" as const, shell: "border-red-200 bg-red-50", accent: "text-red-700", avatar: "bg-red-100 text-red-800", pill: "bg-red-600 text-white", pillLabel: "Rejected" };
 
   const guest = result?.guest ?? null;
+  // A wrong-event guest's check-in time/count belong to the other event, so they're hidden
+  // and the message (which names that event) is shown instead.
+  const isWrongEvent = state === "wrong_event";
   const remainingGuests = guest ? guest.allowed_guests - guest.checked_in_count : 0;
 
   return (
@@ -63,8 +68,8 @@ export default function StatusBanner({
                   <span className="font-mono text-xs font-bold text-slate-500">{guest.event_pass_id ? formatPassIdForDisplay(guest.event_pass_id) : "Pass ID not available"}</span>
                 </p>
               )}
-              {!guest && (errorMessage || result?.message) && <p className="mt-1 text-sm text-slate-600">{errorMessage || result?.message}</p>}
-              {guest && guest.allowed_guests > 1 && (
+              {(!guest || isWrongEvent) && (errorMessage || result?.message) && <p className={`mt-1 text-sm ${isWrongEvent ? `font-bold ${config.accent}` : "text-slate-600"}`}>{errorMessage || result?.message}</p>}
+              {guest && !isWrongEvent && guest.allowed_guests > 1 && (
                 <p className={`mt-1.5 text-sm font-bold ${config.accent}`}>
                   Checked in: {guest.checked_in_count} of {guest.allowed_guests}
                   {state === "partially_checked_in" && ` — ${remainingGuests} more guest${remainingGuests === 1 ? "" : "s"} expected`}
@@ -79,7 +84,7 @@ export default function StatusBanner({
                 <CheckInIcon name={config.icon} className="h-3.5 w-3.5" />
                 {config.pillLabel}
               </span>
-              {guest && <span className="text-xs font-semibold text-slate-500">{formatTime(guest.checked_in_at)}</span>}
+              {guest && !isWrongEvent && <span className="text-xs font-semibold text-slate-500">{formatTime(guest.checked_in_at)}</span>}
             </div>
             <Button variant="dark" size="sm" onClick={onNext}>{state === "invalid" ? "Try Again" : "Next Guest"}</Button>
           </div>
