@@ -138,7 +138,7 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   };
   const modeAvailable = (value: SaveTheDateChannelMode) =>
     value === "whatsapp" ? Boolean(preview?.whatsappConfigured) : value === "sms" ? Boolean(preview?.smsConfigured) : Boolean(preview?.whatsappConfigured && preview?.smsConfigured);
-  const canSend = modeAvailable(mode);
+  const canSend = modeAvailable(mode) && !preview?.sendBlocked;
 
   function estimateText() {
     const parts: string[] = [];
@@ -211,7 +211,11 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
               </label>
             )}
             {mode === "both" && <p className="mt-2 text-sm text-slate-600">Kila mpokeaji anapata WhatsApp <b>na</b> SMS (jumbe mbili). Mwenye namba sahihi kwa njia moja tu anapata hiyo moja.</p>}
-            {!canSend && <p className="mt-2 text-sm font-semibold text-red-700">Njia hii haijasetiwa (WhatsApp template au BEEM SMS).</p>}
+            {preview?.sendBlocked ? (
+              <p role="alert" className="mt-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">Kutuma Save the Date kumefungwa kwa event hii kwa muda — uthibitisho wa WhatsApp/SMS bado unaendelea.</p>
+            ) : !canSend ? (
+              <p className="mt-2 text-sm font-semibold text-red-700">Njia hii haijasetiwa (WhatsApp template au BEEM SMS).</p>
+            ) : null}
           </div>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[["Wanaostahili", counts.qualifying], ["Wametumiwa", counts.sent], ["Wanasubiri", counts.waiting], [`Hawana namba sahihi ya ${MODE_NOUN[mode]}`, counts.noPhone]].map(([label, value]) => (

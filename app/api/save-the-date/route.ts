@@ -23,6 +23,17 @@ function serviceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 }
 
+/**
+ * Temporary safety lock: when SAVE_THE_DATE_SEND_ALLOWED_EVENT_IDS is set (comma-separated event
+ * ids), sending is refused for every other event. Used while the WhatsApp/SMS channel modes are
+ * verified on a test event, so nothing reaches real guests by accident. Unset = no lock.
+ */
+function sendAllowedForEvent(eventId: number) {
+  const allowed = process.env.SAVE_THE_DATE_SEND_ALLOWED_EVENT_IDS?.trim();
+  if (!allowed) return true;
+  return allowed.split(",").map((id) => id.trim()).includes(String(eventId));
+}
+
 function idList(value: unknown) {
   return Array.isArray(value) ? [...new Set(value.map(Number).filter((item) => Number.isInteger(item) && item > 0))] : [];
 }
@@ -56,7 +67,9 @@ export async function POST(request: Request) {
 
     const siteOrigin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, "");
 
-    if (action === "preview") return reply(await previewSaveTheDate(db, eventId, siteOrigin));
+    const sendBlocked = !sendAllowedForEvent(eventId);
+
+    if (action === "preview") return reply({ ...(await previewSaveTheDate(db, eventId, siteOrigin)), sendBlocked });
 
     if (action === "set_variant") {
       await setSaveTheDateVariant(db, eventId, normalizeVariant(body?.variant));
@@ -80,6 +93,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "send") {
+      if (sendBlocked) return reply({ error: "Kutuma Save the Date kumefungwa kwa event hii kwa muda (uthibitisho wa production bado haujakamilika)." }, 423);
       const pledgeIds = idList(body?.pledgeIds);
       if (!pledgeIds.length) return reply({ error: "Chagua angalau mchangiaji mmoja." }, 400);
       if (body?.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
