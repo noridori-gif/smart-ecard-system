@@ -292,8 +292,8 @@ export default function GuestsPage() {
       // manual-entry flows use, so this is the only code path that ever
       // mutates check-in state — it's what keeps checked_in_count honest.
       const verification = guest.event_pass_id
-        ? await checkInGuestByEventPassId(guest.event_pass_id, guest.event_id)
-        : await checkInGuest(guest.qr_token, guest.event_id);
+        ? await checkInGuestByEventPassId(guest.event_pass_id, guest.event_id, "guest_list")
+        : await checkInGuest(guest.qr_token, guest.event_id, "guest_list");
 
       if (verification.status === "invalid" || verification.status === "wrong_event" || !verification.guest) {
         showNotification(

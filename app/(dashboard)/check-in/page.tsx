@@ -28,7 +28,7 @@ import { getPledgesForEvent, type FinancialPledge } from "@/services/financialSu
 import { classifyContribution, getContributorGuestSettings, type ContributorGuestSettings } from "@/services/contributorGuestService";
 import { getCurrentUserProfile, type CurrentUserProfile } from "@/services/profileService";
 
-type CheckInMethod = "qr" | "event_pass";
+type CheckInMethod = "qr" | "event_pass" | "name_search";
 type SecondaryTab = "activity" | "stats";
 type FacingMode = "environment" | "user";
 
@@ -95,6 +95,7 @@ export default function CheckInPage() {
   // fully released its stream -- the next start() awaits this so a retry or event
   // switch can never race a still-closing track (a common source of NotReadableError).
   const cameraTeardownRef = useRef<Promise<void>>(Promise.resolve());
+  const statusBannerRef = useRef<HTMLDivElement | null>(null);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -181,7 +182,9 @@ export default function CheckInPage() {
       setRejectedPasses((value) => value + 1);
       pushScanLog({ status: verification.status, guestName: verification.guest?.full_name ?? null, passId: verification.guest?.event_pass_id ?? rawInput ?? null, detail: verification.message });
     }
-    if ((verification.status === "checked_in" || verification.status === "partially_checked_in") && verification.guest) {
+    // already_checked_in is included so a row another scanner checked in refreshes here too
+    // (the name-search list would otherwise keep offering its Check in button).
+    if ((verification.status === "checked_in" || verification.status === "partially_checked_in" || verification.status === "already_checked_in") && verification.guest) {
       setGuests((current) => verification.guest?.event_id === selectedEventId
         ? current.map((guest) => guest.id === verification.guest?.id ? verification.guest : guest)
         : current);
@@ -193,7 +196,7 @@ export default function CheckInPage() {
     if (!cleanedToken || scanLockedRef.current) return;
     scanLockedRef.current = true;
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("qr");
-    try { applyVerification(await checkInGuest(cleanedToken, selectedEventId), "qr"); }
+    try { applyVerification(await checkInGuest(cleanedToken, selectedEventId, "qr"), "qr"); }
     catch (error) {
       const message = error instanceof Error ? error.message : "QR verification failed.";
       setErrorMessage(message);
@@ -346,7 +349,7 @@ export default function CheckInPage() {
     setEventPassId(normalizedPassId);
     setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("event_pass");
     scanLockedRef.current = true;
-    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId, selectedEventId), "event_pass", normalizedPassId); }
+    try { applyVerification(await checkInGuestByEventPassId(normalizedPassId, selectedEventId, "event_pass"), "event_pass", normalizedPassId); }
     catch (error) {
       const message = error instanceof Error ? error.message : "Event Pass ID verification failed.";
       setErrorMessage(message);
@@ -355,6 +358,23 @@ export default function CheckInPage() {
       scanLockedRef.current = false;
     } finally { setIsChecking(false); }
   }
+
+  // Name search picks a guest from this event's loaded list, then checks in through the same RPC
+  // (and the same expected_event_id guard) as QR -- qr_token is used because every guest has one,
+  // unlike event_pass_id. The banner sits at the top of the page, so bring it into view.
+  const handleNameCheckIn = useCallback(async (guest: Guest) => {
+    setIsChecking(true); setErrorMessage(""); setResult(null); setCheckInMethod("name_search");
+    scanLockedRef.current = true;
+    statusBannerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    try { applyVerification(await checkInGuest(guest.qr_token, selectedEventId, "name_search"), "name_search", guest.event_pass_id ?? undefined); }
+    catch (error) {
+      const message = error instanceof Error ? error.message : "Check-in failed.";
+      setErrorMessage(message);
+      setRejectedPasses((value) => value + 1);
+      pushScanLog({ status: "invalid", guestName: guest.full_name, passId: guest.event_pass_id, detail: message });
+      scanLockedRef.current = false;
+    } finally { setIsChecking(false); }
+  }, [applyVerification, pushScanLog, selectedEventId]);
 
   function handleNextGuest() {
     setEventPassId(""); setResult(null); setErrorMessage(""); setCheckInMethod(null); scanLockedRef.current = false;
@@ -386,22 +406,27 @@ export default function CheckInPage() {
   // Each bucket tracks pass/card count (for "how many passes were issued") separately
   // from capacity and checked-in headcount (for "how many people"), since a Double
   // pass can now be partially checked in — 1 of its 2 allowed guests present.
-  const cardTypeStats = useMemo(() => {
-    const classificationByGuestId = new Map<number, "single" | "double">();
+  const classificationByGuestId = useMemo(() => {
+    const classifications = new Map<number, "single" | "double">();
     if (guestEligibilitySettings) {
       for (const pledge of pledges) {
         if (pledge.calculated_status === "cancelled" || pledge.guest_id === null) continue;
         const classification = classifyContribution(pledge, guestEligibilitySettings);
         if (classification === "single" || classification === "double") {
-          classificationByGuestId.set(pledge.guest_id, classification);
+          classifications.set(pledge.guest_id, classification);
         }
       }
     }
+    return classifications;
+  }, [pledges, guestEligibilitySettings]);
+  const cardTypeOf = useCallback((guest: Guest) => classificationByGuestId.get(guest.id)
+    ?? (guest.allowed_guests === 1 ? "single" : guest.allowed_guests === 2 ? "double" : null), [classificationByGuestId]);
+
+  const cardTypeStats = useMemo(() => {
     const single = { passCount: 0, capacity: 0, checkedIn: 0 };
     const double = { passCount: 0, capacity: 0, checkedIn: 0 };
     for (const guest of guests) {
-      const type = classificationByGuestId.get(guest.id)
-        ?? (guest.allowed_guests === 1 ? "single" : guest.allowed_guests === 2 ? "double" : null);
+      const type = cardTypeOf(guest);
       if (!type) continue;
       const bucket = type === "single" ? single : double;
       bucket.passCount += 1;
@@ -409,7 +434,7 @@ export default function CheckInPage() {
       bucket.checkedIn += guest.checked_in_count;
     }
     return { single, double };
-  }, [guests, pledges, guestEligibilitySettings]);
+  }, [guests, cardTypeOf]);
 
   const metrics = useMemo<AttendanceMetrics>(() => {
     const invitedGuests = guests.reduce((sum, guest) => sum + guest.allowed_guests, 0);
@@ -508,7 +533,9 @@ export default function CheckInPage() {
         <div role="status" className="sep-card p-5 text-sm text-slate-600">Loading live attendance dashboard…</div>
       ) : (
         <>
-          <StatusBanner checking={isChecking} result={result} errorMessage={errorMessage} onNext={handleNextGuest} />
+          <div ref={statusBannerRef} className="scroll-mt-4">
+            <StatusBanner checking={isChecking} result={result} errorMessage={errorMessage} onNext={handleNextGuest} />
+          </div>
 
           <StatStrip
             totalGuests={classifiedTotalGuests}
@@ -540,14 +567,23 @@ export default function CheckInPage() {
           >
             <span className="flex items-center gap-3 text-sm font-semibold text-slate-700">
               <CheckInIcon name="pass" className="h-5 w-5 text-slate-500" />
-              {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Event Pass ID manually"}
+              {showManualEntry ? "Hide manual entry" : "Trouble scanning? Enter the Pass ID or search by name"}
             </span>
             <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${showManualEntry ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
           </button>
 
           {showManualEntry && (
             <div id="manual-entry-panel">
-              <ManualEntryPanel value={eventPassId} checking={isChecking && checkInMethod === "event_pass"} onChange={setEventPassId} onSubmit={handleManualCheckIn} />
+              <ManualEntryPanel
+                value={eventPassId}
+                checking={isChecking && checkInMethod === "event_pass"}
+                onChange={setEventPassId}
+                onSubmit={handleManualCheckIn}
+                guests={guests}
+                cardTypeOf={cardTypeOf}
+                nameSearchChecking={isChecking}
+                onNameCheckIn={handleNameCheckIn}
+              />
             </div>
           )}
 

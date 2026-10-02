@@ -36,6 +36,13 @@ export type Guest = {
   created_at: string;
 };
 
+// How a check-in was made — recorded by the RPC in guest_check_in_log.
+export type CheckInMethod =
+  | "qr"
+  | "event_pass"
+  | "name_search"
+  | "guest_list";
+
 export type CheckInResult = {
   success: boolean;
   status:
@@ -149,6 +156,7 @@ async function secureCheckIn(
     qrToken?: string;
     eventPassId?: string;
     expectedEventId: number | null;
+    method: CheckInMethod;
   }
 ): Promise<CheckInResult> {
   const qrToken =
@@ -180,6 +188,8 @@ async function secureCheckIn(
         // with status "wrong_event".
         expected_event_id:
           values.expectedEventId,
+        check_in_method:
+          values.method,
       }
     );
 
@@ -406,21 +416,25 @@ export async function getGuestByEventPassId(
 
 export async function checkInGuest(
   qrToken: string,
-  expectedEventId: number | null
+  expectedEventId: number | null,
+  method: CheckInMethod
 ): Promise<CheckInResult> {
   return secureCheckIn({
     qrToken,
     expectedEventId,
+    method,
   });
 }
 
 export async function checkInGuestByEventPassId(
   eventPassId: string,
-  expectedEventId: number | null
+  expectedEventId: number | null,
+  method: CheckInMethod
 ): Promise<CheckInResult> {
   return secureCheckIn({
     eventPassId,
     expectedEventId,
+    method,
   });
 }
 
