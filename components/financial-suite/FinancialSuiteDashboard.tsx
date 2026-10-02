@@ -16,6 +16,7 @@ import FinancialRemindersTab from "./tabs/FinancialRemindersTab";
 import FinancialReportsTab from "./tabs/FinancialReportsTab";
 import ContributorEligibilityDashboard from "./tabs/ContributorEligibilityDashboard";
 import InvitationEligibilityQueue from "./tabs/InvitationEligibilityQueue";
+import SaveTheDateTab from "./tabs/SaveTheDateTab";
 import ReceiptDialog from "./ReceiptDialog";
 import FinancialImportWizard from "./FinancialImportWizard";
 import ContributorGuestEligibilitySettings from "./ContributorGuestEligibilitySettings";
@@ -333,6 +334,15 @@ export default function FinancialSuiteDashboard({ eventId: eventIdParam, initial
           guests={data.guests}
           onRefresh={load}
         />
+      )}
+
+      {activeTab === "save_the_date" && (
+        <TabSection
+          title="Save the Date"
+          description="Send the Save the Date card to contributors who have completed their pledge, before the formal invitation."
+        >
+          <SaveTheDateTab eventId={eventId} />
+        </TabSection>
       )}
 
       {activeTab === "payments" && (

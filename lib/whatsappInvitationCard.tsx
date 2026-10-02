@@ -124,7 +124,7 @@ const ROSE_GARDEN_FONT_DIR = join(process.cwd(), "public", "invitation-assets", 
 function loadRoseGardenFont(file: string) {
   return readFileSync(join(ROSE_GARDEN_FONT_DIR, file));
 }
-type EmbeddedFont = {
+export type EmbeddedFont = {
   name: string;
   data: Buffer;
   weight: 400 | 700 | 900;
@@ -141,7 +141,7 @@ const ROSE_GARDEN_FONTS: EmbeddedFont[] = [
 // monogram, closing line) and Lato 400/700/900 (everything else). Same
 // bundled-WOFF, load-once approach as the Rose Garden fonts above (Google
 // Fonts, OFL licensed).
-const GILDED_BORDER_FONTS: EmbeddedFont[] = [
+export const GILDED_BORDER_FONTS: EmbeddedFont[] = [
   { name: "Kaushan Script", data: loadRoseGardenFont("KaushanScript-Regular.woff"), weight: 400, style: "normal" },
   { name: "Lato", data: loadRoseGardenFont("Lato-Regular.woff"), weight: 400, style: "normal" },
   { name: "Lato", data: loadRoseGardenFont("Lato-Bold.woff"), weight: 700, style: "normal" },
@@ -425,7 +425,7 @@ function isWebP(bytes: Uint8Array) {
   return hasRiffHeader && hasWebPHeader;
 }
 
-async function fetchCoverImageDataUrl(urlValue: string | null) {
+export async function fetchCoverImageDataUrl(urlValue: string | null) {
   if (!urlValue) {
     return null;
   }
@@ -583,7 +583,7 @@ async function materializePng(
  * is too slow / the file is too large) and stays well under WhatsApp's
  * 5MB media limit.
  */
-async function materializeJpeg(
+export async function materializeJpeg(
   element: ReactElement,
   width = CARD_WIDTH,
   height = CARD_HEIGHT,
@@ -600,7 +600,7 @@ async function materializeJpeg(
     .toBuffer();
 }
 
-function jpegResponse(buffer: Buffer) {
+export function jpegResponse(buffer: Buffer) {
   return new Response(new Uint8Array(buffer), {
     status: 200,
     headers: {

@@ -542,3 +542,53 @@ export async function sendGuestThankYouWhatsAppTemplate(
     acceptanceStatus: responseData.messages?.[0]?.message_status || "accepted",
   };
 }
+
+export type SaveTheDateWhatsAppInput = {
+  phoneNumber: string;
+  templateName: string;
+  languageCode: string;
+  cardImageUrl: string;
+  parameters: string[];
+};
+
+/**
+ * Sends the Save the Date template: the card as the IMAGE header plus body parameters. Same request
+ * shape as sendGuestThankYouWhatsAppTemplate with the header the invitation send also uses.
+ */
+export async function sendSaveTheDateWhatsAppTemplate(input: SaveTheDateWhatsAppInput) {
+  const accessToken = getRequiredEnvironmentVariable("WHATSAPP_ACCESS_TOKEN");
+  const phoneNumberId = getRequiredEnvironmentVariable("WHATSAPP_PHONE_NUMBER_ID");
+  const graphApiVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v23.0";
+  const recipientPhone = normalizeWhatsAppPhoneNumber(input.phoneNumber);
+
+  const response = await fetch(`https://graph.facebook.com/${graphApiVersion}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: recipientPhone,
+      type: "template",
+      template: {
+        name: input.templateName,
+        language: { code: input.languageCode },
+        components: [
+          { type: "header", parameters: [{ type: "image", image: { link: input.cardImageUrl } }] },
+          { type: "body", parameters: input.parameters.map((parameter) => ({ type: "text", text: parameter })) },
+        ],
+      },
+    }),
+    cache: "no-store",
+  });
+
+  const responseData = (await response.json()) as WhatsAppApiResponse;
+
+  if (!response.ok || responseData.error) {
+    throw new Error(`WhatsApp Cloud API (HTTP ${response.status}): ${getMetaApiError(responseData)}`);
+  }
+
+  const messageId = responseData.messages?.[0]?.id;
+  if (!messageId) throw new Error("WhatsApp Cloud API did not return a message ID.");
+
+  return { success: true as const, messageId, recipientPhone };
+}

@@ -180,7 +180,7 @@ const MONTHS = {
 };
 
 /** "2026-10-17" -> { weekday: "Jumamosi", day: "17", monthYear: "Okt 2026" }. */
-function dateParts(iso: string, language: "sw" | "en") {
+export function dateParts(iso: string, language: "sw" | "en") {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
   if (!match) return null;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
