@@ -1,12 +1,9 @@
 import { supabase } from "@/lib/supabase";
-import type { SaveTheDateVariant } from "@/lib/saveTheDateEligibility";
+import type { SaveTheDateIneligibleReason, SaveTheDateVariant } from "@/lib/saveTheDateEligibility";
+import type { SaveTheDateChannelMode, SaveTheDateChannelState } from "@/lib/saveTheDateChannels";
 
 // Types duplicated (not imported) from the server-only saveTheDateService.ts, same convention as
 // guestThankYouClientService.ts, so this client module never pulls in a "server-only" import.
-export type SaveTheDateSkipReason =
-  | "cancelled" | "not_completed" | "below_minimum" | "single_below_70k" | "double_below_100k"
-  | "missing_phone" | "already_sent" | "in_progress";
-
 export type SaveTheDateRow = {
   pledgeId: number;
   guestId: number | null;
@@ -16,13 +13,10 @@ export type SaveTheDateRow = {
   totalPaid: number;
   calculatedStatus: string;
   qualifies: boolean;
-  sendable: boolean;
-  reason: SaveTheDateSkipReason | null;
-  deliveryStatus: "processing" | "sent" | "delivered" | "read" | "failed" | null;
-  deliveryChannel: "whatsapp" | "sms" | null;
-  deliveryError: string | null;
-  sentAt: string | null;
-  cardToken: string | null;
+  ruleReason: SaveTheDateIneligibleReason | null;
+  whatsapp: SaveTheDateChannelState;
+  sms: SaveTheDateChannelState;
+  smsSegments: number;
 };
 
 export type SaveTheDatePreview = {
@@ -32,7 +26,7 @@ export type SaveTheDatePreview = {
   smsConfigured: boolean;
 };
 
-export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; failed: number; skipped: number; errors: string[] };
+export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; smsFallbacks: number; failed: number; skipped: number; errors: string[] };
 
 async function request(body: Record<string, unknown>) {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -64,6 +58,6 @@ export async function renderSaveTheDateCardPreview(eventId: number, variant: Sav
   return URL.createObjectURL(await response.blob());
 }
 
-export async function sendSaveTheDate(eventId: number, pledgeIds: number[]): Promise<SaveTheDateSendResult> {
-  return (await request({ action: "send", eventId, pledgeIds, confirmed: true })) as unknown as SaveTheDateSendResult;
+export async function sendSaveTheDate(eventId: number, pledgeIds: number[], mode: SaveTheDateChannelMode, smsFallback: boolean): Promise<SaveTheDateSendResult> {
+  return (await request({ action: "send", eventId, pledgeIds, mode, smsFallback, confirmed: true })) as unknown as SaveTheDateSendResult;
 }

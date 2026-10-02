@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { createSaveTheDateCard } from "@/lib/saveTheDateCardImage";
 import {
+  normalizeMode,
   normalizeVariant,
   previewSaveTheDate,
   sendSaveTheDate,
@@ -53,7 +54,9 @@ export async function POST(request: Request) {
 
     const action = body?.action;
 
-    if (action === "preview") return reply(await previewSaveTheDate(db, eventId));
+    const siteOrigin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, "");
+
+    if (action === "preview") return reply(await previewSaveTheDate(db, eventId, siteOrigin));
 
     if (action === "set_variant") {
       await setSaveTheDateVariant(db, eventId, normalizeVariant(body?.variant));
@@ -80,8 +83,8 @@ export async function POST(request: Request) {
       const pledgeIds = idList(body?.pledgeIds);
       if (!pledgeIds.length) return reply({ error: "Chagua angalau mchangiaji mmoja." }, 400);
       if (body?.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
-      const siteOrigin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, "");
-      return reply(await sendSaveTheDate(db, { eventId, pledgeIds, siteOrigin }, { userId: auth.user.id }));
+      // mode: whatsapp | sms | both. smsFallback only applies to whatsapp and is opt-in from the tab.
+      return reply(await sendSaveTheDate(db, { eventId, pledgeIds, siteOrigin, mode: normalizeMode(body?.mode), smsFallback: body?.smsFallback === true }, { userId: auth.user.id }));
     }
 
     return reply({ error: "Unsupported action." }, 400);

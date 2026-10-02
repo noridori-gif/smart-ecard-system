@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendBeemSms } from "@/services/beemSmsService";
-import { sendSaveTheDateWhatsAppTemplate } from "@/services/whatsappCloudService";
+import { normalizeBeemPhoneNumber, sendBeemSms } from "@/services/beemSmsService";
+import { normalizeWhatsAppPhoneNumber, sendSaveTheDateWhatsAppTemplate } from "@/services/whatsappCloudService";
 import { formatEventDate } from "@/services/invitationMessageService";
 import { getSaveTheDateWhatsAppTemplate } from "@/lib/saveTheDateConfig";
 import {
@@ -9,6 +9,15 @@ import {
   type SaveTheDateIneligibleReason,
   type SaveTheDateVariant,
 } from "@/lib/saveTheDateEligibility";
+import {
+  planSaveTheDate,
+  smsFallbackPossible,
+  smsSegments,
+  type SaveTheDateChannel,
+  type SaveTheDateChannelMode,
+  type SaveTheDateChannelState,
+  type SaveTheDateDeliveryStatus,
+} from "@/lib/saveTheDateChannels";
 
 type EventRow = {
   id: number;
@@ -34,14 +43,11 @@ type PledgeRow = {
 type DeliveryRow = {
   id: number;
   pledge_id: number;
-  delivery_status: "processing" | "sent" | "delivered" | "read" | "failed";
-  channel: "whatsapp" | "sms" | null;
+  delivery_status: SaveTheDateDeliveryStatus;
+  channel: SaveTheDateChannel | null;
   error_message: string | null;
   sent_at: string | null;
-  card_token: string;
 };
-
-export type SaveTheDateSkipReason = SaveTheDateIneligibleReason | "missing_phone" | "already_sent" | "in_progress";
 
 export type SaveTheDateRow = {
   pledgeId: number;
@@ -53,14 +59,12 @@ export type SaveTheDateRow = {
   calculatedStatus: string;
   /** Meets the client's rule (completed + Double >= 100k / Single >= 70k). */
   qualifies: boolean;
-  /** Qualifies, has a phone and has not been sent / is not mid-send. */
-  sendable: boolean;
-  reason: SaveTheDateSkipReason | null;
-  deliveryStatus: DeliveryRow["delivery_status"] | null;
-  deliveryChannel: DeliveryRow["channel"];
-  deliveryError: string | null;
-  sentAt: string | null;
-  cardToken: string | null;
+  /** Why the rule excludes this pledge (null when it qualifies). */
+  ruleReason: SaveTheDateIneligibleReason | null;
+  whatsapp: SaveTheDateChannelState;
+  sms: SaveTheDateChannelState;
+  /** Beem segments for this person's SMS (for the cost estimate). */
+  smsSegments: number;
 };
 
 export type SaveTheDatePreview = {
@@ -70,10 +74,12 @@ export type SaveTheDatePreview = {
   smsConfigured: boolean;
 };
 
-export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; failed: number; skipped: number; errors: string[] };
+export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; smsFallbacks: number; failed: number; skipped: number; errors: string[] };
 
-function idempotencyKey(eventId: number, pledgeId: number) {
-  return `save-the-date:v1:${eventId}:${pledgeId}`;
+// v2: one row per (pledge, channel), so "both" can send WhatsApp AND SMS to the same person.
+// v1 rows (one per pledge) are still honoured: already-sent is checked by pledge_id + channel.
+function idempotencyKey(eventId: number, pledgeId: number, channel: SaveTheDateChannel) {
+  return `save-the-date:v2:${eventId}:${pledgeId}:${channel}`;
 }
 
 function isSmsProviderConfigured() {
@@ -84,8 +90,17 @@ function safeError(value: unknown) {
   return (value instanceof Error ? value.message : "Save the Date send failed.").slice(0, 500);
 }
 
+function whatsappNumber(phone: string | null) {
+  if (!phone) return null;
+  try { return normalizeWhatsAppPhoneNumber(phone); } catch { return null; }
+}
+
 export function normalizeVariant(value: unknown): SaveTheDateVariant {
   return value === "cream" ? "cream" : "navy";
+}
+
+export function normalizeMode(value: unknown): SaveTheDateChannelMode {
+  return value === "sms" || value === "both" ? value : "whatsapp";
 }
 
 async function loadEvent(db: SupabaseClient, eventId: number) {
@@ -98,7 +113,29 @@ async function loadEvent(db: SupabaseClient, eventId: number) {
   return data as EventRow;
 }
 
-export async function previewSaveTheDate(db: SupabaseClient, eventId: number): Promise<SaveTheDatePreview> {
+function coupleLine(event: SaveTheDatePreview["event"]) {
+  return event.groomName && event.brideName ? `${event.groomName} & ${event.brideName}` : event.title;
+}
+
+function buildSms(event: SaveTheDatePreview["event"], name: string, link: string) {
+  if (event.language === "en") {
+    return `Dear ${name}, please save the date ${event.eventDate} for the wedding of ${coupleLine(event)} at ${event.venue}. A formal invitation will follow. View the card: ${link}`;
+  }
+  return `Mpendwa ${name}, tafadhali hifadhi tarehe ${event.eventDate} kwa ajili ya harusi ya ${coupleLine(event)} ukumbini ${event.venue}. Mwaliko rasmi utafuata. Tazama kadi: ${link}`;
+}
+
+function channelState(phoneValid: boolean, delivery: DeliveryRow | undefined): SaveTheDateChannelState {
+  return { valid: phoneValid, status: delivery?.delivery_status ?? null, error: delivery?.error_message ?? null, sentAt: delivery?.sent_at ?? null };
+}
+
+// Most relevant row per channel: anything not failed beats a failed one (a v1 row and a v2 retry can coexist).
+function pickDelivery(current: DeliveryRow | undefined, next: DeliveryRow) {
+  if (!current) return next;
+  if (current.delivery_status === "failed" && next.delivery_status !== "failed") return next;
+  return current.delivery_status !== "failed" ? current : next.id > current.id ? next : current;
+}
+
+export async function previewSaveTheDate(db: SupabaseClient, eventId: number, siteOrigin = "https://www.smarteventpass.co.tz"): Promise<SaveTheDatePreview> {
   const event = await loadEvent(db, eventId);
   if (event.archived_at) throw new Error("This event is archived.");
   const language: "sw" | "en" = event.language === "en" ? "en" : "sw";
@@ -106,7 +143,7 @@ export async function previewSaveTheDate(db: SupabaseClient, eventId: number): P
   const [settingsResult, pledgesResult, deliveriesResult] = await Promise.all([
     db.from("event_contributor_guest_settings").select("classification_basis,single_card_minimum,double_card_minimum").eq("event_id", eventId).maybeSingle(),
     db.from("event_pledge_financial_summary").select("id,full_name,phone,guest_id,pledged_amount,total_paid,calculated_status").eq("event_id", eventId).order("full_name", { ascending: true }),
-    db.from("save_the_date_deliveries").select("id,pledge_id,delivery_status,channel,error_message,sent_at,card_token").eq("event_id", eventId),
+    db.from("save_the_date_deliveries").select("id,pledge_id,delivery_status,channel,error_message,sent_at").eq("event_id", eventId),
   ]);
   if (settingsResult.error) throw new Error(settingsResult.error.message);
   if (pledgesResult.error) throw new Error(pledgesResult.error.message);
@@ -122,8 +159,27 @@ export async function previewSaveTheDate(db: SupabaseClient, eventId: number): P
     if (error) throw new Error(error.message);
     for (const guest of data ?? []) guests.set(guest.id, guest);
   }
-  const deliveries = new Map<number, DeliveryRow>();
-  for (const delivery of (deliveriesResult.data ?? []) as DeliveryRow[]) deliveries.set(delivery.pledge_id, delivery);
+  const deliveries = new Map<number, { whatsapp?: DeliveryRow; sms?: DeliveryRow }>();
+  for (const delivery of (deliveriesResult.data ?? []) as DeliveryRow[]) {
+    // A v1 row that failed before a channel was recorded doesn't block or count for either channel.
+    if (!delivery.channel) continue;
+    const entry = deliveries.get(delivery.pledge_id) ?? {};
+    entry[delivery.channel] = pickDelivery(entry[delivery.channel], delivery);
+    deliveries.set(delivery.pledge_id, entry);
+  }
+
+  const eventInfo: SaveTheDatePreview["event"] = {
+    id: event.id,
+    title: event.title,
+    groomName: event.groom_name?.trim() || "",
+    brideName: event.bride_name?.trim() || "",
+    eventDate: formatEventDate(event.event_date, language) || event.event_date || "-",
+    venue: event.venue?.trim() || "-",
+    language,
+    variant: normalizeVariant(event.save_the_date_variant),
+  };
+  // Same length as a real card link, for the segment estimate.
+  const sampleLink = `${siteOrigin}/save-the-date/00000000-0000-0000-0000-000000000000`;
 
   const rows = pledges.map((pledge): SaveTheDateRow => {
     const guest = pledge.guest_id !== null ? guests.get(pledge.guest_id) ?? null : null;
@@ -131,12 +187,7 @@ export async function previewSaveTheDate(db: SupabaseClient, eventId: number): P
     const name = guest?.full_name?.trim() || pledge.full_name;
     const phone = guest?.phone?.trim() || pledge.phone?.trim() || null;
     const rule = saveTheDateEligibility(pledge, settings);
-    const delivery = deliveries.get(pledge.id) ?? null;
-    let reason: SaveTheDateSkipReason | null = rule.eligible ? null : rule.reason;
-    // delivered/read come from WhatsApp receipts (webhook) and count as sent.
-    if (!reason && (delivery?.delivery_status === "sent" || delivery?.delivery_status === "delivered" || delivery?.delivery_status === "read")) reason = "already_sent";
-    else if (!reason && delivery?.delivery_status === "processing") reason = "in_progress";
-    else if (!reason && !phone) reason = "missing_phone";
+    const sent = deliveries.get(pledge.id) ?? {};
     return {
       pledgeId: pledge.id,
       guestId: pledge.guest_id,
@@ -146,27 +197,15 @@ export async function previewSaveTheDate(db: SupabaseClient, eventId: number): P
       totalPaid: Number(pledge.total_paid),
       calculatedStatus: pledge.calculated_status,
       qualifies: rule.eligible,
-      sendable: reason === null,
-      reason,
-      deliveryStatus: delivery?.delivery_status ?? null,
-      deliveryChannel: delivery?.channel ?? null,
-      deliveryError: delivery?.error_message ?? null,
-      sentAt: delivery?.sent_at ?? null,
-      cardToken: delivery?.card_token ?? null,
+      ruleReason: rule.eligible ? null : rule.reason,
+      whatsapp: channelState(Boolean(whatsappNumber(phone)), sent.whatsapp),
+      sms: channelState(Boolean(normalizeBeemPhoneNumber(phone)), sent.sms),
+      smsSegments: smsSegments(buildSms(eventInfo, name, sampleLink)),
     };
   });
 
   return {
-    event: {
-      id: event.id,
-      title: event.title,
-      groomName: event.groom_name?.trim() || "",
-      brideName: event.bride_name?.trim() || "",
-      eventDate: formatEventDate(event.event_date, language) || event.event_date || "-",
-      venue: event.venue?.trim() || "-",
-      language,
-      variant: normalizeVariant(event.save_the_date_variant),
-    },
+    event: eventInfo,
     rows,
     whatsappConfigured: getSaveTheDateWhatsAppTemplate(language).configured,
     smsConfigured: isSmsProviderConfigured(),
@@ -178,18 +217,7 @@ export async function setSaveTheDateVariant(db: SupabaseClient, eventId: number,
   if (error) throw new Error(error.message);
 }
 
-function coupleLine(event: SaveTheDatePreview["event"]) {
-  return event.groomName && event.brideName ? `${event.groomName} & ${event.brideName}` : event.title;
-}
-
-function buildSms(event: SaveTheDatePreview["event"], name: string, link: string) {
-  if (event.language === "en") {
-    return `Dear ${name}, please save the date ${event.eventDate} for the wedding of ${coupleLine(event)} at ${event.venue}. A formal invitation will follow. View the card: ${link}`;
-  }
-  return `Mpendwa ${name}, tafadhali hifadhi tarehe ${event.eventDate} kwa ajili ya harusi ya ${coupleLine(event)} ukumbini ${event.venue}. Mwaliko rasmi utafuata. Tazama kadi: ${link}`;
-}
-
-/** Fetches the card the way Meta will, so a broken card falls back to SMS instead of a failed WhatsApp. */
+/** Fetches the card the way Meta will, so a broken card fails here instead of after Meta accepts. */
 async function assertCardImage(url: string) {
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
   const type = response.headers.get("content-type") ?? "";
@@ -197,115 +225,146 @@ async function assertCardImage(url: string) {
   await response.arrayBuffer();
 }
 
+/**
+ * Claims the (pledge, channel) row before sending: returns the row to send on, or null when that
+ * channel is already sent / in progress (including v1 rows). A failed row is reused (retry).
+ */
+async function claim(
+  db: SupabaseClient,
+  input: { eventId: number; row: SaveTheDateRow; channel: SaveTheDateChannel; variant: SaveTheDateVariant; userId: string }
+): Promise<{ id: number; card_token: string } | null> {
+  const { eventId, row, channel } = input;
+  const existing = await db
+    .from("save_the_date_deliveries")
+    .select("id,delivery_status,card_token")
+    .eq("pledge_id", row.pledgeId)
+    .eq("channel", channel);
+  if (existing.error) throw new Error("delivery history could not be checked.");
+  const rows = (existing.data ?? []) as Array<{ id: number; delivery_status: SaveTheDateDeliveryStatus; card_token: string }>;
+  if (rows.some((item) => item.delivery_status !== "failed")) return null;
+  const fields = { full_name: row.name, recipient_phone: row.phone as string, variant: input.variant, error_message: null, whatsapp_error_message: null, failed_at: null };
+  const failed = rows.sort((a, b) => b.id - a.id)[0];
+  if (failed) {
+    const retry = await db
+      .from("save_the_date_deliveries")
+      .update({ ...fields, delivery_status: "processing", provider_message_id: null, delivered_at: null, read_at: null })
+      .eq("id", failed.id)
+      .eq("delivery_status", "failed")
+      .select("id,card_token")
+      .maybeSingle();
+    return retry.data;
+  }
+  const inserted = await db
+    .from("save_the_date_deliveries")
+    .insert({ ...fields, event_id: eventId, pledge_id: row.pledgeId, guest_id: row.guestId, channel, delivery_status: "processing", idempotency_key: idempotencyKey(eventId, row.pledgeId, channel), created_by: input.userId })
+    .select("id,card_token")
+    .maybeSingle();
+  return inserted.data; // null on a unique-key race: someone else claimed it first.
+}
+
+async function finish(db: SupabaseClient, id: number, outcome: { ok: true; messageId?: string } | { ok: false; error: string }) {
+  const update = outcome.ok
+    ? { delivery_status: "sent", provider_message_id: outcome.messageId ?? null, sent_at: new Date().toISOString(), error_message: null }
+    : { delivery_status: "failed", error_message: outcome.error, failed_at: new Date().toISOString() };
+  return db.from("save_the_date_deliveries").update(update).eq("id", id);
+}
+
 export async function sendSaveTheDate(
   db: SupabaseClient,
-  input: { eventId: number; pledgeIds: number[]; siteOrigin: string },
+  input: { eventId: number; pledgeIds: number[]; siteOrigin: string; mode: SaveTheDateChannelMode; smsFallback: boolean },
   actor: { userId: string }
 ): Promise<SaveTheDateSendResult> {
-  // Re-read everything at send time: the rule is checked against current payments, not what the
-  // organizer's screen showed.
-  const preview = await previewSaveTheDate(db, input.eventId);
+  // Re-read everything at send time: the rule and each channel's state are checked against the
+  // database now, not what the organizer's screen showed.
+  const preview = await previewSaveTheDate(db, input.eventId, input.siteOrigin);
   const wanted = new Set(input.pledgeIds);
-  const result: SaveTheDateSendResult = { sentWhatsapp: 0, sentSms: 0, failed: 0, skipped: 0, errors: [] };
+  const result: SaveTheDateSendResult = { sentWhatsapp: 0, sentSms: 0, smsFallbacks: 0, failed: 0, skipped: 0, errors: [] };
   const template = getSaveTheDateWhatsAppTemplate(preview.event.language);
+  const smsReady = isSmsProviderConfigured();
+  // The fallback is opt-in and only exists in WhatsApp mode (never hidden).
+  const fallback = input.mode === "whatsapp" && input.smsFallback;
+
+  const sendSms = async (row: SaveTheDateRow, claimed: { id: number; card_token: string }) => {
+    try {
+      if (!smsReady) throw new Error("BEEM SMS is not configured.");
+      const sms = await sendBeemSms({ phoneNumber: row.phone as string, message: buildSms(preview.event, row.name, `${input.siteOrigin}/save-the-date/${claimed.card_token}`) });
+      if (!sms.success) throw new Error(sms.message);
+      await finish(db, claimed.id, { ok: true, messageId: sms.providerMessageId });
+      return true;
+    } catch (cause) {
+      const error = safeError(cause);
+      await finish(db, claimed.id, { ok: false, error: `SMS: ${error}` });
+      result.errors.push(`${row.name} (SMS): ${error}`);
+      return false;
+    }
+  };
+
+  const sendWhatsApp = async (row: SaveTheDateRow, claimed: { id: number; card_token: string }) => {
+    try {
+      if (!template.configured) throw new Error("WhatsApp Save the Date template is not configured.");
+      // Nonce in the path, like the invitation card, so Meta can't serve a cached image.
+      const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const cardImageUrl = `${input.siteOrigin}/api/save-the-date/${claimed.card_token}/card/${nonce}`;
+      await assertCardImage(cardImageUrl);
+      const sent = await sendSaveTheDateWhatsAppTemplate({
+        phoneNumber: row.phone as string,
+        templateName: template.templateName as string,
+        languageCode: template.languageCode,
+        cardImageUrl,
+        parameters: [row.name, coupleLine(preview.event), preview.event.eventDate, preview.event.venue],
+      });
+      await finish(db, claimed.id, { ok: true, messageId: sent.messageId });
+      return true;
+    } catch (cause) {
+      const error = safeError(cause);
+      await finish(db, claimed.id, { ok: false, error: `WhatsApp: ${error}` });
+      result.errors.push(`${row.name} (WhatsApp): ${error}`);
+      return false;
+    }
+  };
 
   for (const row of preview.rows.filter((item) => wanted.has(item.pledgeId))) {
-    if (!row.sendable) {
+    const plan = planSaveTheDate(row, input.mode);
+    if (!plan.channels.length) {
       result.skipped += 1;
-      result.errors.push(`${row.name}: ${row.reason === "already_sent" ? "tayari ametumiwa Save the Date." : row.reason === "in_progress" ? "bado inatumwa." : row.reason === "missing_phone" ? "hana namba ya simu." : "hastahili Save the Date (ahadi haijakamilika au kiwango hakijafikiwa)."}`);
+      result.errors.push(`${row.name}: ${plan.reason === "already_sent" ? "tayari ametumiwa Save the Date kwa njia hii." : plan.reason === "in_progress" ? "bado inatumwa." : plan.reason === "missing_phone" ? "hana namba sahihi kwa njia hii." : "hastahili Save the Date (ahadi haijakamilika au kiwango hakijafikiwa)."}`);
       continue;
     }
 
-    const key = idempotencyKey(input.eventId, row.pledgeId);
-    const existing = await db.from("save_the_date_deliveries").select("id,delivery_status,card_token").eq("idempotency_key", key).maybeSingle();
-    if (existing.error) {
-      result.failed += 1;
-      result.errors.push(`${row.name}: delivery history could not be checked.`);
-      continue;
-    }
-
-    // Claim the row before sending (the unique idempotency_key stops a double send).
-    let claimed: { id: number; card_token: string } | null = null;
-    if (existing.data?.delivery_status === "failed") {
-      const retry = await db
-        .from("save_the_date_deliveries")
-        .update({ delivery_status: "processing", full_name: row.name, recipient_phone: row.phone, variant: preview.event.variant, channel: null, error_message: null, whatsapp_error_message: null, failed_at: null })
-        .eq("id", existing.data.id)
-        .eq("delivery_status", "failed")
-        .select("id,card_token")
-        .maybeSingle();
-      claimed = retry.data;
-    } else if (!existing.data) {
-      const inserted = await db
-        .from("save_the_date_deliveries")
-        .insert({ event_id: input.eventId, pledge_id: row.pledgeId, guest_id: row.guestId, full_name: row.name, recipient_phone: row.phone, variant: preview.event.variant, delivery_status: "processing", idempotency_key: key, created_by: actor.userId })
-        .select("id,card_token")
-        .maybeSingle();
-      claimed = inserted.data;
-    }
-    if (!claimed) {
-      result.skipped += 1;
-      result.errors.push(`${row.name}: tayari inatumwa au imetumwa.`);
-      continue;
-    }
-
-    const phone = row.phone as string;
-    let channel: "whatsapp" | "sms" | null = null;
-    let providerMessageId: string | undefined;
-    let whatsappError = "";
-    let smsError = "";
-
-    if (template.configured) {
+    for (const channel of plan.channels) {
+      let claimed: { id: number; card_token: string } | null;
       try {
-        // Nonce in the path, like the invitation card, so Meta can't serve a cached image.
-        const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const cardImageUrl = `${input.siteOrigin}/api/save-the-date/${claimed.card_token}/card/${nonce}`;
-        await assertCardImage(cardImageUrl);
-        const sent = await sendSaveTheDateWhatsAppTemplate({
-          phoneNumber: phone,
-          templateName: template.templateName as string,
-          languageCode: template.languageCode,
-          cardImageUrl,
-          parameters: [row.name, coupleLine(preview.event), preview.event.eventDate, preview.event.venue],
-        });
-        channel = "whatsapp";
-        providerMessageId = sent.messageId;
+        claimed = await claim(db, { eventId: input.eventId, row, channel, variant: preview.event.variant, userId: actor.userId });
       } catch (cause) {
-        whatsappError = safeError(cause);
-        console.error("Save the Date WhatsApp send failed:", { pledgeId: row.pledgeId, eventId: input.eventId, error: whatsappError });
+        result.failed += 1;
+        result.errors.push(`${row.name} (${channel}): ${safeError(cause)}`);
+        continue;
       }
-    } else {
-      whatsappError = "WhatsApp Save the Date template is not configured.";
-    }
-
-    if (!channel) {
-      try {
-        const sms = await sendBeemSms({ phoneNumber: phone, message: buildSms(preview.event, row.name, `${input.siteOrigin}/save-the-date/${claimed.card_token}`) });
-        if (!sms.success) throw new Error(sms.message);
-        channel = "sms";
-        providerMessageId = sms.providerMessageId;
-      } catch (cause) {
-        smsError = safeError(cause);
-        console.error("Save the Date SMS send failed:", { pledgeId: row.pledgeId, eventId: input.eventId, error: smsError });
+      if (!claimed) {
+        result.skipped += 1;
+        result.errors.push(`${row.name} (${channel}): tayari inatumwa au imetumwa.`);
+        continue;
       }
-    }
 
-    if (channel) {
-      const saved = await db
-        .from("save_the_date_deliveries")
-        .update({ delivery_status: "sent", channel, provider_message_id: providerMessageId ?? null, sent_at: new Date().toISOString(), error_message: null, whatsapp_error_message: channel === "sms" ? whatsappError || null : null })
-        .eq("id", claimed.id);
-      if (saved.error) result.errors.push(`${row.name}: sent but could not be recorded.`);
-      if (channel === "whatsapp") result.sentWhatsapp += 1;
-      else result.sentSms += 1;
-    } else {
-      const combined = [whatsappError && `WhatsApp: ${whatsappError}`, smsError && `SMS: ${smsError}`].filter(Boolean).join(" ") || "Send failed.";
-      await db
-        .from("save_the_date_deliveries")
-        .update({ delivery_status: "failed", error_message: combined, whatsapp_error_message: whatsappError || null, failed_at: new Date().toISOString() })
-        .eq("id", claimed.id);
+      if (channel === "sms") {
+        if (await sendSms(row, claimed)) result.sentSms += 1;
+        else result.failed += 1;
+        continue;
+      }
+
+      if (await sendWhatsApp(row, claimed)) {
+        result.sentWhatsapp += 1;
+        continue;
+      }
       result.failed += 1;
-      result.errors.push(`${row.name}: ${combined}`);
+      // Opt-in fallback: an SMS on its own delivery row, so the WhatsApp failure stays visible.
+      if (fallback && smsFallbackPossible(row)) {
+        const smsClaim = await claim(db, { eventId: input.eventId, row, channel: "sms", variant: preview.event.variant, userId: actor.userId }).catch(() => null);
+        if (smsClaim && (await sendSms(row, smsClaim))) {
+          result.sentSms += 1;
+          result.smsFallbacks += 1;
+        }
+      }
     }
   }
 
