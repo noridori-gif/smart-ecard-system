@@ -26,6 +26,8 @@ export type SaveTheDatePreview = {
   smsConfigured: boolean;
   /** Server-side lock (SAVE_THE_DATE_SEND_ALLOWED_EVENT_IDS): sending refused for this event. */
   sendBlocked?: boolean;
+  /** Server-side restriction (SAVE_THE_DATE_WHATSAPP_ONLY_EVENT_IDS): WhatsApp only, no SMS fallback. */
+  whatsappOnly?: boolean;
 };
 
 export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; smsFallbacks: number; failed: number; skipped: number; errors: string[] };

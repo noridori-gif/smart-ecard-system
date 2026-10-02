@@ -134,10 +134,11 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
     whatsapp: toSend.filter((row) => planOf(row).channels.includes("whatsapp")).length,
     sms: toSend.filter((row) => planOf(row).channels.includes("sms")).length,
     smsParts: toSend.filter((row) => planOf(row).channels.includes("sms")).reduce((sum, row) => sum + row.smsSegments, 0),
-    fallbackSms: mode === "whatsapp" && smsFallback ? toSend.filter((row) => planOf(row).channels.includes("whatsapp") && smsFallbackPossible(row)).length : 0,
+    fallbackSms: mode === "whatsapp" && smsFallback && !preview?.whatsappOnly ? toSend.filter((row) => planOf(row).channels.includes("whatsapp") && smsFallbackPossible(row)).length : 0,
   };
+  const whatsappOnly = Boolean(preview?.whatsappOnly);
   const modeAvailable = (value: SaveTheDateChannelMode) =>
-    value === "whatsapp" ? Boolean(preview?.whatsappConfigured) : value === "sms" ? Boolean(preview?.smsConfigured) : Boolean(preview?.whatsappConfigured && preview?.smsConfigured);
+    value === "whatsapp" ? Boolean(preview?.whatsappConfigured) : !whatsappOnly && (value === "sms" ? Boolean(preview?.smsConfigured) : Boolean(preview?.whatsappConfigured && preview?.smsConfigured));
   const canSend = modeAvailable(mode) && !preview?.sendBlocked;
 
   function estimateText() {
@@ -155,7 +156,7 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   async function send() {
     setSending(true);
     try {
-      const sent = await sendSaveTheDate(eventId, toSend.map((row) => row.pledgeId), mode, mode === "whatsapp" && smsFallback);
+      const sent = await sendSaveTheDate(eventId, toSend.map((row) => row.pledgeId), mode, mode === "whatsapp" && smsFallback && !preview?.whatsappOnly);
       // Close the dialog before clearing the selection (it would otherwise flash "0"), and only show
       // the result once the table reflects it.
       setConfirming(false);
@@ -204,7 +205,8 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
                 </button>
               ))}
             </div>
-            {mode === "whatsapp" && (
+            {whatsappOnly && <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">Event hii inaruhusu WhatsApp pekee kwa sasa (SMS bado haijathibitishwa) — bila SMS fallback.</p>}
+            {mode === "whatsapp" && !whatsappOnly && (
               <label className={`mt-3 flex items-start gap-2 text-sm ${preview?.smsConfigured ? "text-slate-700" : "text-slate-400"}`}>
                 <input type="checkbox" className="mt-0.5" checked={smsFallback} disabled={!preview?.smsConfigured} onChange={(event) => setSmsFallback(event.target.checked)} />
                 <span><b>Tuma SMS ikiwa WhatsApp itashindwa</b> — ikiachwa, WhatsApp ikishindwa itabaki &quot;Imeshindikana&quot; mpaka uitume tena mwenyewe.</span>
@@ -305,7 +307,7 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
         <Dialog titleId="confirm-save-the-date-title" onClose={() => !sending && setConfirming(false)} className="sm:max-w-md">
           <h2 id="confirm-save-the-date-title" className="sep-card-title">Tuma Save the Date?</h2>
           <p className="mt-3 text-slate-700">
-            Kadi ya Save the Date ({variant === "navy" ? "Navy" : "Cream"}) kwa wachangiaji <b>{toSend.length}</b> kupitia <b>{MODES.find((option) => option.value === mode)?.label}</b>{mode === "whatsapp" && smsFallback ? ", na SMS ikiwa WhatsApp itashindwa" : ""}.
+            Kadi ya Save the Date ({variant === "navy" ? "Navy" : "Cream"}) kwa wachangiaji <b>{toSend.length}</b> kupitia <b>{MODES.find((option) => option.value === mode)?.label}</b>{mode === "whatsapp" && smsFallback && !preview?.whatsappOnly ? ", na SMS ikiwa WhatsApp itashindwa" : ""}.
           </p>
           <p className="mt-2 text-sm text-slate-600">{estimateText()}</p>
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">Ujumbe utaenda kwa wageni halisi. Ustahiki na hali ya kila njia vinakaguliwa upya wakati wa kutuma.</p>

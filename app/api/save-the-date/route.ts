@@ -34,6 +34,15 @@ function sendAllowedForEvent(eventId: number) {
   return allowed.split(",").map((id) => id.trim()).includes(String(eventId));
 }
 
+/**
+ * Temporary channel restriction: events listed in SAVE_THE_DATE_WHATSAPP_ONLY_EVENT_IDS may only send
+ * by WhatsApp (no SMS, no "both", no SMS fallback) -- used while SMS delivery is still unverified.
+ */
+function whatsappOnlyForEvent(eventId: number) {
+  const listed = process.env.SAVE_THE_DATE_WHATSAPP_ONLY_EVENT_IDS?.trim();
+  return Boolean(listed) && listed!.split(",").map((id) => id.trim()).includes(String(eventId));
+}
+
 function idList(value: unknown) {
   return Array.isArray(value) ? [...new Set(value.map(Number).filter((item) => Number.isInteger(item) && item > 0))] : [];
 }
@@ -68,8 +77,9 @@ export async function POST(request: Request) {
     const siteOrigin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, "");
 
     const sendBlocked = !sendAllowedForEvent(eventId);
+    const whatsappOnly = whatsappOnlyForEvent(eventId);
 
-    if (action === "preview") return reply({ ...(await previewSaveTheDate(db, eventId, siteOrigin)), sendBlocked });
+    if (action === "preview") return reply({ ...(await previewSaveTheDate(db, eventId, siteOrigin)), sendBlocked, whatsappOnly });
 
     if (action === "set_variant") {
       await setSaveTheDateVariant(db, eventId, normalizeVariant(body?.variant));
@@ -94,6 +104,9 @@ export async function POST(request: Request) {
 
     if (action === "send") {
       if (sendBlocked) return reply({ error: "Kutuma Save the Date kumefungwa kwa event hii kwa muda (uthibitisho wa production bado haujakamilika)." }, 423);
+      if (whatsappOnly && (normalizeMode(body?.mode) !== "whatsapp" || body?.smsFallback === true)) {
+        return reply({ error: "Event hii inaruhusu WhatsApp pekee kwa sasa (SMS bado haijathibitishwa) — bila SMS fallback." }, 423);
+      }
       const pledgeIds = idList(body?.pledgeIds);
       if (!pledgeIds.length) return reply({ error: "Chagua angalau mchangiaji mmoja." }, 400);
       if (body?.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
