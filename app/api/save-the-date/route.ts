@@ -111,7 +111,8 @@ export async function POST(request: Request) {
       if (!pledgeIds.length) return reply({ error: "Chagua angalau mchangiaji mmoja." }, 400);
       if (body?.confirmed !== true) return reply({ error: "Explicit confirmation is required." }, 400);
       // mode: whatsapp | sms | both. smsFallback only applies to whatsapp and is opt-in from the tab.
-      return reply(await sendSaveTheDate(db, { eventId, pledgeIds, siteOrigin, mode: normalizeMode(body?.mode), smsFallback: body?.smsFallback === true }, { userId: auth.user.id }));
+      // resend: the explicit "Tuma tena" option -- also sends to people who already received it.
+      return reply(await sendSaveTheDate(db, { eventId, pledgeIds, siteOrigin, mode: normalizeMode(body?.mode), smsFallback: body?.smsFallback === true, resend: body?.resend === true }, { userId: auth.user.id }));
     }
 
     return reply({ error: "Unsupported action." }, 400);

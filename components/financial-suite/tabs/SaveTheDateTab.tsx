@@ -67,6 +67,9 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   const cardUrl = cardLoading ? null : card?.url ?? null;
   const [mode, setMode] = useState<SaveTheDateChannelMode>("whatsapp");
   const [smsFallback, setSmsFallback] = useState(false);
+  // "Tuma tena": also send to people who already received it on the chosen channel(s).
+  const [resend, setResend] = useState(false);
+  const [resendAcknowledged, setResendAcknowledged] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -114,8 +117,12 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   }
 
   const rows = useMemo(() => preview?.rows ?? [], [preview]);
-  const plans = useMemo(() => new Map(rows.map((row) => [row.pledgeId, planSaveTheDate(row, mode)])), [rows, mode]);
+  // basePlans: the normal "Tuma" (skips who already received it) -- used for the counts.
+  // plans: what will actually be sent, including re-sends when "Tuma tena" is on.
+  const basePlans = useMemo(() => new Map(rows.map((row) => [row.pledgeId, planSaveTheDate(row, mode)])), [rows, mode]);
+  const plans = useMemo(() => (resend ? new Map(rows.map((row) => [row.pledgeId, planSaveTheDate(row, mode, true)])) : basePlans), [rows, mode, resend, basePlans]);
   const planOf = (row: SaveTheDateRow) => plans.get(row.pledgeId) ?? { channels: [], reason: "not_qualified" as const };
+  const basePlanOf = (row: SaveTheDateRow) => basePlans.get(row.pledgeId) ?? { channels: [], reason: "not_qualified" as const };
   const qualifying = rows.filter((row) => row.qualifies);
   const query = normalizeName(search);
   const visible = (showAll ? rows : qualifying).filter((row) => !query || normalizeName(row.name).includes(query));
@@ -126,15 +133,17 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
 
   const counts = {
     qualifying: qualifying.length,
-    sent: qualifying.filter((row) => planOf(row).reason === "already_sent").length,
-    waiting: qualifying.filter((row) => planOf(row).channels.length > 0).length,
-    noPhone: qualifying.filter((row) => planOf(row).reason === "missing_phone").length,
+    sent: qualifying.filter((row) => basePlanOf(row).reason === "already_sent").length,
+    waiting: qualifying.filter((row) => basePlanOf(row).channels.length > 0).length,
+    noPhone: qualifying.filter((row) => basePlanOf(row).reason === "missing_phone").length,
   };
+  // Messages in this send that repeat a channel the person already received.
+  const repeats = toSend.reduce((sum, row) => sum + planOf(row).channels.filter((channel) => isChannelDone(row[channel])).length, 0);
   const estimate = {
     whatsapp: toSend.filter((row) => planOf(row).channels.includes("whatsapp")).length,
     sms: toSend.filter((row) => planOf(row).channels.includes("sms")).length,
     smsParts: toSend.filter((row) => planOf(row).channels.includes("sms")).reduce((sum, row) => sum + row.smsSegments, 0),
-    fallbackSms: mode === "whatsapp" && smsFallback && !preview?.whatsappOnly ? toSend.filter((row) => planOf(row).channels.includes("whatsapp") && smsFallbackPossible(row)).length : 0,
+    fallbackSms: mode === "whatsapp" && smsFallback && !preview?.whatsappOnly ? toSend.filter((row) => planOf(row).channels.includes("whatsapp") && smsFallbackPossible(row, resend)).length : 0,
   };
   const whatsappOnly = Boolean(preview?.whatsappOnly);
   const modeAvailable = (value: SaveTheDateChannelMode) =>
@@ -156,7 +165,7 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
   async function send() {
     setSending(true);
     try {
-      const sent = await sendSaveTheDate(eventId, toSend.map((row) => row.pledgeId), mode, mode === "whatsapp" && smsFallback && !preview?.whatsappOnly);
+      const sent = await sendSaveTheDate(eventId, toSend.map((row) => row.pledgeId), mode, mode === "whatsapp" && smsFallback && !preview?.whatsappOnly, resend);
       // Close the dialog before clearing the selection (it would otherwise flash "0"), and only show
       // the result once the table reflects it.
       setConfirming(false);
@@ -213,6 +222,10 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
               </label>
             )}
             {mode === "both" && <p className="mt-2 text-sm text-slate-600">Kila mpokeaji anapata WhatsApp <b>na</b> SMS (jumbe mbili). Mwenye namba sahihi kwa njia moja tu anapata hiyo moja.</p>}
+            <label className={`mt-3 flex items-start gap-2 rounded-xl border p-3 text-sm ${resend ? "border-red-200 bg-red-50 text-red-800" : "border-[#e7e1d7] text-slate-700"}`}>
+              <input type="checkbox" className="mt-0.5" checked={resend} onChange={(event) => setResend(event.target.checked)} />
+              <span><b>Tuma tena hata kama ameshapokea</b> — wachangiaji waliokwisha tumiwa (hata waliosoma) wanaweza kuchaguliwa na watapokea ujumbe mwingine. Anayetumiwa sasa hivi (&quot;Inatumwa…&quot;) anarukwa.</span>
+            </label>
             {preview?.sendBlocked ? (
               <p role="alert" className="mt-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">Kutuma Save the Date kumefungwa kwa event hii kwa muda — uthibitisho wa WhatsApp/SMS bado unaendelea.</p>
             ) : !canSend ? (
@@ -267,9 +280,9 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
             <p className="text-sm text-slate-600">{estimateText()}{hiddenSelected ? ` · ${hiddenSelected} kati ya waliochaguliwa hawaonekani kwa utafutaji huu` : ""}</p>
             <div className="flex flex-wrap gap-2">
               {/* Replaces the selection with exactly the rows this search shows (nobody hidden stays selected). */}
-              <Button variant="secondary" size="sm" disabled={!visibleSendable.length} onClick={() => setSelected(new Set(visibleSendable.map((row) => row.pledgeId)))}>Chagua wote wanaosubiri ({visibleSendable.length})</Button>
+              <Button variant="secondary" size="sm" disabled={!visibleSendable.length} onClick={() => setSelected(new Set(visibleSendable.map((row) => row.pledgeId)))}>{resend ? "Chagua wote" : "Chagua wote wanaosubiri"} ({visibleSendable.length})</Button>
               <Button variant="secondary" size="sm" disabled={!selected.size} onClick={() => setSelected(new Set())}>Ondoa chaguo</Button>
-              <Button size="sm" disabled={!toSend.length || sending || !canSend} onClick={() => setConfirming(true)}>Tuma Save the Date ({toSend.length})</Button>
+              <Button size="sm" disabled={!toSend.length || sending || !canSend} onClick={() => { setResendAcknowledged(false); setConfirming(true); }}>{resend ? "Tuma tena" : "Tuma Save the Date"} ({toSend.length})</Button>
             </div>
           </div>
         </div>
@@ -305,15 +318,24 @@ export default function SaveTheDateTab({ eventId }: { eventId: number }) {
 
       {confirming && (
         <Dialog titleId="confirm-save-the-date-title" onClose={() => !sending && setConfirming(false)} className="sm:max-w-md">
-          <h2 id="confirm-save-the-date-title" className="sep-card-title">Tuma Save the Date?</h2>
+          <h2 id="confirm-save-the-date-title" className="sep-card-title">{resend ? "Tuma tena Save the Date?" : "Tuma Save the Date?"}</h2>
           <p className="mt-3 text-slate-700">
             Kadi ya Save the Date ({variant === "navy" ? "Navy" : "Cream"}) kwa wachangiaji <b>{toSend.length}</b> kupitia <b>{MODES.find((option) => option.value === mode)?.label}</b>{mode === "whatsapp" && smsFallback && !preview?.whatsappOnly ? ", na SMS ikiwa WhatsApp itashindwa" : ""}.
           </p>
           <p className="mt-2 text-sm text-slate-600">{estimateText()}</p>
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">Ujumbe utaenda kwa wageni halisi. Ustahiki na hali ya kila njia vinakaguliwa upya wakati wa kutuma.</p>
+          {resend && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <p className="font-bold">Tuma tena: jumbe {repeats} zinaenda kwa watu waliokwisha pokea Save the Date kwa njia hiyo — watapokea tena.</p>
+              <label className="mt-2 flex items-start gap-2 font-medium">
+                <input type="checkbox" className="mt-0.5" checked={resendAcknowledged} onChange={(event) => setResendAcknowledged(event.target.checked)} />
+                <span>Ninaelewa kwamba wageni hawa watapokea Save the Date tena.</span>
+              </label>
+            </div>
+          )}
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" disabled={sending} onClick={() => setConfirming(false)}>Ghairi</Button>
-            <Button loading={sending} onClick={() => void send()}>Thibitisha na Tuma</Button>
+            <Button loading={sending} disabled={resend && !resendAcknowledged} onClick={() => void send()}>{resend ? "Thibitisha na Tuma tena" : "Thibitisha na Tuma"}</Button>
           </div>
         </Dialog>
       )}

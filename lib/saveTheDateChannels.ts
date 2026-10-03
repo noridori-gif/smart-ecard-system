@@ -37,15 +37,19 @@ export function channelsForMode(mode: SaveTheDateChannelMode): SaveTheDateChanne
  * The channels still to send for one recipient. In "both" mode a person whose number is valid for
  * only one channel still gets that one (client's choice: nobody is dropped because their number
  * doesn't work on WhatsApp). A failed channel is sendable again (retry).
+ *
+ * `resend` (the explicit "Tuma tena" option) also re-sends channels already sent/delivered/read --
+ * only a send still in progress is skipped, so a double click or a second tab can't send twice.
  */
 export function planSaveTheDate(
   row: { qualifies: boolean; whatsapp: SaveTheDateChannelState; sms: SaveTheDateChannelState },
-  mode: SaveTheDateChannelMode
+  mode: SaveTheDateChannelMode,
+  resend = false
 ): { channels: SaveTheDateChannel[]; reason: SaveTheDatePlanReason | null } {
   if (!row.qualifies) return { channels: [], reason: "not_qualified" };
   const valid = channelsForMode(mode).filter((channel) => row[channel].valid);
   if (!valid.length) return { channels: [], reason: "missing_phone" };
-  const pending = valid.filter((channel) => !isChannelDone(row[channel]) && row[channel].status !== "processing");
+  const pending = valid.filter((channel) => (resend || !isChannelDone(row[channel])) && row[channel].status !== "processing");
   if (pending.length) return { channels: pending, reason: null };
   return { channels: [], reason: valid.some((channel) => row[channel].status === "processing") ? "in_progress" : "already_sent" };
 }
@@ -54,8 +58,8 @@ export function planSaveTheDate(
  * Whether the optional "SMS if WhatsApp fails" fallback (WhatsApp mode only, opt-in) could still
  * send an SMS to this recipient.
  */
-export function smsFallbackPossible(row: { sms: SaveTheDateChannelState }) {
-  return row.sms.valid && !isChannelDone(row.sms) && row.sms.status !== "processing";
+export function smsFallbackPossible(row: { sms: SaveTheDateChannelState }, resend = false) {
+  return row.sms.valid && (resend || !isChannelDone(row.sms)) && row.sms.status !== "processing";
 }
 
 /** SMS segments Beem bills for a message: GSM-7 160/153 per part, otherwise UCS-2 70/67. */

@@ -78,8 +78,11 @@ export type SaveTheDateSendResult = { sentWhatsapp: number; sentSms: number; sms
 
 // v2: one row per (pledge, channel), so "both" can send WhatsApp AND SMS to the same person.
 // v1 rows (one per pledge) are still honoured: already-sent is checked by pledge_id + channel.
-function idempotencyKey(eventId: number, pledgeId: number, channel: SaveTheDateChannel) {
-  return `save-the-date:v2:${eventId}:${pledgeId}:${channel}`;
+// A resend ("Tuma tena") adds a row keyed by how many rows that channel already has, so two
+// simultaneous resends of the same state collide on the unique key and only one goes out.
+function idempotencyKey(eventId: number, pledgeId: number, channel: SaveTheDateChannel, resendOf?: number) {
+  const key = `save-the-date:v2:${eventId}:${pledgeId}:${channel}`;
+  return resendOf === undefined ? key : `${key}:resend:${resendOf}`;
 }
 
 function isSmsProviderConfigured() {
@@ -128,11 +131,13 @@ function channelState(phoneValid: boolean, delivery: DeliveryRow | undefined): S
   return { valid: phoneValid, status: delivery?.delivery_status ?? null, error: delivery?.error_message ?? null, sentAt: delivery?.sent_at ?? null };
 }
 
-// Most relevant row per channel: anything not failed beats a failed one (a v1 row and a v2 retry can coexist).
+// Most relevant row per channel (v1 rows, retries and resends can coexist): one still processing
+// wins, then the newest not failed, then the newest failed.
 function pickDelivery(current: DeliveryRow | undefined, next: DeliveryRow) {
   if (!current) return next;
-  if (current.delivery_status === "failed" && next.delivery_status !== "failed") return next;
-  return current.delivery_status !== "failed" ? current : next.id > current.id ? next : current;
+  const rank = (row: DeliveryRow) => (row.delivery_status === "processing" ? 2 : row.delivery_status !== "failed" ? 1 : 0);
+  if (rank(next) !== rank(current)) return rank(next) > rank(current) ? next : current;
+  return next.id > current.id ? next : current;
 }
 
 export async function previewSaveTheDate(db: SupabaseClient, eventId: number, siteOrigin = "https://www.smarteventpass.co.tz"): Promise<SaveTheDatePreview> {
@@ -228,10 +233,11 @@ async function assertCardImage(url: string) {
 /**
  * Claims the (pledge, channel) row before sending: returns the row to send on, or null when that
  * channel is already sent / in progress (including v1 rows). A failed row is reused (retry).
+ * With `resend`, only a send in progress blocks, and every resend gets its own new row.
  */
 async function claim(
   db: SupabaseClient,
-  input: { eventId: number; row: SaveTheDateRow; channel: SaveTheDateChannel; variant: SaveTheDateVariant; userId: string }
+  input: { eventId: number; row: SaveTheDateRow; channel: SaveTheDateChannel; variant: SaveTheDateVariant; userId: string; resend: boolean }
 ): Promise<{ id: number; card_token: string } | null> {
   const { eventId, row, channel } = input;
   const existing = await db
@@ -241,8 +247,17 @@ async function claim(
     .eq("channel", channel);
   if (existing.error) throw new Error("delivery history could not be checked.");
   const rows = (existing.data ?? []) as Array<{ id: number; delivery_status: SaveTheDateDeliveryStatus; card_token: string }>;
-  if (rows.some((item) => item.delivery_status !== "failed")) return null;
   const fields = { full_name: row.name, recipient_phone: row.phone as string, variant: input.variant, error_message: null, whatsapp_error_message: null, failed_at: null };
+  const insertRow = (key: string) => db
+    .from("save_the_date_deliveries")
+    .insert({ ...fields, event_id: eventId, pledge_id: row.pledgeId, guest_id: row.guestId, channel, delivery_status: "processing", idempotency_key: key, created_by: input.userId })
+    .select("id,card_token")
+    .maybeSingle();
+  if (input.resend) {
+    if (rows.some((item) => item.delivery_status === "processing")) return null;
+    return (await insertRow(idempotencyKey(eventId, row.pledgeId, channel, rows.length))).data; // null on a race.
+  }
+  if (rows.some((item) => item.delivery_status !== "failed")) return null;
   const failed = rows.sort((a, b) => b.id - a.id)[0];
   if (failed) {
     const retry = await db
@@ -254,11 +269,7 @@ async function claim(
       .maybeSingle();
     return retry.data;
   }
-  const inserted = await db
-    .from("save_the_date_deliveries")
-    .insert({ ...fields, event_id: eventId, pledge_id: row.pledgeId, guest_id: row.guestId, channel, delivery_status: "processing", idempotency_key: idempotencyKey(eventId, row.pledgeId, channel), created_by: input.userId })
-    .select("id,card_token")
-    .maybeSingle();
+  const inserted = await insertRow(idempotencyKey(eventId, row.pledgeId, channel));
   return inserted.data; // null on a unique-key race: someone else claimed it first.
 }
 
@@ -271,7 +282,7 @@ async function finish(db: SupabaseClient, id: number, outcome: { ok: true; messa
 
 export async function sendSaveTheDate(
   db: SupabaseClient,
-  input: { eventId: number; pledgeIds: number[]; siteOrigin: string; mode: SaveTheDateChannelMode; smsFallback: boolean },
+  input: { eventId: number; pledgeIds: number[]; siteOrigin: string; mode: SaveTheDateChannelMode; smsFallback: boolean; resend: boolean },
   actor: { userId: string }
 ): Promise<SaveTheDateSendResult> {
   // Re-read everything at send time: the rule and each channel's state are checked against the
@@ -324,7 +335,7 @@ export async function sendSaveTheDate(
   };
 
   for (const row of preview.rows.filter((item) => wanted.has(item.pledgeId))) {
-    const plan = planSaveTheDate(row, input.mode);
+    const plan = planSaveTheDate(row, input.mode, input.resend);
     if (!plan.channels.length) {
       result.skipped += 1;
       result.errors.push(`${row.name}: ${plan.reason === "already_sent" ? "tayari ametumiwa Save the Date kwa njia hii." : plan.reason === "in_progress" ? "bado inatumwa." : plan.reason === "missing_phone" ? "hana namba sahihi kwa njia hii." : "hastahili Save the Date (ahadi haijakamilika au kiwango hakijafikiwa)."}`);
@@ -334,7 +345,7 @@ export async function sendSaveTheDate(
     for (const channel of plan.channels) {
       let claimed: { id: number; card_token: string } | null;
       try {
-        claimed = await claim(db, { eventId: input.eventId, row, channel, variant: preview.event.variant, userId: actor.userId });
+        claimed = await claim(db, { eventId: input.eventId, row, channel, variant: preview.event.variant, userId: actor.userId, resend: input.resend });
       } catch (cause) {
         result.failed += 1;
         result.errors.push(`${row.name} (${channel}): ${safeError(cause)}`);
@@ -358,8 +369,8 @@ export async function sendSaveTheDate(
       }
       result.failed += 1;
       // Opt-in fallback: an SMS on its own delivery row, so the WhatsApp failure stays visible.
-      if (fallback && smsFallbackPossible(row)) {
-        const smsClaim = await claim(db, { eventId: input.eventId, row, channel: "sms", variant: preview.event.variant, userId: actor.userId }).catch(() => null);
+      if (fallback && smsFallbackPossible(row, input.resend)) {
+        const smsClaim = await claim(db, { eventId: input.eventId, row, channel: "sms", variant: preview.event.variant, userId: actor.userId, resend: input.resend }).catch(() => null);
         if (smsClaim && (await sendSms(row, smsClaim))) {
           result.sentSms += 1;
           result.smsFallbacks += 1;

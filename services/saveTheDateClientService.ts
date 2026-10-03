@@ -62,6 +62,6 @@ export async function renderSaveTheDateCardPreview(eventId: number, variant: Sav
   return URL.createObjectURL(await response.blob());
 }
 
-export async function sendSaveTheDate(eventId: number, pledgeIds: number[], mode: SaveTheDateChannelMode, smsFallback: boolean): Promise<SaveTheDateSendResult> {
-  return (await request({ action: "send", eventId, pledgeIds, mode, smsFallback, confirmed: true })) as unknown as SaveTheDateSendResult;
+export async function sendSaveTheDate(eventId: number, pledgeIds: number[], mode: SaveTheDateChannelMode, smsFallback: boolean, resend = false): Promise<SaveTheDateSendResult> {
+  return (await request({ action: "send", eventId, pledgeIds, mode, smsFallback, resend, confirmed: true })) as unknown as SaveTheDateSendResult;
 }
